@@ -3,6 +3,7 @@ package cn.cheny.toolbox.expression.func;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.time.DateFormatUtils;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,17 @@ public class InternalFunction {
 
     public static String replace(String text, String oldChar, String replacement) {
         return text.replace(oldChar, replacement);
+    }
+
+    public static BigDecimal abs(Object value) {
+        return new BigDecimal(value.toString()).abs();
+    }
+
+    public static BigDecimal to_number(Object object) {
+        if (object == null) {
+            throw new NullPointerException();
+        }
+        return new BigDecimal(object.toString());
     }
 
     public static Object output(Object object) {
