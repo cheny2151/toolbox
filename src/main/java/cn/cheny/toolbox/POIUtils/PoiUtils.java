@@ -47,7 +47,7 @@ public class PoiUtils {
      * 创建一张含有数据的表
      *
      * @param data 数据
-     * @return
+     * @return HSSFWorkbook
      */
     public static HSSFWorkbook createSheet(List<?> data) {
         return getHSSFWorkbookBuilder().createSheet(data);
@@ -57,7 +57,7 @@ public class PoiUtils {
      * 创建一张表头
      *
      * @param targetClass 目标类型
-     * @return
+     * @return HSSFWorkbook
      */
     public static HSSFWorkbook createEmptySheet(Class<?> targetClass) {
         return getHSSFWorkbookBuilder().createHead(targetClass);
@@ -69,7 +69,7 @@ public class PoiUtils {
      * @param file        文件
      * @param targetClass 目标类型
      * @param <T>         类型
-     * @return
+     * @return 读取结果
      */
     public static <T> ReadResult<T> readFormFile(File file, Class<T> targetClass) {
         try {
@@ -86,7 +86,7 @@ public class PoiUtils {
      * @param inputStream 输入流
      * @param targetClass 目标类型
      * @param <T>         类型
-     * @return
+     * @return 读取结果
      */
     public static <T> ReadResult<T> readForStream(String fileName, InputStream inputStream, Class<T> targetClass) {
         return getWorkBookReader().read(fileName, inputStream, targetClass);
@@ -95,10 +95,9 @@ public class PoiUtils {
     /**
      * 读取数据
      *
-     * @param file        文件
-     * @param targetClass 目标类型
-     * @param <T>         类型
-     * @return
+     * @param file          文件
+     * @param excelReadInfo 读取参数信息
+     * @return 读取结果
      */
     public static ReadResult<Map<String, Object>> readAsMap(File file, ExcelReadInfo excelReadInfo) {
         try {
@@ -111,11 +110,10 @@ public class PoiUtils {
     /**
      * 读取数据
      *
-     * @param fileName    文件名称(用作判断为xls/xlsx)
-     * @param inputStream 输入流
-     * @param targetClass 目标类型
-     * @param <T>         类型
-     * @return
+     * @param fileName      文件名称(用作判断为xls/xlsx)
+     * @param inputStream   输入流
+     * @param excelReadInfo 读取参数信息
+     * @return 读取结果
      */
     public static ReadResult<Map<String, Object>> readAsMap(String fileName, InputStream inputStream, ExcelReadInfo excelReadInfo) {
         return getWorkBookReader().readAsMap(fileName, inputStream, excelReadInfo);

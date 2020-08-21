@@ -25,8 +25,8 @@ import static cn.cheny.toolbox.expression.func.InternalFunction.OUT_PUT_FUNC_NAM
  * 4.嵌套函数解析(例如：funcA(funcB(funcC()))，通过递归实现)
  * <p>
  * 解析的结果封装为{@link ParseResult},一个方法表达式为一个ParseResult，
- * 例如funcA(funcB()，解析结果ParseResult实体中，其成员变量args{@link ParseResult.args}为单个元素的{@link Arg}，
- * 元素Arg中的成员变量{@link Arg.value}为funB解析结果的实体{@link ParseResult}，形成嵌套。
+ * 例如funcA(funcB()，解析结果ParseResult实体中，其成员变量args{@link ParseResult}.args为单个元素的{@link Arg}，
+ * 元素Arg中的成员变量{@link Arg}.value为funB解析结果的实体{@link ParseResult}，形成嵌套。
  *
  * 1.1 新增支持运算符嵌套函数解析,见{@link #createArg(List, Arg, Object, short)}}
  * 1.2 新增支持解析方法名为运算符--运算符表达式,见{@link #createArg(List, Arg, Object, short)}};
