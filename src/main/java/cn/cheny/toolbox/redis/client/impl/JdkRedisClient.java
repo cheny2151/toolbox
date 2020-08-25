@@ -7,17 +7,14 @@ import com.alibaba.fastjson.JSON;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 
-import javax.annotation.Resource;
 import java.util.Map;
 
 public class JdkRedisClient<V> extends AbstractMapRedisClient<V> implements MapRedisApi<V>, ObjectRedisApi {
 
-    @Resource(name = "jdkRedisTemplate")
     private RedisTemplate<String, V> redis;
 
-    @Override
-    @Resource(name = "jdkRedisTemplate")
-    protected void setRedis(RedisTemplate<String, V> redis) {
+    public JdkRedisClient(RedisTemplate<String, V> redis) {
+        this.redis = redis;
         super.setRedis(redis);
     }
 

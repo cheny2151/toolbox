@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.rateLimit;
 
-import cn.cheny.toolbox.redis.factory.RedisLockFactory;
+import cn.cheny.toolbox.redis.RedisConfiguration;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,7 +41,7 @@ public class RateLimiter {
     private RedisExecutor redisExecutor;
 
     public RateLimiter(String path, int maxPermits, int rate) {
-        this(path, maxPermits, rate, RedisLockFactory.DEFAULT_LOCK_FACTORY.getRedisExecutor());
+        this(path, maxPermits, rate, RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor());
     }
 
     public RateLimiter(String path, int maxPermits, int rate, RedisExecutor redisExecutor) {

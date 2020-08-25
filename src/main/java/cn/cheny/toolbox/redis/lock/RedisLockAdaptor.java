@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.lock;
 
-import cn.cheny.toolbox.redis.factory.RedisLockFactory;
+import cn.cheny.toolbox.redis.RedisConfiguration;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,7 +51,7 @@ public abstract class RedisLockAdaptor implements RedisLock {
 
     public RedisLockAdaptor(String path) {
         this.path = "{" + pathPreLabel() + path + "}";
-        this.redisExecutor = RedisLockFactory.DEFAULT_LOCK_FACTORY.getRedisExecutor();
+        this.redisExecutor = RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor();
     }
 
 

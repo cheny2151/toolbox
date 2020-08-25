@@ -17,8 +17,6 @@ import java.util.Collection;
  * 原理：@Component会创建一个类，@DependsOn("springUtils")会使该类依赖于SpringUtils创建
  * ，@PostConstruct通过创建类后将spring管理的bean通过SpringUtils获取并写入静态变量中
  */
-@Component
-@Lazy(false)
 public class SpringUtils implements ApplicationContextAware {
 
     private static ApplicationContext applicationContext;

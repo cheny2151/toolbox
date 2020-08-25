@@ -1,7 +1,7 @@
 package cn.cheny.toolbox.redis.lock.awaken;
 
+import cn.cheny.toolbox.redis.RedisConfiguration;
 import cn.cheny.toolbox.redis.lock.RedisLockAdaptor;
-import cn.cheny.toolbox.redis.factory.RedisLockFactory;
 import cn.cheny.toolbox.redis.lock.awaken.listener.LockListener;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SubLockManager;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +35,7 @@ public abstract class AwakenRedisLock extends RedisLockAdaptor {
 
     public AwakenRedisLock(String path) {
         super(path);
-        subLockManager = RedisLockFactory.DEFAULT_LOCK_FACTORY.getSubLockManager();
+        subLockManager = RedisConfiguration.DEFAULT.getRedisLockFactory().getSubLockManager();
     }
 
     public boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit) {

@@ -1,9 +1,9 @@
 package cn.cheny.toolbox.redis.clustertask.sub;
 
 import cn.cheny.toolbox.other.page.Limit;
+import cn.cheny.toolbox.redis.RedisConfiguration;
 import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.clustertask.TaskInfo;
-import cn.cheny.toolbox.redis.factory.RedisLockFactory;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -56,7 +56,7 @@ public class ClusterTaskDealer {
                              @Qualifier("clusterTaskExecutor") ExecutorService taskExecutor) {
         this.redisTemplate = redisTemplate;
         this.taskExecutor = taskExecutor;
-        this.redisExecutor = RedisLockFactory.DEFAULT_LOCK_FACTORY.getRedisExecutor();
+        this.redisExecutor = RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor();
     }
 
 
