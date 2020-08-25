@@ -4,9 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 
-import javax.annotation.Resource;
-
-import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
 
 import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTER_TASK_CHANNEL_PRE_KEY;
 
@@ -19,12 +17,15 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 @Slf4j
 public class ClusterTaskRedisSub implements MessageListener {
 
-    @Resource(name = "clusterTaskSubscriberHolder")
     private ClusterTaskSubscriberHolder clusterTaskSubscriberHolder;
+
+    public ClusterTaskRedisSub(ClusterTaskSubscriberHolder clusterTaskSubscriberHolder) {
+        this.clusterTaskSubscriberHolder = clusterTaskSubscriberHolder;
+    }
 
     @Override
     public void onMessage(Message message, byte[] bytes) {
-        String concurrentNums = new String(message.getBody());
+        String concurrentNums = new String(message.getBody(), StandardCharsets.UTF_8);
         String channel = new String(message.getChannel());
         String taskId = channel.replace(CLUSTER_TASK_CHANNEL_PRE_KEY, "");
         log.info("订阅集群任务,taskId:{}", taskId);

@@ -2,15 +2,40 @@ package cn.cheny.toolbox.redis;
 
 import cn.cheny.toolbox.redis.client.impl.JdkRedisClient;
 import cn.cheny.toolbox.redis.client.impl.JsonRedisClient;
+import cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher;
+import cn.cheny.toolbox.redis.clustertask.pub.DefaultClusterTaskPublisher;
+import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskDealer;
+import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskRedisSub;
+import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskSubscriberHolder;
 import cn.cheny.toolbox.redis.factory.SpringRedisLockFactory;
+import cn.cheny.toolbox.redis.lock.LockConstant;
+import cn.cheny.toolbox.redis.lock.awaken.listener.SpringSubLockManager;
 import cn.cheny.toolbox.spring.SpringToolAutoConfig;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.data.redis.connection.MessageListener;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.listener.PatternTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
+import org.springframework.data.redis.listener.Topic;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTER_TASK_CHANNEL_PRE_KEY;
 
 /**
  * redis lock相关自动配置
@@ -22,14 +47,47 @@ import org.springframework.data.redis.core.RedisTemplate;
 @AutoConfigureAfter({SpringToolAutoConfig.class, RedisAutoConfiguration.class})
 public class SpringRedisLockAutoConfig {
 
+    @Bean("strRedisTemplate")
+    public RedisTemplate strRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<Object, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new StringRedisSerializer());
+        return template;
+    }
+
+    @Bean("jsonRedisTemplate")
+    public RedisTemplate jsonRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<Object, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        return template;
+    }
+
+    @Bean("jdkRedisTemplate")
+    public RedisTemplate jdkRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        RedisTemplate<Object, Object> template = new RedisTemplate<>();
+        template.setConnectionFactory(redisConnectionFactory);
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setValueSerializer(new JdkSerializationRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+        template.setHashValueSerializer(new JdkSerializationRedisSerializer());
+        return template;
+    }
+
     @Bean(name = "toolbox:jdkRedisClient")
-    public <V> JdkRedisClient<V> jdkRedisClient(RedisTemplate<String, V> redisTemplate) {
+    public JdkRedisClient<?> jdkRedisClient(@Qualifier("jdkRedisTemplate") RedisTemplate redisTemplate) {
         return new JdkRedisClient<>(redisTemplate);
     }
 
     @Bean(name = "toolbox:jsonRedisClient")
-    @ConditionalOnBean(name = "redisTemplate")
-    public <V> JsonRedisClient<V> jsonRedisClient(RedisTemplate<String, V> redisTemplate) {
+    @ConditionalOnBean(name = "jsonRedisTemplate")
+    public JsonRedisClient<?> jsonRedisClient(@Qualifier("jsonRedisTemplate") RedisTemplate redisTemplate) {
         return new JsonRedisClient<>(redisTemplate);
     }
 
@@ -39,6 +97,54 @@ public class SpringRedisLockAutoConfig {
         SpringRedisLockFactory springRedisLockFactory = new SpringRedisLockFactory();
         RedisConfiguration.DEFAULT.setRedisLockFactory(springRedisLockFactory);
         return RedisConfiguration.DEFAULT;
+    }
+
+    @Bean("springSubLockManager")
+    public SpringSubLockManager subLockManager() {
+        return new SpringSubLockManager();
+    }
+
+    @Bean(name = "clusterTask", destroyMethod = "shutdown")
+    public ExecutorService clusterTask() {
+        return Executors.newFixedThreadPool(20);
+    }
+
+    @Bean
+    public ClusterTaskPublisher clusterTaskPublisher(@Qualifier(value = "strRedisTemplate") RedisTemplate redisTemplate) {
+        return new DefaultClusterTaskPublisher(redisTemplate);
+    }
+
+    @Bean
+    public ClusterTaskDealer clusterTaskDealer(@Qualifier(value = "strRedisTemplate") RedisTemplate redisTemplate,
+                                               @Qualifier("clusterTask") ExecutorService clusterTask) {
+        return new ClusterTaskDealer(redisTemplate, clusterTask);
+    }
+
+    @Bean
+    @ConditionalOnBean(name = "clusterTaskDealer")
+    public ClusterTaskSubscriberHolder clusterTaskSubscriberHolder(ClusterTaskDealer clusterTaskDealer) {
+        return new ClusterTaskSubscriberHolder(clusterTaskDealer);
+    }
+
+    @Bean
+    @ConditionalOnBean(name = "clusterTaskSubscriberHolder")
+    public ClusterTaskRedisSub clusterTaskRedisSub(ClusterTaskSubscriberHolder clusterTaskSubscriberHolder) {
+        return new ClusterTaskRedisSub(clusterTaskSubscriberHolder);
+    }
+
+    @Bean
+    public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
+                                                                       SpringSubLockManager springSubLockManager,
+                                                                       ClusterTaskRedisSub clusterTaskRedisSub) {
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(redisConnectionFactory);
+        Map<MessageListener, Collection<? extends Topic>> messageListeners = new HashMap<>();
+        messageListeners.put(springSubLockManager, Collections.singleton(new PatternTopic(LockConstant.LOCK_CHANNEL + "*")));
+        if (clusterTaskRedisSub != null) {
+            messageListeners.put(clusterTaskRedisSub, Collections.singleton(new PatternTopic(CLUSTER_TASK_CHANNEL_PRE_KEY + "*")));
+        }
+        container.setMessageListeners(messageListeners);
+        return container;
     }
 
 }

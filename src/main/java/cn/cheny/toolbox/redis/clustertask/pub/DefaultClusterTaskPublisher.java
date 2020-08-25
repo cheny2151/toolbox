@@ -3,10 +3,7 @@ package cn.cheny.toolbox.redis.clustertask.pub;
 import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.clustertask.TaskInfo;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -18,13 +15,11 @@ import java.util.concurrent.TimeUnit;
  * @date 2019-09-03
  */
 @Slf4j
-@Component
 public class DefaultClusterTaskPublisher implements ClusterTaskPublisher {
 
     private RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
-    public DefaultClusterTaskPublisher(@Qualifier("redisTemplate") RedisTemplate<String, Object> redisTemplate) {
+    public DefaultClusterTaskPublisher(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 

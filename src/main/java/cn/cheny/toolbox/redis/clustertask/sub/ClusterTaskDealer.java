@@ -6,10 +6,8 @@ import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.clustertask.TaskInfo;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,7 +37,6 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
  * @date 2019-09-03
  * @version 1.1.0
  */
-@Component
 @Slf4j
 public class ClusterTaskDealer {
 
@@ -52,8 +49,8 @@ public class ClusterTaskDealer {
 
     private ExecutorService taskExecutor;
 
-    public ClusterTaskDealer(@Qualifier("redisTemplate") RedisTemplate<String, Object> redisTemplate,
-                             @Qualifier("clusterTaskExecutor") ExecutorService taskExecutor) {
+    public ClusterTaskDealer(RedisTemplate<String, Object> redisTemplate,
+                             ExecutorService taskExecutor) {
         this.redisTemplate = redisTemplate;
         this.taskExecutor = taskExecutor;
         this.redisExecutor = RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor();

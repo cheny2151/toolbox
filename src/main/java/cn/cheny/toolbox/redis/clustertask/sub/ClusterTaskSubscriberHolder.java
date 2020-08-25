@@ -1,9 +1,7 @@
 package cn.cheny.toolbox.redis.clustertask.sub;
 
 import cn.cheny.toolbox.spring.SpringUtils;
-import org.springframework.stereotype.Component;
 
-import javax.annotation.Resource;
 import java.util.Collection;
 
 /**
@@ -12,11 +10,13 @@ import java.util.Collection;
  * @author cheney
  * @date 2019-09-03
  */
-@Component
 public class ClusterTaskSubscriberHolder {
 
-    @Resource(name = "clusterTaskDealer")
     private ClusterTaskDealer clusterTaskDealer;
+
+    public ClusterTaskSubscriberHolder(ClusterTaskDealer clusterTaskDealer) {
+        this.clusterTaskDealer = clusterTaskDealer;
+    }
 
     public void executeSub(String taskId, int concurrentNums) {
         Collection<ClusterTaskSubscriber> subscribers = SpringUtils.getBeansOfType(ClusterTaskSubscriber.class);

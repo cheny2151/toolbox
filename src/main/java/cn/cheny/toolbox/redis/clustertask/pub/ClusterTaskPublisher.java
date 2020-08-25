@@ -19,7 +19,7 @@ public interface ClusterTaskPublisher {
     /**
      * 集群任务redis任务信息key
      */
-    public final String CLUSTER_TASK_PRE_KEY = "TOOLBOX:CLUSTER_TASK_CHANNEL";
+    public final String CLUSTER_TASK_PRE_KEY = "TOOLBOX:CLUSTER_TASK_CHANNEL:";
 
     /**
      * 发布集群任务
