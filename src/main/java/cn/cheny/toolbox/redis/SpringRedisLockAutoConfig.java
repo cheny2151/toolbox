@@ -14,6 +14,7 @@ import cn.cheny.toolbox.spring.SpringToolAutoConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -47,7 +48,8 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 @AutoConfigureAfter({SpringToolAutoConfig.class, RedisAutoConfiguration.class})
 public class SpringRedisLockAutoConfig {
 
-    @Bean("strRedisTemplate")
+    @Bean
+    @ConditionalOnMissingBean(name = "strRedisTemplate")
     public RedisTemplate strRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<Object, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
@@ -58,7 +60,8 @@ public class SpringRedisLockAutoConfig {
         return template;
     }
 
-    @Bean("jsonRedisTemplate")
+    @Bean
+    @ConditionalOnMissingBean(name = "jsonRedisTemplate")
     public RedisTemplate jsonRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<Object, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
@@ -69,7 +72,8 @@ public class SpringRedisLockAutoConfig {
         return template;
     }
 
-    @Bean("jdkRedisTemplate")
+    @Bean
+    @ConditionalOnMissingBean(name = "jdkRedisTemplate")
     public RedisTemplate jdkRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<Object, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
@@ -86,7 +90,6 @@ public class SpringRedisLockAutoConfig {
     }
 
     @Bean(name = "toolbox:jsonRedisClient")
-    @ConditionalOnBean(name = "jsonRedisTemplate")
     public JsonRedisClient<?> jsonRedisClient(@Qualifier("jsonRedisTemplate") RedisTemplate redisTemplate) {
         return new JsonRedisClient<>(redisTemplate);
     }
@@ -99,12 +102,12 @@ public class SpringRedisLockAutoConfig {
         return RedisConfiguration.DEFAULT;
     }
 
-    @Bean("springSubLockManager")
-    public SpringSubLockManager subLockManager() {
+    @Bean
+    public SpringSubLockManager springSubLockManager() {
         return new SpringSubLockManager();
     }
 
-    @Bean(name = "clusterTask", destroyMethod = "shutdown")
+    @Bean(name = "toolbox:clusterTask", destroyMethod = "shutdown")
     public ExecutorService clusterTask() {
         return Executors.newFixedThreadPool(20);
     }
@@ -116,7 +119,7 @@ public class SpringRedisLockAutoConfig {
 
     @Bean
     public ClusterTaskDealer clusterTaskDealer(@Qualifier(value = "strRedisTemplate") RedisTemplate redisTemplate,
-                                               @Qualifier("clusterTask") ExecutorService clusterTask) {
+                                               @Qualifier("toolbox:clusterTask") ExecutorService clusterTask) {
         return new ClusterTaskDealer(redisTemplate, clusterTask);
     }
 
