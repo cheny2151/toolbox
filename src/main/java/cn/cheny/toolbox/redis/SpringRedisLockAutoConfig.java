@@ -22,6 +22,7 @@ import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
@@ -49,19 +50,12 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 public class SpringRedisLockAutoConfig {
 
     @Bean
-    @ConditionalOnMissingBean(name = "strRedisTemplate")
-    public RedisTemplate<String, Object> strRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(new StringRedisSerializer());
-        template.setHashKeySerializer(new StringRedisSerializer());
-        template.setHashValueSerializer(new StringRedisSerializer());
-        return template;
+    @ConditionalOnMissingBean(name = "stringRedisTemplate")
+    public StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        return new StringRedisTemplate(redisConnectionFactory);
     }
 
-    @Bean
-    @ConditionalOnMissingBean(name = "jsonRedisTemplate")
+    @Bean(name = "toolbox:jsonRedisTemplate")
     public RedisTemplate<String, Object> jsonRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
@@ -72,8 +66,7 @@ public class SpringRedisLockAutoConfig {
         return template;
     }
 
-    @Bean
-    @ConditionalOnMissingBean(name = "jdkRedisTemplate")
+    @Bean(name = "toolbox:jdkRedisTemplate")
     public RedisTemplate<String, Object> jdkRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         template.setConnectionFactory(redisConnectionFactory);
@@ -84,13 +77,13 @@ public class SpringRedisLockAutoConfig {
         return template;
     }
 
-    @Bean(name = "jdkRedisClient")
-    public JdkRedisClient jdkRedisClient(@Qualifier("jdkRedisTemplate") RedisTemplate<String,Object> redisTemplate) {
+    @Bean
+    public JdkRedisClient jdkRedisClient(@Qualifier("toolbox:jdkRedisTemplate") RedisTemplate<String, Object> redisTemplate) {
         return new JdkRedisClient<>(redisTemplate);
     }
 
-    @Bean(name = "jsonRedisClient")
-    public JsonRedisClient jsonRedisClient(@Qualifier("jsonRedisTemplate") RedisTemplate<String,Object> redisTemplate) {
+    @Bean
+    public JsonRedisClient jsonRedisClient(@Qualifier("toolbox:jsonRedisTemplate") RedisTemplate<String, Object> redisTemplate) {
         return new JsonRedisClient<>(redisTemplate);
     }
 
@@ -113,12 +106,12 @@ public class SpringRedisLockAutoConfig {
     }
 
     @Bean
-    public ClusterTaskPublisher clusterTaskPublisher(@Qualifier(value = "strRedisTemplate") RedisTemplate<String,Object> redisTemplate) {
+    public ClusterTaskPublisher clusterTaskPublisher(@Qualifier("stringRedisTemplate") StringRedisTemplate redisTemplate) {
         return new DefaultClusterTaskPublisher(redisTemplate);
     }
 
     @Bean
-    public ClusterTaskDealer clusterTaskDealer(@Qualifier(value = "strRedisTemplate") RedisTemplate<String,Object> redisTemplate,
+    public ClusterTaskDealer clusterTaskDealer(@Qualifier("stringRedisTemplate") StringRedisTemplate redisTemplate,
                                                @Qualifier("toolbox:clusterTask") ExecutorService clusterTask) {
         return new ClusterTaskDealer(redisTemplate, clusterTask);
     }

@@ -17,9 +17,9 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class DefaultClusterTaskPublisher implements ClusterTaskPublisher {
 
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
 
-    public DefaultClusterTaskPublisher(RedisTemplate<String, Object> redisTemplate) {
+    public DefaultClusterTaskPublisher(RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
@@ -38,8 +38,6 @@ public class DefaultClusterTaskPublisher implements ClusterTaskPublisher {
         }
         // set taskInfo
         Map<String, String> taskInfo = new TaskInfo(taskId, dataNums, 0, stepSize, desc, header);
-        System.out.println(taskInfo);
-        System.out.println(taskRedisKey);
         redisTemplate.opsForHash().putAll(taskRedisKey, taskInfo);
         // 设置过期时间，防止所有线程终止，无法删除任务标识
         redisTemplate.expire(taskRedisKey, TaskConfig.KEY_EXPIRE_SECONDS, TimeUnit.SECONDS);
