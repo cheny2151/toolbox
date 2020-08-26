@@ -53,6 +53,8 @@
         <zxing.version>3.3.3</zxing.version>
         <aviator.version>4.2.7</aviator.version>
         <javassist.version>3.27.0-GA</javassist.version>
+        <spring.boot.version>2.2.2.RELEASE</spring.boot.version>
+        <jedis.version>3.1.0</jedis.version>
     </properties>
 
     <dependencies>
@@ -130,6 +132,18 @@
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
             <version>${javassist.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+            <version>${spring.boot.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>${jedis.version}</version>
         </dependency>
 
     </dependencies>
