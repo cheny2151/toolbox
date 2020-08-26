@@ -43,13 +43,13 @@ public class ClusterTaskDealer {
     // 服务器注册执行任务标识
     private final static String REGISTERED_LABEL = "REGISTERED_COUNT";
 
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
 
     private RedisExecutor redisExecutor;
 
     private ExecutorService taskExecutor;
 
-    public ClusterTaskDealer(RedisTemplate<String, Object> redisTemplate,
+    public ClusterTaskDealer(RedisTemplate<String, String> redisTemplate,
                              ExecutorService taskExecutor) {
         this.redisTemplate = redisTemplate;
         this.taskExecutor = taskExecutor;

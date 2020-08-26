@@ -40,7 +40,7 @@ public class SpringRedisLockFactory extends CacheLockFactory {
     protected RedisExecutor newRedisExecutor() {
         RedisTemplate redisTemplate = null;
         try {
-            redisTemplate = SpringUtils.getBean("redisTemplate", RedisTemplate.class);
+            redisTemplate = SpringUtils.getBean("stringRedisTemplate", RedisTemplate.class);
         } catch (Exception e) {
             // try next
         }
