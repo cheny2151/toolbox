@@ -9,7 +9,6 @@ import cn.cheny.toolbox.expression.model.ParseResult;
 import cn.cheny.toolbox.reflect.methodHolder.factory.DefaultMethodHolderFactory;
 import cn.cheny.toolbox.reflect.methodHolder.factory.MethodHolderFactory;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections4.CollectionUtils;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -71,7 +70,9 @@ public class ReflectExpressionParser extends BaseExpressionParser {
 
     public ReflectExpressionParser(MethodHolderFactory methodHolderFactory, Collection<Class<?>> classes) {
         this.methodHolderFactory = methodHolderFactory;
-        this.functionClasses = new FunctionClasses(classes);
+        FunctionClasses functionClasses = new FunctionClasses(classes);
+        functionClasses.add(INTERNAL_FUNCTION);
+        this.functionClasses = functionClasses;
     }
 
     @Override
@@ -116,9 +117,12 @@ public class ReflectExpressionParser extends BaseExpressionParser {
 
     /**
      * 获取新的ReflectExpressionParser解析器实例
+     *
+     * @param methodHolderFactory 方法持有类工厂
+     * @param classes             内置静态方法对应的类
      */
     public static ReflectExpressionParser getInstance(MethodHolderFactory methodHolderFactory, Collection<Class<?>> classes) {
-        if (methodHolderFactory == null || CollectionUtils.isEmpty(classes)) {
+        if (methodHolderFactory == null || classes == null) {
             throw new NullPointerException();
         }
         return new ReflectExpressionParser(methodHolderFactory, classes);
