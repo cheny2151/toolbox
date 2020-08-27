@@ -2,7 +2,7 @@ package cn.cheny.toolbox.expression.executor;
 
 import cn.cheny.toolbox.expression.model.Arg;
 import cn.cheny.toolbox.expression.model.ParseResult;
-import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.math.BigDecimal;
