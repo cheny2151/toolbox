@@ -34,20 +34,6 @@ public abstract class BaseMethodHolder implements MethodHolder {
     }
 
     @Override
-    public void cacheMethod(Method method) {
-        if (method == null)
-            return;
-        cacheMethod(method.getName(), method);
-    }
-
-    @Override
-    public void cacheMethod(String methodKey, Method method) {
-        if (method == null)
-            return;
-        methodMap.computeIfAbsent(methodKey, key -> new MetaMethodCollect(holdClass, key)).add(methodKey, method);
-    }
-
-    @Override
     public Object invoke(String methodKey, Object obj, Object... args) {
         // args会包含调用的null,eg:如果调用此方法为invoke(a,b,null,null),则args为[null,null]
         return invoke(null, methodKey, obj, args);
@@ -150,6 +136,29 @@ public abstract class BaseMethodHolder implements MethodHolder {
             builder.append(args);
         }
         return builder.toString();
+    }
+
+    /**
+     * 缓存方法
+     *
+     * @param method 方法
+     */
+    protected void cacheMethod(Method method) {
+        if (method == null)
+            return;
+        cacheMethod(method.getName(), method);
+    }
+
+    /**
+     * 指定key缓存方法
+     *
+     * @param methodKey 缓存key
+     * @param method    方法
+     */
+    protected void cacheMethod(String methodKey, Method method) {
+        if (method == null)
+            return;
+        methodMap.computeIfAbsent(methodKey, key -> new MetaMethodCollect(holdClass, key)).add(methodKey, method);
     }
 
     /**
