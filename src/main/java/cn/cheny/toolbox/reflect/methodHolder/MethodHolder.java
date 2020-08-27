@@ -62,10 +62,10 @@ public interface MethodHolder {
 
     /**
      * 通过方法key(默认为方法名)获取方法
-     * 查询多个方法时抛出该异常:{@link FindNotUniqueMethodException}
      *
      * @param methodKey 方法key(默认为方法名)
      * @return 方法
+     * @throws FindNotUniqueMethodException 查询多个方法时抛出该异常
      */
     Optional<Method> getMethod(String methodKey);
 
@@ -77,6 +77,7 @@ public interface MethodHolder {
      * @param returnType 返回类型，可为空
      * @param args       参数类型数组，可为空
      * @return 方法
+     * @throws FindNotUniqueMethodException 查询多个方法时抛出该异常
      */
     Optional<Method> speculateMethod(String methodKey, Class<?> returnType, Class<?>... args);
 
