@@ -71,7 +71,6 @@ public interface MethodHolder {
 
     /**
      * 通过给定方法key(默认为方法名)和其他参数推测方法
-     * 查询多个方法时抛出该异常:{@link FindNotUniqueMethodException}
      *
      * @param methodKey  方法key(默认为方法名)，必填
      * @param returnType 返回类型，可为空
