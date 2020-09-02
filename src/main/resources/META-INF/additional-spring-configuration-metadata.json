@@ -1,0 +1,16 @@
+{
+  "properties": [
+    {
+      "name": "toolbox.entity-cache.type",
+      "type": "cn.cheny.toolbox.entityCache.BufferType",
+      "defaultValue": "cn.cheny.toolbox.entityCache.BufferType.DEFAULT",
+      "description": "A default BufferType."
+    },
+    {
+      "name": "toolbox.entity-cache.underline",
+      "type": "java.lang.Boolean",
+      "defaultValue": "false",
+      "description": "java class field change to sql column:Whether to underline."
+    }
+  ]
+}
