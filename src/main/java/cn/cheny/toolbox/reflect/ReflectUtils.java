@@ -136,25 +136,17 @@ public class ReflectUtils {
 
     /**
      * 获取writer方法
-     * 找不到对应方法不抛出异常，返回null
      */
     public static Method getWriterMethod(Class<?> clazz, String property, Class<?> propertyType) {
         if (StringUtils.isEmpty(property)) {
             throw new IllegalArgumentException("property must not empty");
         }
         String methodName = SET_PRE + toUpperFirstLetter(property);
-        Class<?> currentClass = clazz;
-        while (!Object.class.equals(currentClass)) {
-            try {
-                Method method = currentClass.getDeclaredMethod(methodName, propertyType);
-                method.setAccessible(true);
-                return method;
-            } catch (NoSuchMethodException e) {
-                // try next superClass
-            }
-            currentClass = currentClass.getSuperclass();
+        Method method = getMethod(clazz, methodName, propertyType);
+        if (method == null) {
+            throw new ReflectException("can not find write method '" + methodName + "' in " + clazz.getName());
         }
-        throw new ReflectException("can not find write method '" + methodName + "' in " + clazz.getName());
+        return method;
     }
 
     /**
@@ -176,6 +168,30 @@ public class ReflectUtils {
             currentClass = currentClass.getSuperclass();
         }
         return methods;
+    }
+
+
+    /**
+     * 获取方法，找不到对应方法时返回null
+     *
+     * @param clazz         方法所在类
+     * @param methodName    方法名
+     * @param propertyTypes 参数类型
+     * @return 方法实例
+     */
+    public static Method getMethod(Class<?> clazz, String methodName, Class<?>... propertyTypes) {
+        Class<?> currentClass = clazz;
+        while (!Object.class.equals(currentClass)) {
+            try {
+                Method method = currentClass.getDeclaredMethod(methodName, propertyTypes);
+                method.setAccessible(true);
+                return method;
+            } catch (NoSuchMethodException e) {
+                // try next superClass
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        return null;
     }
 
     /**
@@ -409,6 +425,25 @@ public class ReflectUtils {
             Object type = warp.getField("TYPE").get(null);
             return base.equals(type);
         } catch (NoSuchFieldException | IllegalAccessException e) {
+            return false;
+        }
+    }
+
+    /**
+     * 判断类是否存在
+     *
+     * @param className   类名
+     * @param classLoader 类加载器
+     * @return 是否存在
+     */
+    public static boolean isPresent(String className, ClassLoader classLoader) {
+        if (classLoader == null) {
+            classLoader = Thread.currentThread().getContextClassLoader();
+        }
+        try {
+            Class.forName(className, false, classLoader);
+            return true;
+        } catch (ClassNotFoundException e) {
             return false;
         }
     }
