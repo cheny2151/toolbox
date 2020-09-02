@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.other.page;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 /**
@@ -11,7 +12,7 @@ public class Page<T> extends PageInfo {
 
     private static final long serialVersionUID = 285590709870311132L;
 
-    private List<T> content;
+    private Collection<T> content;
 
     public Page() {
     }
@@ -32,11 +33,11 @@ public class Page<T> extends PageInfo {
         this.content = content;
     }
 
-    public List<T> getContent() {
+    public Collection<T> getContent() {
         return content;
     }
 
-    public void setContent(List<T> content) {
+    public void setContent(Collection<T> content) {
         this.content = content;
     }
 
@@ -45,5 +46,19 @@ public class Page<T> extends PageInfo {
      */
     public static <T> Page<T> emptyPage(Pageable pageable) {
         return new Page<>(new ArrayList<>(0), 0L, pageable);
+    }
+
+    public static <T> Page<T> build(long total, int pageSize, int pageNum, Collection<T> list) {
+        Page<T> page = new Page<>();
+        page.setTotal(total);
+        page.setPageSize(pageSize);
+        page.setPageNumber(pageNum);
+        page.setContent(list);
+        page.setTotalPage((int) ((total + pageSize - 1) / pageSize));
+        return page;
+    }
+
+    public static <T> Page<T> build(long total, Pageable page, List<T> list) {
+        return build(total, page.getPageSize(), page.getPageNumber(), list);
     }
 }
