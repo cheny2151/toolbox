@@ -10,9 +10,11 @@ import cn.cheny.toolbox.redis.client.impl.JsonRedisClient;
 import cn.cheny.toolbox.spring.SpringToolAutoConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.DependsOn;
 
@@ -23,7 +25,8 @@ import org.springframework.context.annotation.DependsOn;
  * @date 2020-09-02
  */
 @Configuration
-@ConditionalOnProperty(prefix = EntityBufferProperties.CACHE_PREFIX, name = "type")
+@Conditional(ConditionalOnEntityBufferEnable.class)
+@ConditionalOnClass
 @EnableConfigurationProperties({EntityBufferProperties.class})
 @AutoConfigureAfter(SpringToolAutoConfig.class)
 public class SpringEntityCacheAutoConfig {
@@ -35,6 +38,7 @@ public class SpringEntityCacheAutoConfig {
     }
 
     @Bean
+    @ConditionalOnMissingBean(name = "entityBufferHolder")
     public EntityBufferFactory entityBufferFactory(@Autowired(required = false) JsonRedisClient jsonRedisClient) {
         if (BufferType.REDIS.equals(entityBufferProperties.getType()) &&
                 jsonRedisClient != null) {
@@ -46,6 +50,7 @@ public class SpringEntityCacheAutoConfig {
 
     @Bean
     @DependsOn("toolbox:springUtils")
+    @ConditionalOnMissingBean
     public EntityBufferHolder entityBufferHolder(EntityBufferFactory entityBufferFactory) {
         return new DefaultEntityBufferHolder(entityBufferFactory);
     }
