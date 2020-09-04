@@ -10,6 +10,7 @@ import cn.cheny.toolbox.redis.client.impl.JsonRedisClient;
 import cn.cheny.toolbox.spring.SpringToolAutoConfig;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -53,6 +54,13 @@ public class SpringEntityCacheAutoConfig {
     @ConditionalOnMissingBean
     public EntityBufferHolder entityBufferHolder(EntityBufferFactory entityBufferFactory) {
         return new DefaultEntityBufferHolder(entityBufferFactory);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnBean(name = "entityBufferHolder")
+    public EntityBufferAutoScanner entityBufferAutoScanner(EntityBufferHolder entityBufferHolder) {
+        return new EntityBufferAutoScanner(entityBufferProperties, entityBufferHolder);
     }
 
 }
