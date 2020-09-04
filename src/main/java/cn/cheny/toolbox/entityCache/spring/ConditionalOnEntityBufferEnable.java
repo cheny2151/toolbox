@@ -6,6 +6,9 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 
 /**
+ * config property:toolbox.entity-cache.enable
+ * 配置并且为true
+ *
  * @author cheney
  * @date 2020-09-03
  */
