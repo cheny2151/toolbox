@@ -68,7 +68,13 @@ public class EntityBufferAutoScanner implements InitializingBean, DisposableBean
      * @param classes 缓存实体class集合
      */
     private void scheduled(List<Class<?>> classes) {
-        Runnable task = () -> classes.parallelStream().forEach(entityBufferHolder::refreshCache);
+        Runnable task = () -> {
+            try {
+                classes.parallelStream().forEach(entityBufferHolder::refreshCache);
+            } catch (Throwable e) {
+                log.error("Execute refresh entity buffer error,cause:", e);
+            }
+        };
         if (entityBufferProperties.isAutoRefresh()) {
             ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
             this.scheduledExecutor = scheduledExecutorService;
