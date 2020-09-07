@@ -34,6 +34,16 @@ public class EntityBufferProperties {
      */
     private String entityPath;
 
+    /**
+     * 是否开启定时自动刷新缓存
+     */
+    private boolean autoRefresh;
+
+    /**
+     * 自动刷新间隔(分钟)
+     */
+    private Long period;
+
     public boolean isEnable() {
         return enable;
     }
@@ -64,5 +74,21 @@ public class EntityBufferProperties {
 
     public void setEntityPath(String entityPath) {
         this.entityPath = entityPath;
+    }
+
+    public boolean isAutoRefresh() {
+        return autoRefresh;
+    }
+
+    public void setAutoRefresh(boolean autoRefresh) {
+        this.autoRefresh = autoRefresh;
+    }
+
+    public Long getPeriod() {
+        return period;
+    }
+
+    public void setPeriod(Long period) {
+        this.period = period;
     }
 }
