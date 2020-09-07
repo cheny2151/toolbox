@@ -1,16 +1,36 @@
 {
   "properties": [
     {
+      "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
       "name": "toolbox.entity-cache.type",
       "type": "cn.cheny.toolbox.entityCache.BufferType",
       "defaultValue": "cn.cheny.toolbox.entityCache.BufferType.DEFAULT",
       "description": "A default BufferType."
     },
     {
+      "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
       "name": "toolbox.entity-cache.underline",
       "type": "java.lang.Boolean",
       "defaultValue": "false",
       "description": "java class field change to sql column:Whether to underline."
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
+      "name": "toolbox.entity-cache.entityPath",
+      "type": "java.lang.String"
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
+      "name": "toolbox.entity-cache.autoRefresh",
+      "type": "java.lang.Boolean"
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
+      "name": "toolbox.entity-cache.period",
+      "type": "java.lang.Long",
+      "defaultValue": 60,
+      "description": "A default period to execute auto refresh."
     }
-  ]
+  ],
+  "hints": []
 }
