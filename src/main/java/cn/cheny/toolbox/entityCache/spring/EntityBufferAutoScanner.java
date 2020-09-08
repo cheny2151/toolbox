@@ -50,15 +50,19 @@ public class EntityBufferAutoScanner implements InitializingBean, DisposableBean
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        String entityPath = entityBufferProperties.getEntityPath();
-        if (StringUtils.isEmpty(entityPath)) {
+        String[] entityPaths = entityBufferProperties.getEntityPaths();
+        if (entityPaths == null || entityPaths.length == 0) {
             return;
         }
         ScanFilter scanFilter = new ScanFilter();
         scanFilter.addAnnotation(CacheEntity.class);
-        List<Class<?>> classes = new PathScanner(scanFilter).scanClass(entityPath);
-        if (classes.size() > 0) {
-            scheduled(classes);
+        for (String entityPath : entityPaths) {
+            if (!StringUtils.isEmpty(entityPath)) {
+                List<Class<?>> classes = new PathScanner(scanFilter).scanClass(entityPath);
+                if (classes.size() > 0) {
+                    scheduled(classes);
+                }
+            }
         }
     }
 

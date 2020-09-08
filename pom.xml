@@ -53,7 +53,7 @@
         <zxing.version>3.3.3</zxing.version>
         <aviator.version>4.2.7</aviator.version>
         <javassist.version>3.27.0-GA</javassist.version>
-        <spring.boot.version>2.2.2.RELEASE</spring.boot.version>
+        <spring-boot.version>2.2.2.RELEASE</spring-boot.version>
         <jedis.version>3.1.0</jedis.version>
         <mybatis.version>2.1.3</mybatis.version>
     </properties>
@@ -138,13 +138,15 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
-            <version>${spring.boot.version}</version>
+            <version>${spring-boot.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>${jedis.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- mybatis -->
@@ -152,6 +154,7 @@
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter</artifactId>
             <version>${mybatis.version}</version>
+            <optional>true</optional>
         </dependency>
 
     </dependencies>
