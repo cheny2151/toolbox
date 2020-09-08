@@ -32,7 +32,7 @@ public class EntityBufferProperties {
     /**
      * 实体包目录
      */
-    private String entityPath;
+    private String[] entityPaths;
 
     /**
      * 是否开启定时自动刷新缓存
@@ -68,12 +68,12 @@ public class EntityBufferProperties {
         this.underline = underline;
     }
 
-    public String getEntityPath() {
-        return entityPath;
+    public String[] getEntityPaths() {
+        return entityPaths;
     }
 
-    public void setEntityPath(String entityPath) {
-        this.entityPath = entityPath;
+    public void setEntityPaths(String[] entityPaths) {
+        this.entityPaths = entityPaths;
     }
 
     public boolean isAutoRefresh() {
