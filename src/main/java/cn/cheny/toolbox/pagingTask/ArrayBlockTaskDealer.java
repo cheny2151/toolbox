@@ -59,8 +59,8 @@ public class ArrayBlockTaskDealer {
      * @param <T>              类型
      * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
-    public <T> void executeBlockTask(CountFunction countFunction, FindDataFunction<T> findDataFunction,
-                                     BlockTask<T> blockTask, int step) throws InterruptedException {
+    public <T> void execute(CountFunction countFunction, FindDataFunction<T> findDataFunction,
+                            BlockTask<T> blockTask, int step) throws InterruptedException {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -85,8 +85,8 @@ public class ArrayBlockTaskDealer {
      * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
     public <T extends ExtremumField<V>, V extends Comparable<V>>
-    void executeBlockTaskByExtremumLimit(CountFunction countFunction, FindDataExtremumLimitFunction<T> findDataFunction,
-                                         BlockTask<T> blockTask, int step) throws InterruptedException {
+    void executeOrderByExtremum(CountFunction countFunction, FindDataExtremumLimitFunction<T> findDataFunction,
+                                BlockTask<T> blockTask, int step) throws InterruptedException {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -95,9 +95,68 @@ public class ArrayBlockTaskDealer {
         // 新建阻塞队列
         ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
         // 主线程同步获取数据传递至方法内
-        MainTask mainTask = () -> putDataToQueueByExtremumLimit(findDataFunction, step, count, queue);
+        MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
         startTask(mainTask, queue, blockTask);
+    }
+
+    /**
+     * 执行多线程阻塞任务，主线程生产数据，异步线程消费数据并返回数据
+     *
+     * @param countFunction       count函数
+     * @param findDataFunction    数据查询函数
+     * @param blockTaskWithResult 任务函数（返回数据）
+     * @param step                步长
+     * @param <T>                 类型
+     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
+     */
+    public <T, R> FutureResult<R> execute(CountFunction countFunction,
+                                          FindDataFunction<T> findDataFunction,
+                                          BlockTaskWithResult<T, R> blockTaskWithResult,
+                                          int step) throws InterruptedException {
+        beforeTask();
+        int count = countFunction.count();
+        if (count < 1) {
+            return FutureResult.empty();
+        }
+        // 新建阻塞队列
+        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
+        // 主线程同步获取数据传递至方法内
+        MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
+
+        List<Future<List<R>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
+
+        return new FutureResult<>(futures);
+    }
+
+    /**
+     * 执行多线程阻塞任务，主线程生产数据，异步线程消费数据并返回数据
+     *
+     * @param countFunction       count函数
+     * @param findDataFunction    数据查询函数
+     * @param blockTaskWithResult 任务函数（返回数据）
+     * @param step                步长
+     * @param <T>                 类型
+     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
+     */
+    public <T extends ExtremumField<V>, V extends Comparable<V>, R>
+    FutureResult<R> executeOrderByExtremum(CountFunction countFunction,
+                                           FindDataExtremumLimitFunction<T> findDataFunction,
+                                           BlockTaskWithResult<T, R> blockTaskWithResult,
+                                           int step) throws InterruptedException {
+        beforeTask();
+        int count = countFunction.count();
+        if (count < 1) {
+            return FutureResult.empty();
+        }
+        // 新建阻塞队列
+        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
+        // 主线程同步获取数据传递至方法内
+        MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
+
+        List<Future<List<R>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
+
+        return new FutureResult<>(futures);
     }
 
     /**
@@ -107,7 +166,7 @@ public class ArrayBlockTaskDealer {
      * @param queue     队列
      * @param blockTask 线程池阻塞任务
      * @param <T>       类型
-     * @throws InterruptedException
+     * @throws InterruptedException 任务中断异常
      */
     private <T> void startTask(MainTask mainTask, ArrayBlockingQueue<List<T>> queue,
                                BlockTask<T> blockTask) throws InterruptedException {
@@ -139,66 +198,6 @@ public class ArrayBlockTaskDealer {
         executorService.shutdown();
     }
 
-
-    /**
-     * 执行多线程阻塞任务，主线程生产数据，异步线程消费数据并返回数据
-     *
-     * @param countFunction       count函数
-     * @param findDataFunction    数据查询函数
-     * @param blockTaskWithResult 任务函数（返回数据）
-     * @param step                步长
-     * @param <T>                 类型
-     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
-     */
-    public <T, R> FutureResult<R> executeBlockTask(CountFunction countFunction,
-                                                   FindDataFunction<T> findDataFunction,
-                                                   BlockTaskWithResult<T, R> blockTaskWithResult,
-                                                   int step) throws InterruptedException {
-        beforeTask();
-        int count = countFunction.count();
-        if (count < 1) {
-            return FutureResult.empty();
-        }
-        // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
-        // 主线程同步获取数据传递至方法内
-        MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
-
-        List<Future<List<R>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
-
-        return new FutureResult<>(futures);
-    }
-
-    /**
-     * 执行多线程阻塞任务，主线程生产数据，异步线程消费数据并返回数据
-     *
-     * @param countFunction       count函数
-     * @param findDataFunction    数据查询函数
-     * @param blockTaskWithResult 任务函数（返回数据）
-     * @param step                步长
-     * @param <T>                 类型
-     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
-     */
-    public <T extends ExtremumField<V>, V extends Comparable<V>, R>
-    FutureResult<R> executeBlockTaskByExtremumLimit(CountFunction countFunction,
-                                                    FindDataExtremumLimitFunction<T> findDataFunction,
-                                                    BlockTaskWithResult<T, R> blockTaskWithResult,
-                                                    int step) throws InterruptedException {
-        beforeTask();
-        int count = countFunction.count();
-        if (count < 1) {
-            return FutureResult.empty();
-        }
-        // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
-        // 主线程同步获取数据传递至方法内
-        MainTask mainTask = () -> putDataToQueueByExtremumLimit(findDataFunction, step, count, queue);
-
-        List<Future<List<R>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
-
-        return new FutureResult<>(futures);
-    }
-
     /**
      * 开始任务，新建线程池并由主线程生产数据，线程池多线程执行消费数据
      *
@@ -206,7 +205,7 @@ public class ArrayBlockTaskDealer {
      * @param queue               队列
      * @param blockTaskWithResult 线程池阻塞任务
      * @param <T>                 类型
-     * @throws InterruptedException
+     * @throws InterruptedException 任务中断异常
      */
     private <T, R> List<Future<List<R>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<List<T>> queue,
                                                              BlockTaskWithResult<T, R> blockTaskWithResult) throws InterruptedException {
@@ -250,7 +249,7 @@ public class ArrayBlockTaskDealer {
      * @param count            总数
      * @param queue            队列
      * @param <T>              类型
-     * @throws InterruptedException
+     * @throws InterruptedException 任务中断异常
      */
     private <T> void putDataToQueueByLimit(FindDataFunction<T> findDataFunction,
                                            int step, int count,
@@ -281,10 +280,10 @@ public class ArrayBlockTaskDealer {
      * @param count            总数
      * @param queue            队列
      * @param <T>              类型
-     * @throws InterruptedException
+     * @throws InterruptedException 任务中断异常
      */
     private <T extends ExtremumField<V>, V extends Comparable<V>> void
-    putDataToQueueByExtremumLimit(FindDataExtremumLimitFunction<T> findDataFunction,
+    putDataToQueueOrderByExtremum(FindDataExtremumLimitFunction<T> findDataFunction,
                                   int step, int count,
                                   ArrayBlockingQueue<List<T>> queue) throws InterruptedException {
         try {

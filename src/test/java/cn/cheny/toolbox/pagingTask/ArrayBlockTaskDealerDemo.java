@@ -19,7 +19,7 @@ public class ArrayBlockTaskDealerDemo {
     public static void demo1() throws InterruptedException {
         long l = System.currentTimeMillis();
         ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8);
-        ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.executeBlockTask(() -> 2000, limit -> {
+        ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.execute(() -> 2000, limit -> {
             System.out.println("put data");
             int num = limit.getNum();
             ArrayList<HashMap<String, Object>> hashMaps = new ArrayList<>();
@@ -51,7 +51,7 @@ public class ArrayBlockTaskDealerDemo {
     public static void demo2() throws InterruptedException {
         AtomicInteger atomicInteger = new AtomicInteger(0);
         ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer();
-        ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.executeBlockTaskByExtremumLimit(
+        ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.executeOrderByExtremum(
                 () -> 2000,
                 limit -> {
                     System.out.println("max:" + limit.getExtremum());
