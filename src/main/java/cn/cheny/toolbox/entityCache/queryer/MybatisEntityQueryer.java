@@ -6,6 +6,7 @@ import javassist.*;
 import javassist.bytecode.AnnotationsAttribute;
 import javassist.bytecode.ClassFile;
 import javassist.bytecode.ConstPool;
+import javassist.bytecode.SignatureAttribute;
 import javassist.bytecode.annotation.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.session.SqlSession;
@@ -75,6 +76,8 @@ public class MybatisEntityQueryer implements EntityQueryer {
             CtClass typeMap = classPool.getCtClass(Map.class.getName());
             CtMethod queryMethod = CtNewMethod.abstractMethod(typeList, QUERY_METHOD_NAME,
                     new CtClass[]{typeMap}, null, cc);
+            queryMethod.setGenericSignature(
+                    SignatureAttribute.toMethodSignature("(Ljava/util/Map;)Ljava/util/List<Ljava/util/Map;>;").encode());
             // 添加注解
             ClassFile classFile = cc.getClassFile();
             ConstPool constPool = classFile.getConstPool();
@@ -92,6 +95,7 @@ public class MybatisEntityQueryer implements EntityQueryer {
             cc.addMethod(queryMethod);
             return cc.toClass();
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException("fail to create proxy queryer");
         }
     }
