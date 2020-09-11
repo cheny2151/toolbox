@@ -95,8 +95,7 @@ public class MybatisEntityQueryer implements EntityQueryer {
             cc.addMethod(queryMethod);
             return cc.toClass();
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("fail to create proxy queryer");
+            throw new RuntimeException("fail to create proxy queryer", e);
         }
     }
 
