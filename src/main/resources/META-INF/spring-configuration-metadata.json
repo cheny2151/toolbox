@@ -9,6 +9,13 @@
   "properties": [
     {
       "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
+      "name": "toolbox.entity-cache.enable",
+      "type": "java.lang.Boolean",
+      "defaultValue": "false",
+      "description": "entity buffer enable."
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
       "name": "toolbox.entity-cache.type",
       "type": "cn.cheny.toolbox.entityCache.BufferType",
       "defaultValue": "cn.cheny.toolbox.entityCache.BufferType.DEFAULT",

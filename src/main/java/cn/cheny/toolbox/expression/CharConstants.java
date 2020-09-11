@@ -67,17 +67,6 @@ public final class CharConstants {
     public final static Pattern ORIGIN_PATTERN = Pattern.compile(".*[+\\-*/%?&|><=!]$");
 
     /**
-     * 单个运算符正则
-     */
-    public final static Pattern OPERATOR_PATTERN = Pattern.compile("(([+\\-*/%?]|>=?|<=?)\\s*)|((==|!=?|&{1,2}|\\|{1,2})(\\s*!*)?)");
-
-    /**
-     * 一个或多个合法运算符正则(运算符前后不能重复出现运算符)
-     */
-    public final static Pattern LEGITIMATE_OPERATOR_PATTERN
-            = Pattern.compile("(((?![+\\-*/%?&|><=]).)*((([+\\-*/%?]|>=?|<=?)\\s*)|((==|!=?|&{1,2}|\\|{1,2})(\\s*!*)?))((?![+\\-*/%?&|><=]).)+)+");
-
-    /**
      * 存在运算符正则
      */
     public final static Pattern CONTAINS_OPERATOR_PATTERN = Pattern.compile("[+\\-*/%?><=|&!.]");
@@ -85,9 +74,9 @@ public final class CharConstants {
     /**
      * 存在函数正则
      */
-    public final static Pattern CONTAINS_FUNC = Pattern.compile("(?<=[a-zA-Z])\\s*\\(");
+    public final static Pattern CONTAINS_FUNC = Pattern.compile("([\\s+\\-*/%?&|><=!](?=[a-zA-Z_$])|(^[a-zA-Z_$]))[a-zA-Z0-9_$]*\\(");
 
-    /**
+ /**
      * 数字正则
      */
     public final static Pattern NUMBER = Pattern.compile("\\d+(\\.?\\d+)?");
