@@ -73,10 +73,13 @@ public class EntityBufferAutoScanner implements InitializingBean, DisposableBean
      */
     private void scheduled(List<Class<?>> classes) {
         Runnable task = () -> {
+            if (log.isDebugEnabled()){
+                log.debug("Start executing refresh entity buffer");
+            }
             try {
                 classes.parallelStream().forEach(entityBufferHolder::refreshCache);
             } catch (Throwable e) {
-                log.error("Execute refresh entity buffer error,cause:", e);
+                log.error("Executed refresh entity buffer error,cause:", e);
             }
         };
         if (entityBufferProperties.isAutoRefresh()) {
