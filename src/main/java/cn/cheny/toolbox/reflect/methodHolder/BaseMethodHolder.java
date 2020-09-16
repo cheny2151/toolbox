@@ -1,10 +1,10 @@
 package cn.cheny.toolbox.reflect.methodHolder;
 
+import cn.cheny.toolbox.reflect.methodHolder.exception.MethodHolderInvokeException;
 import cn.cheny.toolbox.reflect.methodHolder.exception.NoSuchMethodException;
+import cn.cheny.toolbox.reflect.methodHolder.model.MetaMethodCollect;
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
-import cn.cheny.toolbox.reflect.methodHolder.exception.MethodHolderInvokeException;
-import cn.cheny.toolbox.reflect.methodHolder.model.MetaMethodCollect;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
@@ -165,17 +165,21 @@ public abstract class BaseMethodHolder implements MethodHolder {
      * 修复不定参数,将最后一项参数(不定参数)包装为array，其他参数不变copy出新的Object[]
      *
      * @param args           参数
-     * @param type           不定参数类型
+     * @param arrayType      不定参数数组类型
      * @param parameterCount 方法参数个数
      * @return 修复后的数据
      */
-    private Object[] castToObjectArray(Object[] args, Class<?> type, int parameterCount) {
+    private Object[] castToObjectArray(Object[] args, Class<?> arrayType, int parameterCount) {
+        // 如果入参与方法参数长度一致，并且最后一个入参即为array类型，则直接返回原入参
+        if (args.length == parameterCount && args[parameterCount - 1].getClass().isArray()) {
+            return args;
+        }
         Object[] fixArgs = new Object[parameterCount];
         int defineNum = parameterCount - 1;
         // 非不定参数不变，copy
         System.arraycopy(args, 0, fixArgs, 0, defineNum);
         // 通过反射将不定参数包装到array中，存到fixArgs最后一位
-        Object array = Array.newInstance(type, args.length - parameterCount + 1);
+        Object array = Array.newInstance(arrayType, args.length - parameterCount + 1);
         int index = 0;
         for (int i = defineNum; i < args.length; i++) {
             Array.set(array, index++, args[i]);
