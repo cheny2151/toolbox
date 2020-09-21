@@ -49,6 +49,7 @@ public class ReflectExpressionExecutor extends BaseExpressionExecutor {
 
     @Override
     protected Object executeOperation(String expression, Map<String, Object> env, boolean cache) {
+        expression = expression.replace("null", "nil");
         AviatorExpressionParser aviator = AviatorExpressionParser.getInstance();
         ExpressionExecutor executor = cache ? aviator.parseExpressionWithCache(expression) : aviator.parseExpression(expression);
         return executor.execute(env);
