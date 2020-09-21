@@ -40,6 +40,7 @@ public class ReflectExpressionExecutor extends BaseExpressionExecutor {
 
     @Override
     public Object execute(Map<String, Object> env) {
+        beforeExecute();
         try {
             return executeFunc(parseResult.getFuncName(), parseResult.getArgs(), env);
         } catch (RuntimeException e) {
