@@ -1,8 +1,8 @@
 package cn.cheny.toolbox.scan;
 
+import cn.cheny.toolbox.scan.filter.ScanFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import cn.cheny.toolbox.scan.filter.ScanFilter;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,9 +40,6 @@ public class PathScanner {
 
     // 过滤器
     private ScanFilter scanFilter;
-
-    // 为root的路径
-    public final static String[] ROOT_PATH = new String[]{SEPARATE_CHARACTER, EMPTY_PATH};
 
     public PathScanner() {
     }
@@ -88,7 +85,6 @@ public class PathScanner {
      * @param parentPath 上级目录,以'.'为分隔符
      * @param file       文件
      * @param result     扫描结果集
-     * @param first      是否首次调用
      */
     private void scanClassInFile(String parentPath, File file, List<Class<?>> result) {
         // 结尾补'.'
@@ -111,7 +107,6 @@ public class PathScanner {
      * @param parentPath 上级目录,以'.'为分隔符
      * @param file       文件
      * @param result     扫描结果集
-     * @param first      是否首次调用
      */
     private void loadResourcesInFile(String parentPath, File file, List<Class<?>> result) {
         if (file.isFile()) {
@@ -134,7 +129,6 @@ public class PathScanner {
      *
      * @param parentPath 上级目录,以'.'为分隔符
      * @param directory  扫描的当前目录
-     * @param first      是否首次调用
      * @return 下一个包路径
      */
     private String getNextScanPath(String parentPath, File directory) {
@@ -147,7 +141,6 @@ public class PathScanner {
      * @param parentPath 上级目录,以'.'为分隔符
      * @param url        jar包的url资源
      * @param result     扫描结果集
-     * @param first      是否首次调用
      */
     private void scanClassInJar(String parentPath, URL url, List<Class<?>> result)
             throws ScanException {
@@ -170,9 +163,9 @@ public class PathScanner {
      * 从资源路径中获取URL实例
      *
      * @param scanPath     入参扫描
-     * @param resourcePath
-     * @return
-     * @throws ScanException
+     * @param resourcePath 资源路径
+     * @return 资源URL
+     * @throws ScanException 扫描异常
      */
     private URL getResource(String scanPath, String resourcePath) throws ScanException {
         URL resource = PathScanner.class.getClassLoader().getResource(resourcePath);
@@ -212,7 +205,7 @@ public class PathScanner {
      * @param parentPath     上级目录,以'.'为分隔符
      * @param jarInputStream jar文件流
      * @param result         结果合集
-     * @throws IOException
+     * @throws IOException IO异常
      */
     private void loadResourcesInJar(String parentPath, JarInputStream jarInputStream, List<Class<?>> result)
             throws IOException {
@@ -271,7 +264,7 @@ public class PathScanner {
      * 返回有效的子目录或文件
      *
      * @param cur 当前目录
-     * @return
+     * @return 有效的文件实体集合
      */
     private List<File> getEffectiveChildFiles(File cur) {
         File[] files = cur.listFiles((childFile) ->
@@ -284,7 +277,7 @@ public class PathScanner {
      * 提取有效路径，若最终结尾存在'.'则删除
      *
      * @param scanPath 扫描的路径
-     * @return
+     * @return 合法的扫描路径
      */
     private String extractEffectivePath(String scanPath) {
         StringBuilder pathBuilder = new StringBuilder(scanPath.replaceAll("/", "."));
