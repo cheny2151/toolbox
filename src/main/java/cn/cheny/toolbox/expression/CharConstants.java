@@ -59,7 +59,7 @@ public final class CharConstants {
     /**
      * 运算符开头正则
      */
-    public final static Pattern OPERATOR_START_PATTERN = Pattern.compile("^([+\\-*/%?><=|&!]).*");
+    public final static Pattern OPERATOR_START_PATTERN = Pattern.compile("^([+\\-*/%?><=|&!.]).*");
 
     /**
      * 运算符结尾正则
