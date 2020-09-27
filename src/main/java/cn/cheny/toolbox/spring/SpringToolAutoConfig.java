@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Configuration;
 public class SpringToolAutoConfig {
 
     @Bean("toolbox:springUtils")
-    @ConditionalOnMissingBean
+    @ConditionalOnMissingBean(name = "toolbox:springUtils")
     public SpringUtils springUtils() {
         return new SpringUtils();
     }
