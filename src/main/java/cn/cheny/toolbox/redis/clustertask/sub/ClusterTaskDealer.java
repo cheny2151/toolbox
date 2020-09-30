@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -43,9 +44,9 @@ public class ClusterTaskDealer {
     // 服务器注册执行任务标识
     private final static String REGISTERED_LABEL = "REGISTERED_COUNT";
 
-    private RedisTemplate<String, String> redisTemplate;
+    private final RedisExecutor redisExecutor;
 
-    private RedisExecutor redisExecutor;
+    private RedisTemplate<String, String> redisTemplate;
 
     private ExecutorService taskExecutor;
 
@@ -83,8 +84,9 @@ public class ClusterTaskDealer {
             Object RemainingNum = redisExecutor.execute(REGISTERED_LUA_SCRIPT, keys, Collections.singletonList("-1"));
             if ((long) RemainingNum == 0) {
                 log.info("【集群任务】任务taskId:{},所有服务器执行完毕", taskId);
-                // 清除任务
-                redisTemplate.delete(fullKey);
+                // 清除任务(兼容高低spring版本)
+                byte[] rawKey = fullKey.getBytes(StandardCharsets.UTF_8);
+                redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
                 // 执行任务完成回调
                 subscriber.afterAllTask();
             }
