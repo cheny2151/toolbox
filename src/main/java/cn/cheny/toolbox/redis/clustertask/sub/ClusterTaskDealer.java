@@ -70,8 +70,8 @@ public class ClusterTaskDealer {
     public void registeredTask(String taskId, int concurrentNums, ClusterTaskSubscriber subscriber) {
 
         List<String> keys = new ArrayList<>();
-        String fullKey = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_PRE_KEY, taskId, null);
-        keys.add(fullKey);
+        String taskRedisKey = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_PRE_KEY, taskId, null);
+        keys.add(taskRedisKey);
         keys.add(REGISTERED_LABEL);
 
         long time = System.currentTimeMillis();
@@ -86,7 +86,7 @@ public class ClusterTaskDealer {
             if ((long) RemainingNum == 0) {
                 log.info("【集群任务】任务taskId:{},所有服务器执行完毕", taskId);
                 // 清除任务(兼容高低spring版本)
-                byte[] rawKey = fullKey.getBytes(StandardCharsets.UTF_8);
+                byte[] rawKey = taskRedisKey.getBytes(StandardCharsets.UTF_8);
                 redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
                 // 执行任务完成回调
                 subscriber.afterAllTask();
