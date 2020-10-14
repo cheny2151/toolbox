@@ -48,7 +48,7 @@
         <jackson-core.version>2.9.2</jackson-core.version>
         <jackson-databind.version>2.9.10.5</jackson-databind.version>
         <fastjson.version>1.2.62</fastjson.version>
-        <junit.version>4.12</junit.version>
+        <junit.version>4.13.1</junit.version>
         <lombok.version>1.18.2</lombok.version>
         <zxing.version>3.3.3</zxing.version>
         <aviator.version>4.2.7</aviator.version>
