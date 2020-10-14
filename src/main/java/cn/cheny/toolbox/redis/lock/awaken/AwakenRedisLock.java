@@ -61,7 +61,7 @@ public abstract class AwakenRedisLock extends RedisLockAdaptor {
             }
         } catch (Exception e) {
             log.error("try lock error", e);
-            return false;
+            result = null;
         }
 
         boolean isLock = result == null;
