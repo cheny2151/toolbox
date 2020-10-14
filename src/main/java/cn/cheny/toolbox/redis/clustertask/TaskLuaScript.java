@@ -23,7 +23,7 @@ public class TaskLuaScript {
      */
     public static final String REGISTERED_LUA_SCRIPT =
             "if (redis.call('exists', KEYS[1]) == 1) then " +
-                    "local count = redis.call('hincrby', KEYS[1], KEYS[2], ARGV[1]); " +
+                    "local count = redis.call('hincrby', KEYS[1], ARGV[1], ARGV[2]); " +
                     "return count; " +
                     "end;" +
                     "return nil; ";

@@ -72,17 +72,21 @@ public class ClusterTaskDealer {
         List<String> keys = new ArrayList<>();
         String taskRedisKey = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_PRE_KEY, taskId, null);
         keys.add(taskRedisKey);
-        keys.add(REGISTERED_LABEL);
+        List<String> args = new ArrayList<>();
+        args.add(REGISTERED_LABEL);
 
         long time = System.currentTimeMillis();
         try {
             // 执行lua脚本注册任务 v1.1.0
-            redisExecutor.execute(REGISTERED_LUA_SCRIPT, keys, Collections.singletonList("1"));
+            args.add("1");
+            redisExecutor.execute(REGISTERED_LUA_SCRIPT, keys, args);
             this.distributionTask(taskId, concurrentNums, subscriber);
             log.info("【集群任务】任务taskId:{},本机执行完毕,本机耗时:{}秒", taskId, (System.currentTimeMillis() - time) / 1000);
         } finally {
+            args.remove(1);
+            args.add("-1");
             // 执行lua脚本获取当前剩余注册数
-            Object RemainingNum = redisExecutor.execute(REGISTERED_LUA_SCRIPT, keys, Collections.singletonList("-1"));
+            Object RemainingNum = redisExecutor.execute(REGISTERED_LUA_SCRIPT, keys, args);
             if ((long) RemainingNum == 0) {
                 log.info("【集群任务】任务taskId:{},所有服务器执行完毕", taskId);
                 // 清除任务(兼容高低spring版本)
@@ -186,11 +190,10 @@ public class ClusterTaskDealer {
         Integer dataNums = taskInfo.getDataNums();
         List<String> keys = new ArrayList<>();
         keys.add(taskRedisKey);
-        keys.add("stepCount");
         long stepCount;
         try {
             // 执行lua脚本获取当前步长
-            Object executeResult = redisExecutor.execute(ADD_STEP_LUA_SCRIPT, keys, Collections.emptyList());
+            Object executeResult = redisExecutor.execute(ADD_STEP_LUA_SCRIPT, keys, Collections.singletonList("stepCount"));
             if (executeResult == null) {
                 // 已经被其他线程删除
                 return LimitResult.completed();
