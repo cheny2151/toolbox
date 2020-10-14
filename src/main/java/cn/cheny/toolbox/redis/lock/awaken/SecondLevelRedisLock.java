@@ -99,7 +99,7 @@ public class SecondLevelRedisLock extends AwakenRedisLock {
         keys.add(path);
         keys.add(getChannelName());
         ArrayList<String> args = new ArrayList<>();
-        keys.add(LOCK_TYPE_FLAG);
+        args.add(LOCK_TYPE_FLAG);
         args.add(AWAKE_MESSAGE);
         args.add(String.valueOf(type));
         if (TYPE_SECOND_LEVEL == type) {
