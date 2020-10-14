@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.redis.clustertask.pub;
 
+import cn.cheny.toolbox.redis.RedisKeyUtils;
 import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.clustertask.TaskInfo;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,7 @@ public class DefaultClusterTaskPublisher implements ClusterTaskPublisher {
 
     @Override
     public void publish(String taskId, int dataNums, int stepSize, int concurrentNums, boolean desc, Map<String, Object> header) {
-        String taskRedisKey = CLUSTER_TASK_PRE_KEY + taskId;
+        String taskRedisKey = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_PRE_KEY, taskId, null);
         Boolean exists = redisTemplate.hasKey(taskRedisKey);
         if (exists != null && exists) {
             log.info("【集群任务】任务taskId:{}未结束，无法分配新任务", taskId);
@@ -43,7 +44,8 @@ public class DefaultClusterTaskPublisher implements ClusterTaskPublisher {
         redisTemplate.expire(taskRedisKey, TaskConfig.KEY_EXPIRE_SECONDS, TimeUnit.SECONDS);
         // pub task
         log.info("【集群任务】发布集群任务：taskId->{},数量->{}", taskId, dataNums);
-        redisTemplate.convertAndSend(CLUSTER_TASK_CHANNEL_PRE_KEY + taskId, String.valueOf(concurrentNums));
+        String channel = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_CHANNEL_PRE_KEY, taskId, null);
+        redisTemplate.convertAndSend(channel, String.valueOf(concurrentNums));
     }
 
 }

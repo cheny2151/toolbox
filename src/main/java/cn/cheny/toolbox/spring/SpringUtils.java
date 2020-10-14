@@ -3,9 +3,7 @@ package cn.cheny.toolbox.spring;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
 
 import java.util.Collection;
 
@@ -23,10 +21,13 @@ public class SpringUtils implements ApplicationContextAware {
 
     private static Environment env;
 
+    private static boolean inSpring = false;
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
+        SpringUtils.inSpring = true;
     }
 
     public static <T> T getBean(String name, Class<T> tClass) {
@@ -45,4 +46,7 @@ public class SpringUtils implements ApplicationContextAware {
         return env;
     }
 
+    public static boolean isInSpring() {
+        return inSpring;
+    }
 }

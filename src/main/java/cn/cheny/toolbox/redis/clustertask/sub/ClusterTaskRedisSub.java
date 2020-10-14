@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.redis.clustertask.sub;
 
+import cn.cheny.toolbox.redis.RedisKeyUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
@@ -27,7 +28,7 @@ public class ClusterTaskRedisSub implements MessageListener {
     public void onMessage(Message message, byte[] bytes) {
         String concurrentNums = new String(message.getBody(), StandardCharsets.UTF_8);
         String channel = new String(message.getChannel());
-        String taskId = channel.replace(CLUSTER_TASK_CHANNEL_PRE_KEY, "");
+        String taskId = RedisKeyUtils.splitKeyCore(channel);
         log.info("订阅集群任务,taskId:{}", taskId);
         clusterTaskSubscriberHolder.executeSub(taskId, Integer.parseInt(concurrentNums));
     }

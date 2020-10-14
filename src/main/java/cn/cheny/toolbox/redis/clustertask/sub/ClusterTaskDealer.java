@@ -2,6 +2,7 @@ package cn.cheny.toolbox.redis.clustertask.sub;
 
 import cn.cheny.toolbox.other.page.Limit;
 import cn.cheny.toolbox.redis.RedisConfiguration;
+import cn.cheny.toolbox.redis.RedisKeyUtils;
 import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.clustertask.TaskInfo;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
@@ -69,7 +70,7 @@ public class ClusterTaskDealer {
     public void registeredTask(String taskId, int concurrentNums, ClusterTaskSubscriber subscriber) {
 
         List<String> keys = new ArrayList<>();
-        String fullKey = CLUSTER_TASK_PRE_KEY + taskId;
+        String fullKey = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_PRE_KEY, taskId, null);
         keys.add(fullKey);
         keys.add(REGISTERED_LABEL);
 
@@ -101,8 +102,10 @@ public class ClusterTaskDealer {
 
         // 重置活动状态
         subscriber.resetActive();
-
-        TaskInfo taskInfo = getTaskInfo(taskId);
+        // 任务redis key
+        String taskRedisKey = RedisKeyUtils.generatedSafeKey(CLUSTER_TASK_PRE_KEY, taskId, null);
+        // redis中获取任务信息
+        TaskInfo taskInfo = getTaskInfo(taskRedisKey);
 
         if (!taskInfo.isValid()) {
             log.info("【集群任务】无需执行任务,所有分页已被其他节点消费");
@@ -117,13 +120,15 @@ public class ClusterTaskDealer {
             Callable<String> task = () -> {
                 try {
                     LimitResult limitResult;
-                    while (subscriber.isActive() && (limitResult = getLimit(taskInfo)).isSuccess()) {
+                    while (subscriber.isActive() && (limitResult = getLimit(taskInfo, taskRedisKey)).isSuccess()) {
                         Limit limit = limitResult.getResult();
-                        log.info("【集群任务】开始执行集群任务,ID:'{}'，数据总数:{},limit:{{},{}}", taskId, taskInfo.getDataNums(), limit.getNum(), limit.getSize());
+                        log.info("【集群任务】开始执行集群任务,ID:'{}'，数据总数:{},limit:{{},{}}",
+                                taskId, taskInfo.getDataNums(), limit.getNum(), limit.getSize());
                         try {
                             subscriber.execute(taskInfo, limit);
                         } catch (Exception e) {
-                            log.error("【集群任务】执行线程任务,ID:'{}'，limit:{{},{}}异常:{}", taskId, limit.getNum(), limit.getSize(), e);
+                            log.error("【集群任务】执行线程任务,ID:'{}'，limit:{{},{}}异常:{}",
+                                    taskId, limit.getNum(), limit.getSize(), e);
                             subscriber.error(e);
                         }
                     }
@@ -160,12 +165,12 @@ public class ClusterTaskDealer {
     /**
      * 获取任务信息
      *
-     * @param taskId 任务id
+     * @param taskRedisKey 任务key
      * @return 任务信息实体
      */
-    private TaskInfo getTaskInfo(String taskId) {
+    private TaskInfo getTaskInfo(String taskRedisKey) {
         HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
-        Map<String, String> taskInfo = hashOperations.entries(CLUSTER_TASK_PRE_KEY + taskId);
+        Map<String, String> taskInfo = hashOperations.entries(taskRedisKey);
         return new TaskInfo(taskInfo);
     }
 
@@ -175,13 +180,11 @@ public class ClusterTaskDealer {
      * @param taskInfo 任务信息
      * @return 分页实体
      */
-    private LimitResult getLimit(TaskInfo taskInfo) {
-        String taskId = taskInfo.getTaskId();
+    private LimitResult getLimit(TaskInfo taskInfo, String taskRedisKey) {
         // 分页步长
         Integer stepSize = taskInfo.getStepSize();
         Integer dataNums = taskInfo.getDataNums();
         List<String> keys = new ArrayList<>();
-        String taskRedisKey = CLUSTER_TASK_PRE_KEY + taskId;
         keys.add(taskRedisKey);
         keys.add("stepCount");
         long stepCount;

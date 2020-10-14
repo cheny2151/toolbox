@@ -31,14 +31,17 @@ public abstract class AbstractMapRedisClient<V> extends AbstractRedisClient<V> i
 
     @Override
     public Map<String, V> HMGetForMap(String k) {
-        Map<String, V> map;
-        return (map = getHashOperationForMap().entries(k)) == null || map.size() == 0 ? null : map;
+        return getHashOperationForMap().entries(k);
     }
 
     @Override
     public List<V> HValuesForMap(String k) {
-        List<V> values;
-        return (values = getHashOperationForMap().values(k)) == null || values.size() == 0 ? null : values;
+        return getHashOperationForMap().values(k);
+    }
+
+    @Override
+    public long Hlen(String key) {
+        return getHashOperationForMap().size(key);
     }
 
 }

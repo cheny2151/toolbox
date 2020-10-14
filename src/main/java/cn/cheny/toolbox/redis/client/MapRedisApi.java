@@ -22,4 +22,6 @@ public interface MapRedisApi<V> {
 
     List<V> HValuesForMap(String k);
 
+    long Hlen(String key);
+
 }
