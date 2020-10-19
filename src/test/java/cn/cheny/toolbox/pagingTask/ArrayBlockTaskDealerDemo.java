@@ -49,8 +49,9 @@ public class ArrayBlockTaskDealerDemo {
     }
 
     public static void demo2() throws InterruptedException {
+        long l = System.currentTimeMillis();
         AtomicInteger atomicInteger = new AtomicInteger(0);
-        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer();
+        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8,false);
         ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.executeOrderByExtremum(
                 () -> 2000,
                 limit -> {
@@ -66,6 +67,7 @@ public class ArrayBlockTaskDealerDemo {
                 },
                 data -> {
                     try {
+                        System.out.println(Thread.currentThread().getName());
                         Thread.sleep(3000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -76,6 +78,7 @@ public class ArrayBlockTaskDealerDemo {
                 100);
         find_end.getResults();
         System.out.println("~~~");
+        System.out.println(System.currentTimeMillis() - l);
     }
 
     private static class TestEntity implements ExtremumField<Integer> {
