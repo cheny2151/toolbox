@@ -13,12 +13,12 @@ import java.util.stream.Collectors;
 public class ArrayBlockTaskDealerDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        demo2();
+        demo1();
     }
 
     public static void demo1() throws InterruptedException {
         long l = System.currentTimeMillis();
-        ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8);
+        ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8,true);
         ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.execute(() -> 2000, limit -> {
             System.out.println("put data");
             int num = limit.getNum();
@@ -36,7 +36,7 @@ public class ArrayBlockTaskDealerDemo {
             return hashMaps;
         }, data -> {
             try {
-                System.out.println(data);
+                System.out.println(data.size());
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -44,7 +44,7 @@ public class ArrayBlockTaskDealerDemo {
             return data;
         }, 100);
         List<HashMap<String, Object>> results = futureResult.getResults();
-        System.out.println(results);
+        System.out.println(results.size());
         System.out.println(System.currentTimeMillis() - l);
     }
 

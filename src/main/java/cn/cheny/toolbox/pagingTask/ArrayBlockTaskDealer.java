@@ -30,7 +30,7 @@ public class ArrayBlockTaskDealer {
     private int threadNum;
 
     /**
-     * 队列容量
+     * 队列容量(默认为线程的2/3倍)
      */
     private int queueNum;
 
@@ -215,10 +215,10 @@ public class ArrayBlockTaskDealer {
         List<Future<List<R>>> futures = new ArrayList<>();
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum);
-        // 异步订阅任务
-        Callable<List<R>> task = createTaskWithResult(queue, blockTaskWithResult);
         // 启动线程池调用任务
         for (int i = 0; i < this.threadNum; i++) {
+            // 异步订阅任务
+            Callable<List<R>> task = createTaskWithResult(queue, blockTaskWithResult);
             futures.add(executorService.submit(task));
         }
 
@@ -227,7 +227,7 @@ public class ArrayBlockTaskDealer {
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
             try {
-                List<R> call = task.call();
+                List<R> call = createTaskWithResult(queue, blockTaskWithResult).call();
                 futures.add(new WrapFeature<>(call));
             } catch (Exception e) {
                 log.error("主线程协助执行异常", e);
@@ -285,9 +285,7 @@ public class ArrayBlockTaskDealer {
                         if (data != null) {
                             List<R> taskResult = blockTaskWithResult.execute(data);
                             if (taskResult != null) {
-                                synchronized (rs) {
-                                    rs.addAll(taskResult);
-                                }
+                                rs.addAll(taskResult);
                             }
                         }
                     } catch (Exception e) {
