@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.redis.lock.awaken.listener;
 
+import cn.cheny.toolbox.redis.client.jedis.JedisClient;
 import cn.cheny.toolbox.redis.lock.LockConstant;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPubSub;
@@ -7,7 +8,7 @@ import redis.clients.jedis.JedisPubSub;
 import java.util.LinkedList;
 
 /**
- * todo 未实现
+ * jedis实现订阅锁释放得广播
  *
  * @author cheney
  * @date 2019/6/6
@@ -15,18 +16,19 @@ import java.util.LinkedList;
 @Slf4j
 public class JedisSubLockManager extends JedisPubSub implements SubLockManager {
 
-    private LinkedList<LockListener> LockListeners = new LinkedList<>();
+    private final LinkedList<LockListener> LockListeners = new LinkedList<>();
 
     private final Object lock = new Object();
 
-    public JedisSubLockManager() {
+    private JedisClient jedisClient;
+
+    public JedisSubLockManager(JedisClient jedisClient) {
         super();
-        super.psubscribe(LockConstant.LOCK_CHANNEL + "*");
+        this.jedisClient = jedisClient;
     }
 
     @Override
     public void onPMessage(String pattern, String channel, String message) {
-        log.info("收到解锁信号{}", channel);
         if (AWAKE_MESSAGE.equals(message)) {
             synchronized (lock) {
                 LockListeners.stream()
@@ -42,5 +44,19 @@ public class JedisSubLockManager extends JedisPubSub implements SubLockManager {
         synchronized (lock) {
             LockListeners.add(lockListener);
         }
+    }
+
+    @Override
+    public void init() {
+        // 开启订阅线程
+        new Thread(() -> {
+            try {
+                String channel = LockConstant.LOCK_CHANNEL + "*";
+                jedisClient.psubscribe(this, channel);
+            } catch (Exception e) {
+                init();
+                log.error("订阅线程异常,执行重新订阅");
+            }
+        }).start();
     }
 }

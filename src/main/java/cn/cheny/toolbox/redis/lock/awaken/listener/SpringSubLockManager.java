@@ -14,7 +14,7 @@ import java.util.LinkedList;
 @Slf4j
 public class SpringSubLockManager implements MessageListener, SubLockManager {
 
-    private LinkedList<LockListener> LockListeners = new LinkedList<>();
+    private final LinkedList<LockListener> LockListeners = new LinkedList<>();
 
     private final Object lock = new Object();
 

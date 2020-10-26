@@ -15,4 +15,6 @@ public interface SubLockManager {
 
     void addMessageListener(LockListener lockListener);
 
+   default void init(){};
+
 }
