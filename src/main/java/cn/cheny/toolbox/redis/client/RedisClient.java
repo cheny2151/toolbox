@@ -53,15 +53,14 @@ public interface RedisClient<V> {
 
     //------------------------------ hash common------------------------------
 
-    boolean HHasKey(String k, String hk);
+    boolean hHasKey(String k, String hk);
 
-    Set<String> HKeys(String k);
+    Set<String> hKeys(String k);
 
-    long HDel(String k, String hk);
+    long hDel(String k, String hk);
 
-    List<V> HMGet(String k,Collection<String> hks);
+    List<V> hValues(String k, Collection<String> hks);
 
-    List<V> HVals(String k);
-
+    List<V> hValues(String k);
 
 }

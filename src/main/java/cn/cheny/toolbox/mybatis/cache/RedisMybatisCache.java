@@ -28,19 +28,19 @@ public class RedisMybatisCache implements Cache {
     @Override
     public void putObject(Object key, Object o) {
         JsonRedisClient<Object> redisClient = getRedisClient();
-        redisClient.HSetForMap(id, key.toString(), o);
+        redisClient.hSet(id, key.toString(), o);
     }
 
     @Override
     public Object getObject(Object key) {
         JsonRedisClient<Object> redisClient = getRedisClient();
-        return redisClient.HGetForMap(id, key.toString());
+        return redisClient.hGet(id, key.toString());
     }
 
     @Override
     public Object removeObject(Object key) {
         JsonRedisClient<Object> redisClient = getRedisClient();
-        redisClient.HDel(id, key.toString());
+        redisClient.hDel(id, key.toString());
         return null;
     }
 
@@ -53,7 +53,7 @@ public class RedisMybatisCache implements Cache {
     @Override
     public int getSize() {
         JsonRedisClient<Object> redisClient = getRedisClient();
-        return (int) redisClient.Hlen(id);
+        return (int) redisClient.hLen(id);
     }
 
     @SuppressWarnings("unchecked")
