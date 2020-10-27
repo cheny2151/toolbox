@@ -28,4 +28,8 @@ public class RedisConfiguration {
     public void setRedisManagerFactory(RedisManagerFactory redisManagerFactory) {
         this.redisManagerFactory = redisManagerFactory;
     }
+
+    public static void setDefaultRedisManagerFactory(RedisManagerFactory redisManagerFactory) {
+        DEFAULT.setRedisManagerFactory(redisManagerFactory);
+    }
 }

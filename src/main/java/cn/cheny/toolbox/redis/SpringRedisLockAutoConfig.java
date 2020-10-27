@@ -91,7 +91,7 @@ public class SpringRedisLockAutoConfig {
     @DependsOn("toolbox:springUtils")
     public RedisConfiguration redisConfiguration() {
         SpringRedisManagerFactory setRedisManagerFactory = new SpringRedisManagerFactory();
-        RedisConfiguration.DEFAULT.setRedisManagerFactory(setRedisManagerFactory);
+        RedisConfiguration.setDefaultRedisManagerFactory(setRedisManagerFactory);
         return RedisConfiguration.DEFAULT;
     }
 

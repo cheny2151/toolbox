@@ -34,6 +34,7 @@
 
     <properties>
         <java.version>1.8</java.version>
+        <test.skip>true</test.skip>
 
         <compiler-plugin.version>3.7.0</compiler-plugin.version>
         <war-plugin.version>3.2.0</war-plugin.version>
@@ -168,6 +169,7 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <skip>${test.skip}</skip>
                 </configuration>
             </plugin>
         </plugins>

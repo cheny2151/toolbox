@@ -25,7 +25,7 @@ public class ClientTest {
         JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
         JedisClient jedisClient = factory.cacheClient();
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
-        RedisConfiguration.DEFAULT.setRedisManagerFactory(jedisLockFactory);
+        RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
         try (RedisLock redisLock = new ReentrantRedisLock("test")) {
             if (redisLock.tryLock(1000, 1000, TimeUnit.MILLISECONDS)) {
                 System.out.println("获取锁成功");
@@ -42,7 +42,7 @@ public class ClientTest {
     public void testForCluster() throws InterruptedException {
         JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
         JedisClient jedisClient = factory.cacheClient();
-        RedisConfiguration.DEFAULT.setRedisManagerFactory(new JedisManagerFactory(jedisClient));
+        RedisConfiguration.setDefaultRedisManagerFactory(new JedisManagerFactory(jedisClient));
         ClusterTaskPublisher clusterTaskPublisher = JedisClusterHelper.initJedisCluster(factory);
         clusterTaskPublisher.publish("test", 100, 10, 1, true);
         Thread.sleep(10000);
