@@ -9,13 +9,12 @@ import cn.cheny.toolbox.POIUtils.entity.ReadResult;
 import cn.cheny.toolbox.POIUtils.exception.WorkBookReadException;
 import cn.cheny.toolbox.POIUtils.utils.CellDealFunction;
 import cn.cheny.toolbox.POIUtils.utils.CellDealUtils;
+import cn.cheny.toolbox.reflect.ReflectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.poi.hssf.usermodel.HSSFDateUtil;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import cn.cheny.toolbox.reflect.ReflectUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -79,7 +78,7 @@ public class WorkBookReader {
             Row titleRow = sheet.getRow(titleRowNum);
             Map<Integer, String> titleMap = new HashMap<>();
             titleRow.forEach(cell -> {
-                String title = cellDealFunction.dealTitle(cell.getStringCellValue());
+                String title = cellDealFunction.dealTitle("col_" + cell.getAddress().getColumn(), cell.getStringCellValue());
                 titleMap.put(cell.getColumnIndex(), title);
             });
             List<Map<String, Object>> results = new ArrayList<>();
@@ -225,25 +224,9 @@ public class WorkBookReader {
         // 负责回写的字段
         List<String> writeBackKeys = excelReadInfo.getWriteBackKeys();
         HSSFColor.HSSFColorPredefined color = excelReadInfo.getWriteBackColumnColor();
-        // 写入标题
-        int currentColumnNum = titleCount + 1;
-        for (String title : writeBackKeys) {
-            Cell cell = sheet.getRow(titleRowNum).createCell(currentColumnNum++);
-            cell.setCellValue(title);
-            setFontColor(workbook, color, cell);
-        }
         // 写数据
         Map<Integer, Map<String, Object>> dataIndexMap = readResult.getDataIndexMap();
-        dataIndexMap.forEach((index, value) -> {
-            int _currentColumnNum = titleCount + 1;
-            for (String key : writeBackKeys) {
-                Object cellValue = value.get(key);
-                if (cellValue != null) {
-                    Cell cell = sheet.getRow(index).createCell(_currentColumnNum++);
-                    cell.setCellValue(cellValue.toString());
-                }
-            }
-        });
+        writeSheet(workbook, sheet, dataIndexMap, writeBackKeys, color, titleRowNum, titleCount);
     }
 
     /**
@@ -291,13 +274,13 @@ public class WorkBookReader {
      */
     private Object getCellValue(Cell cell, CellDealFunction cellDealFunction) {
         Object value;
-        switch (cell.getCellTypeEnum()) {
+        switch (cell.getCellType()) {
             case STRING: {
                 value = cellDealFunction.dealVal(cell.getStringCellValue());
                 break;
             }
             case NUMERIC: {
-                if (HSSFDateUtil.isCellDateFormatted(cell)) {
+                if (DateUtil.isCellDateFormatted(cell)) {
                     value = cell.getDateCellValue();
                 } else {
                     value = cell.getNumericCellValue();
@@ -374,7 +357,7 @@ public class WorkBookReader {
     /**
      * 设置字体颜色
      */
-    private void setFontColor(Workbook workbook, HSSFColor.HSSFColorPredefined color, Cell cell) {
+    private static void setFontColor(Workbook workbook, HSSFColor.HSSFColorPredefined color, Cell cell) {
         CellStyle cellStyle = workbook.createCellStyle();
         Font font = workbook.createFont();
         font.setColor(color.getIndex());
@@ -382,5 +365,40 @@ public class WorkBookReader {
         cell.setCellStyle(cellStyle);
     }
 
+    /**
+     * 回写数据到sheet
+     *
+     * @param workbook      写数据的excel
+     * @param sheet         写数据的sheet
+     * @param writeBackData 写入的数据,key为行号
+     * @param writeBackKeys 写数据的keys
+     * @param titleColor    标题颜色
+     * @param titleRowNum   写入标题的行号
+     * @param titleColNum   写入标题的列号
+     */
+    public static <T> void writeSheet(Workbook workbook, Sheet sheet,
+                                      Map<Integer, Map<String, T>> writeBackData,
+                                      List<String> writeBackKeys,
+                                      HSSFColor.HSSFColorPredefined titleColor,
+                                      int titleRowNum, int titleColNum) {
+        // 写入标题
+        int currentColumnNum = titleColNum;
+        for (String title : writeBackKeys) {
+            Cell cell = sheet.getRow(titleRowNum).createCell(currentColumnNum++);
+            cell.setCellValue(title);
+            setFontColor(workbook, titleColor, cell);
+        }
+        // 写数据
+        writeBackData.forEach((index, value) -> {
+            int _currentColumnNum = titleColNum;
+            for (String key : writeBackKeys) {
+                Object cellValue = value.get(key);
+                if (cellValue != null) {
+                    Cell cell = sheet.getRow(index).createCell(_currentColumnNum++);
+                    cell.setCellValue(cellValue.toString());
+                }
+            }
+        });
+    }
 
 }
