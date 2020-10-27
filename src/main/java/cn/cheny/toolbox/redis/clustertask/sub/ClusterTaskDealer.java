@@ -7,10 +7,7 @@ import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.clustertask.TaskInfo;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -42,20 +39,29 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 @Slf4j
 public class ClusterTaskDealer {
 
-    // 服务器注册执行任务标识
+    /**
+     * 服务器注册执行任务标识
+     */
     private final static String REGISTERED_LABEL = "REGISTERED_COUNT";
 
+    /**
+     * redis执行器
+     */
     private final RedisExecutor redisExecutor;
 
-    private RedisTemplate<String, String> redisTemplate;
-
+    /**
+     * 任务线程池
+     */
     private ExecutorService taskExecutor;
 
-    public ClusterTaskDealer(RedisTemplate<String, String> redisTemplate,
+    public ClusterTaskDealer(ExecutorService taskExecutor) {
+        this(RedisConfiguration.DEFAULT.getRedisManagerFactory().getRedisExecutor(), taskExecutor);
+    }
+
+    public ClusterTaskDealer(RedisExecutor redisExecutor,
                              ExecutorService taskExecutor) {
-        this.redisTemplate = redisTemplate;
         this.taskExecutor = taskExecutor;
-        this.redisExecutor = RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor();
+        this.redisExecutor = redisExecutor;
     }
 
 
@@ -90,8 +96,7 @@ public class ClusterTaskDealer {
             if ((long) RemainingNum == 0) {
                 log.info("【集群任务】任务taskId:{},所有服务器执行完毕", taskId);
                 // 清除任务(兼容高低spring版本)
-                byte[] rawKey = taskRedisKey.getBytes(StandardCharsets.UTF_8);
-                redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
+                redisExecutor.del(taskRedisKey);
                 // 执行任务完成回调
                 subscriber.afterAllTask();
             }
@@ -173,8 +178,7 @@ public class ClusterTaskDealer {
      * @return 任务信息实体
      */
     private TaskInfo getTaskInfo(String taskRedisKey) {
-        HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
-        Map<String, String> taskInfo = hashOperations.entries(taskRedisKey);
+        Map<String, String> taskInfo = redisExecutor.hgetall(taskRedisKey);
         return new TaskInfo(taskInfo);
     }
 
@@ -231,7 +235,7 @@ public class ClusterTaskDealer {
      * @param key 任务key
      */
     private void extendedExpire(String key) {
-        redisTemplate.expire(key, TaskConfig.KEY_EXPIRE_SECONDS, TimeUnit.SECONDS);
+        redisExecutor.expire(key, TaskConfig.KEY_EXPIRE_SECONDS, TimeUnit.SECONDS);
     }
 
 }

@@ -1,8 +1,10 @@
 package cn.cheny.toolbox.redis;
 
 import cn.cheny.toolbox.redis.client.jedis.JedisClient;
+import cn.cheny.toolbox.redis.clustertask.jedis.JedisClusterHelper;
+import cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher;
 import cn.cheny.toolbox.redis.factory.JedisClientFactory;
-import cn.cheny.toolbox.redis.factory.JedisLockFactory;
+import cn.cheny.toolbox.redis.factory.JedisManagerFactory;
 import cn.cheny.toolbox.redis.lock.RedisLock;
 import cn.cheny.toolbox.redis.lock.awaken.ReentrantRedisLock;
 import org.junit.Test;
@@ -19,18 +21,31 @@ public class ClientTest {
      * 依赖jedis的锁用例
      */
     @Test
-    public void test() {
+    public void testForRedisKey() {
         JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
         JedisClient jedisClient = factory.cacheClient();
-        JedisLockFactory jedisLockFactory = new JedisLockFactory(jedisClient);
-        RedisConfiguration.DEFAULT.setRedisLockFactory(jedisLockFactory);
+        JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(jedisLockFactory);
         try (RedisLock redisLock = new ReentrantRedisLock("test")) {
             if (redisLock.tryLock(1000, 1000, TimeUnit.MILLISECONDS)) {
-                        System.out.println("获取锁成功");
+                System.out.println("获取锁成功");
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 依赖jedis的集群用例
+     */
+    @Test
+    public void testForCluster() throws InterruptedException {
+        JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
+        JedisClient jedisClient = factory.cacheClient();
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(new JedisManagerFactory(jedisClient));
+        ClusterTaskPublisher clusterTaskPublisher = JedisClusterHelper.initJedisCluster(factory);
+        clusterTaskPublisher.publish("test", 100, 10, 1, true);
+        Thread.sleep(10000);
     }
 
 }

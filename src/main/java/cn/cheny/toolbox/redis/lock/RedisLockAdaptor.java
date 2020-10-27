@@ -51,7 +51,7 @@ public abstract class RedisLockAdaptor implements RedisLock {
 
     public RedisLockAdaptor(String path) {
         this.path = "{" + pathPreLabel() + path + "}";
-        this.redisExecutor = RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor();
+        this.redisExecutor = RedisConfiguration.DEFAULT.getRedisManagerFactory().getRedisExecutor();
     }
 
 

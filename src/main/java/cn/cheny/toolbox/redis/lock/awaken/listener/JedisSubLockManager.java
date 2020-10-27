@@ -54,8 +54,8 @@ public class JedisSubLockManager extends JedisPubSub implements SubLockManager {
                 String channel = LockConstant.LOCK_CHANNEL + "*";
                 jedisClient.psubscribe(this, channel);
             } catch (Exception e) {
+                log.error("redis锁订阅线程异常,执行重新订阅", e);
                 init();
-                log.error("订阅线程异常,执行重新订阅");
             }
         }).start();
     }

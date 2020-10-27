@@ -4,12 +4,12 @@ import cn.cheny.toolbox.redis.lock.awaken.listener.SubLockManager;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 
 /**
- * redis lock依赖类工厂接口
+ * redis工具依赖类工厂接口
  *
  * @author cheney
  * @date 2019/6/6
  */
-public interface RedisLockFactory {
+public interface RedisManagerFactory {
 
     SubLockManager getSubLockManager();
 

@@ -12,11 +12,11 @@ import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
  * @author cheney
  * @date 2020-10-26
  */
-public class JedisLockFactory extends CacheLockFactory {
+public class JedisManagerFactory extends CacheManagerFactory {
 
     private JedisClient jedisClient;
 
-    public JedisLockFactory(JedisClient jedisClient) {
+    public JedisManagerFactory(JedisClient jedisClient) {
         this.jedisClient = jedisClient;
     }
 

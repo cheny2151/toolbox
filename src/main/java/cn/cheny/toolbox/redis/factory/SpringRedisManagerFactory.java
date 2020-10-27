@@ -16,7 +16,7 @@ import java.util.Collection;
  * @author cheney
  * @date 2020-08-17
  */
-public class SpringRedisLockFactory extends CacheLockFactory {
+public class SpringRedisManagerFactory extends CacheManagerFactory {
 
     @Override
     protected SubLockManager newSubLockManager() {
@@ -37,8 +37,9 @@ public class SpringRedisLockFactory extends CacheLockFactory {
     }
 
     @Override
+    @SuppressWarnings({"unchecked", "rawtypes"})
     protected RedisExecutor newRedisExecutor() {
-        RedisTemplate redisTemplate = null;
+        RedisTemplate<String,String> redisTemplate = null;
         try {
             redisTemplate = SpringUtils.getBean("stringRedisTemplate", RedisTemplate.class);
         } catch (Exception e) {

@@ -35,7 +35,7 @@ public abstract class AwakenRedisLock extends RedisLockAdaptor {
 
     public AwakenRedisLock(String path) {
         super(path);
-        subLockManager = RedisConfiguration.DEFAULT.getRedisLockFactory().getSubLockManager();
+        subLockManager = RedisConfiguration.DEFAULT.getRedisManagerFactory().getSubLockManager();
     }
 
     public boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit) {

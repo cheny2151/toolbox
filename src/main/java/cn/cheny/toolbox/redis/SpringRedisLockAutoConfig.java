@@ -5,9 +5,9 @@ import cn.cheny.toolbox.redis.client.impl.JsonRedisClient;
 import cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher;
 import cn.cheny.toolbox.redis.clustertask.pub.DefaultClusterTaskPublisher;
 import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskDealer;
-import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskRedisSub;
-import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskSubscriberHolder;
-import cn.cheny.toolbox.redis.factory.SpringRedisLockFactory;
+import cn.cheny.toolbox.redis.clustertask.sub.SpringClusterTaskRedisSub;
+import cn.cheny.toolbox.redis.clustertask.sub.SpringClusterTaskSubscriberHolder;
+import cn.cheny.toolbox.redis.factory.SpringRedisManagerFactory;
 import cn.cheny.toolbox.redis.lock.LockConstant;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SpringSubLockManager;
 import cn.cheny.toolbox.spring.SpringToolAutoConfig;
@@ -90,8 +90,8 @@ public class SpringRedisLockAutoConfig {
     @Bean(name = "toolbox:redisConfiguration")
     @DependsOn("toolbox:springUtils")
     public RedisConfiguration redisConfiguration() {
-        SpringRedisLockFactory springRedisLockFactory = new SpringRedisLockFactory();
-        RedisConfiguration.DEFAULT.setRedisLockFactory(springRedisLockFactory);
+        SpringRedisManagerFactory setRedisManagerFactory = new SpringRedisManagerFactory();
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(setRedisManagerFactory);
         return RedisConfiguration.DEFAULT;
     }
 
@@ -106,32 +106,31 @@ public class SpringRedisLockAutoConfig {
     }
 
     @Bean
-    public ClusterTaskPublisher clusterTaskPublisher(@Qualifier("stringRedisTemplate") StringRedisTemplate redisTemplate) {
-        return new DefaultClusterTaskPublisher(redisTemplate);
+    public ClusterTaskPublisher clusterTaskPublisher() {
+        return new DefaultClusterTaskPublisher();
     }
 
     @Bean
-    public ClusterTaskDealer clusterTaskDealer(@Qualifier("stringRedisTemplate") StringRedisTemplate redisTemplate,
-                                               @Qualifier("toolbox:clusterTask") ExecutorService clusterTask) {
-        return new ClusterTaskDealer(redisTemplate, clusterTask);
+    public ClusterTaskDealer clusterTaskDealer(@Qualifier("toolbox:clusterTask") ExecutorService clusterTask) {
+        return new ClusterTaskDealer(clusterTask);
     }
 
     @Bean
     @ConditionalOnBean(name = "clusterTaskDealer")
-    public ClusterTaskSubscriberHolder clusterTaskSubscriberHolder(ClusterTaskDealer clusterTaskDealer) {
-        return new ClusterTaskSubscriberHolder(clusterTaskDealer);
+    public SpringClusterTaskSubscriberHolder clusterTaskSubscriberHolder(ClusterTaskDealer clusterTaskDealer) {
+        return new SpringClusterTaskSubscriberHolder(clusterTaskDealer);
     }
 
     @Bean
     @ConditionalOnBean(name = "clusterTaskSubscriberHolder")
-    public ClusterTaskRedisSub clusterTaskRedisSub(ClusterTaskSubscriberHolder clusterTaskSubscriberHolder) {
-        return new ClusterTaskRedisSub(clusterTaskSubscriberHolder);
+    public SpringClusterTaskRedisSub clusterTaskRedisSub(SpringClusterTaskSubscriberHolder clusterTaskSubscriberHolder) {
+        return new SpringClusterTaskRedisSub(clusterTaskSubscriberHolder);
     }
 
     @Bean
     public RedisMessageListenerContainer redisMessageListenerContainer(RedisConnectionFactory redisConnectionFactory,
                                                                        SpringSubLockManager springSubLockManager,
-                                                                       ClusterTaskRedisSub clusterTaskRedisSub) {
+                                                                       SpringClusterTaskRedisSub clusterTaskRedisSub) {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
         Map<MessageListener, Collection<? extends Topic>> messageListeners = new HashMap<>();

@@ -7,8 +7,6 @@ import org.springframework.data.redis.connection.MessageListener;
 
 import java.nio.charset.StandardCharsets;
 
-import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTER_TASK_CHANNEL_PRE_KEY;
-
 /**
  * redis集群任务订阅器
  *
@@ -16,11 +14,11 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
  * @date 2019-09-03
  */
 @Slf4j
-public class ClusterTaskRedisSub implements MessageListener {
+public class SpringClusterTaskRedisSub implements MessageListener {
 
-    private ClusterTaskSubscriberHolder clusterTaskSubscriberHolder;
+    private final SpringClusterTaskSubscriberHolder clusterTaskSubscriberHolder;
 
-    public ClusterTaskRedisSub(ClusterTaskSubscriberHolder clusterTaskSubscriberHolder) {
+    public SpringClusterTaskRedisSub(SpringClusterTaskSubscriberHolder clusterTaskSubscriberHolder) {
         this.clusterTaskSubscriberHolder = clusterTaskSubscriberHolder;
     }
 
