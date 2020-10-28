@@ -15,11 +15,11 @@ import cn.cheny.toolbox.spring.SpringToolAutoConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -48,6 +48,7 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
  */
 @Configuration
 @AutoConfigureAfter({SpringToolAutoConfig.class, RedisAutoConfiguration.class})
+@ConditionalOnClass({RedisTemplate.class})
 public class SpringRedisLockAutoConfig {
 
     @Bean
@@ -88,17 +89,17 @@ public class SpringRedisLockAutoConfig {
         return new JsonRedisClient<>(redisTemplate);
     }
 
-    @Bean(name = "toolbox:redisConfiguration")
-    @DependsOn("toolbox:springUtils")
-    public RedisConfiguration redisConfiguration() {
-        SpringRedisManagerFactory setRedisManagerFactory = new SpringRedisManagerFactory();
-        RedisConfiguration.setDefaultRedisManagerFactory(setRedisManagerFactory);
-        return RedisConfiguration.DEFAULT;
-    }
-
     @Bean
     public SpringSubLockManager springSubLockManager() {
         return new SpringSubLockManager();
+    }
+
+    @Bean(name = "toolbox:redisConfiguration")
+    public RedisConfiguration redisConfiguration(SpringSubLockManager springSubLockManager,
+                                                 @Qualifier("stringRedisTemplate") StringRedisTemplate stringRedisTemplate) {
+        SpringRedisManagerFactory setRedisManagerFactory = new SpringRedisManagerFactory(springSubLockManager, stringRedisTemplate);
+        RedisConfiguration.setDefaultRedisManagerFactory(setRedisManagerFactory);
+        return RedisConfiguration.DEFAULT;
     }
 
     @Bean(name = "toolbox:clusterTask", destroyMethod = "shutdown")
