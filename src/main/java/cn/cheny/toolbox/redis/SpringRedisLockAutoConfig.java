@@ -10,6 +10,7 @@ import cn.cheny.toolbox.redis.clustertask.sub.SpringClusterTaskSubscriberHolder;
 import cn.cheny.toolbox.redis.factory.SpringRedisManagerFactory;
 import cn.cheny.toolbox.redis.lock.LockConstant;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SpringSubLockManager;
+import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import cn.cheny.toolbox.spring.SpringToolAutoConfig;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -106,13 +107,16 @@ public class SpringRedisLockAutoConfig {
     }
 
     @Bean
-    public ClusterTaskPublisher clusterTaskPublisher() {
-        return new DefaultClusterTaskPublisher();
+    public ClusterTaskPublisher clusterTaskPublisher(@Qualifier("toolbox:redisConfiguration") RedisConfiguration redisConfiguration) {
+        RedisExecutor redisExecutor = redisConfiguration.getRedisManagerFactory().getRedisExecutor();
+        return new DefaultClusterTaskPublisher(redisExecutor);
     }
 
     @Bean
-    public ClusterTaskDealer clusterTaskDealer(@Qualifier("toolbox:clusterTask") ExecutorService clusterTask) {
-        return new ClusterTaskDealer(clusterTask);
+    public ClusterTaskDealer clusterTaskDealer(@Qualifier("toolbox:redisConfiguration") RedisConfiguration redisConfiguration,
+                                               @Qualifier("toolbox:clusterTask") ExecutorService clusterTask) {
+        RedisExecutor redisExecutor = redisConfiguration.getRedisManagerFactory().getRedisExecutor();
+        return new ClusterTaskDealer(redisExecutor, clusterTask);
     }
 
     @Bean
