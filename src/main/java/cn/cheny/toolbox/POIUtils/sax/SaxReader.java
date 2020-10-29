@@ -288,6 +288,7 @@ public class SaxReader {
                 }
                 currentRow++;
                 currentCol = -1;
+                c = 0;
                 data = new ArrayList<>();
             }
         }
@@ -377,6 +378,7 @@ public class SaxReader {
             this.sheetCount = count;
             this.currentRow = 0;
             this.currentCol = -1;
+            this.c = 0;
             this.data = new ArrayList<>();
         }
     }
