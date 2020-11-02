@@ -10,6 +10,7 @@ import org.apache.poi.xssf.eventusermodel.XSSFReader;
 import org.apache.poi.xssf.model.SharedStringsTable;
 import org.apache.poi.xssf.model.StylesTable;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -305,12 +306,17 @@ public class SaxReader {
             String cellType = attributes.getValue("t");
             if (cellType == null) {
                 nextType = CellType.NUMBER;
-            } else if (cellType.equals("s")) {
-                nextType = CellType.STRING;
             } else if (cellType.equals("e")) {
                 nextType = CellType.ERROR;
             } else if (cellType.equals("b")) {
                 nextType = CellType.BOOLE;
+            } else if ("str".equals(cellType)) {
+                nextType = CellType.FORMULA;
+            } else if ("inlineStr".equals(cellType)) {
+                nextType = CellType.INLINESTR;
+            } else {
+                // 其余都当作String处理
+                nextType = CellType.STRING;
             }
             String cellStyleStr = attributes.getValue("s");
             if (cellStyleStr != null) {
@@ -335,8 +341,12 @@ public class SaxReader {
         public String getNextValue() {
             switch (nextType) {
                 case STRING: {
-                    int idx = Integer.parseInt(lastContents);
-                    return sst.getItemAt(idx).getString();
+                    try {
+                        int idx = Integer.parseInt(lastContents);
+                        return sst.getItemAt(idx).getString();
+                    } catch (NumberFormatException e) {
+                        return lastContents;
+                    }
                 }
                 case NUMBER: {
                     return dataFormatString == null ?
@@ -352,6 +362,9 @@ public class SaxReader {
                 }
                 case ERROR: {
                     return "\"ERROR:" + lastContents + "\"";
+                }
+                case INLINESTR: {
+                    return new XSSFRichTextString(lastContents).toString();
                 }
                 default: {
                     return lastContents;
@@ -391,7 +404,9 @@ public class SaxReader {
         STRING,
         DATE,
         BOOLE,
-        ERROR
+        ERROR,
+        FORMULA,
+        INLINESTR
     }
 
     @FunctionalInterface
