@@ -9,7 +9,7 @@ import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
  * @author cheney
  * @date 2020-08-17
  */
-public abstract class CacheLockFactory implements RedisLockFactory {
+public abstract class CacheManagerFactory implements RedisManagerFactory {
 
     /**
      * 锁订阅Manager

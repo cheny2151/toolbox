@@ -30,10 +30,11 @@
 
     <groupId>io.github.cheny2151</groupId>
     <artifactId>toolbox</artifactId>
-    <version>1.2.2</version>
+    <version>2.0.0-jdk8</version>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>1.8</java.version>
+        <test.skip>true</test.skip>
 
         <compiler-plugin.version>3.7.0</compiler-plugin.version>
         <war-plugin.version>3.2.0</war-plugin.version>
@@ -44,7 +45,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <commons-lang3.version>3.9</commons-lang3.version>
-        <poi-ooxml.version>3.17</poi-ooxml.version>
+        <poi-ooxml.version>4.1.2</poi-ooxml.version>
         <jackson-core.version>2.9.2</jackson-core.version>
         <jackson-databind.version>2.9.10.5</jackson-databind.version>
         <fastjson.version>1.2.62</fastjson.version>
@@ -168,6 +169,7 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <skip>${test.skip}</skip>
                 </configuration>
             </plugin>
         </plugins>

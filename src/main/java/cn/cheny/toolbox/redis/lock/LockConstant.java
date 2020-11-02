@@ -57,28 +57,28 @@ public class LockConstant {
 
     /**
      * 二级锁上锁脚本
-     * keys:1,一级Path;2,type标识KEY
-     * ARGV:1,过期时间;2,type值;3,二级path
+     * keys:1,一级Path
+     * ARGV:1,type标识KEY;2,过期时间;3,type值;4,二级path
      * <p>
      * 返回：null代表上锁成功;数值为过期时间
      */
-    public static final String SECONDARY_LOCK_LUA_SCRIPT = "local type = tonumber(ARGV[2]);" +
+    public static final String SECONDARY_LOCK_LUA_SCRIPT = "local type = tonumber(ARGV[3]);" +
             "if (redis.call('exists', KEYS[1]) == 0) then " +
-            "redis.call('hset', KEYS[1], KEYS[2], type);" +
+            "redis.call('hset', KEYS[1], ARGV[1], type);" +
             "if (type == 1) then " +
-            "redis.call('hset', KEYS[1], ARGV[3], 1)" +
+            "redis.call('hset', KEYS[1], ARGV[4], 1)" +
             "end;" +
-            "if (tonumber(ARGV[1]) > 0) then " +
-            "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+            "if (tonumber(ARGV[2]) > 0) then " +
+            "redis.call('pexpire', KEYS[1], ARGV[2]); " +
             "end;" +
             "return nil; " +
             "end; " +
             // 注意：必须已上锁类型和欲上锁类型都为二级锁(1)才需要执行二级锁逻辑，否则直接返回上锁失败的剩余过期时间
-            "if (tonumber(redis.call('hget', KEYS[1], KEYS[2])) == 1 and type == 1) then " +
-            "if(redis.call('hexists', KEYS[1], ARGV[3]) == 0) then " +
-            "redis.call('hset', KEYS[1], ARGV[3], 1);" +
-            "if (tonumber(ARGV[1]) > 0) then " +
-            "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+            "if (tonumber(redis.call('hget', KEYS[1], ARGV[1])) == 1 and type == 1) then " +
+            "if(redis.call('hexists', KEYS[1], ARGV[4]) == 0) then " +
+            "redis.call('hset', KEYS[1], ARGV[4], 1);" +
+            "if (tonumber(ARGV[2]) > 0) then " +
+            "redis.call('pexpire', KEYS[1], ARGV[2]); " +
             "end;" +
             "return nil;" +
             "end;" +
@@ -87,32 +87,32 @@ public class LockConstant {
 
     /**
      * 二级锁解锁脚本
-     * keys:1,一级Path;2,type标识KEY;3,channel名
-     * ARGV:1,channel信息;2,type值;3,二级path
+     * keys:1,一级Path;2,channel名
+     * ARGV:1,type标识KEY;2,channel信息;3,type值;4,二级path
      * 注意：释放二级锁(hdel hkey)后需要检查hash长度(hlen)是否为1，为1时(只有type标识数据)释放一级锁。
      * <p>
      * 返回：1代表解锁成功/已经解锁;null代表未持有该锁
      */
-    public static final String SECONDARY_UNLOCK_LUA_SCRIPT = "local type = tonumber(ARGV[2]);" +
+    public static final String SECONDARY_UNLOCK_LUA_SCRIPT = "local type = tonumber(ARGV[3]);" +
             "if (redis.call('exists', KEYS[1]) == 0) then " +
-            "redis.call('publish', KEYS[3], ARGV[1]);" +
+            "redis.call('publish', KEYS[2], ARGV[2]);" +
             "return 1;" +
             "end;" +
-            "if (tonumber(redis.call('hget', KEYS[1], KEYS[2])) == type) then " +
+            "if (tonumber(redis.call('hget', KEYS[1], ARGV[1])) == type) then " +
             "if (type == 0) then " +
             "redis.call('del', KEYS[1]);" +
             "else " +
-            "if (redis.call('hexists', KEYS[1], ARGV[3]) == 0) then " +
-            "redis.call('publish', KEYS[3], ARGV[1]);" +
+            "if (redis.call('hexists', KEYS[1], ARGV[4]) == 0) then " +
+            "redis.call('publish', KEYS[2], ARGV[2]);" +
             "return nil;" +
             "end;" +
-            "redis.call('hdel', KEYS[1], ARGV[3]);" +
+            "redis.call('hdel', KEYS[1], ARGV[4]);" +
             // 检查是否释放一级锁
             "if (redis.call('hlen', KEYS[1]) == 1) then " +
             "redis.call('del', KEYS[1]);" +
             "end;" +
             "end;" +
-            "redis.call('publish', KEYS[3], ARGV[1]); " +
+            "redis.call('publish', KEYS[2], ARGV[2]); " +
             "return 1; " +
             "end;" +
             "return nil;";
@@ -155,7 +155,7 @@ public class LockConstant {
 
     /**
      * 多路径锁解锁脚本
-     * keys:1,锁Path;2,路径set的key;3,channel路径
+     * keys:1,锁Path;2,channel路径
      * ARGV:1,channel信息;剩余的为路径值，需将路径值存放到set中
      * <p>
      * 返回：1,代表目前路径解锁成功/已经解锁;null代表未持有该锁

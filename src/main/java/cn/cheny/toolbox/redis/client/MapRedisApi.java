@@ -10,16 +10,16 @@ public interface MapRedisApi<V> {
 
     //------------------------------ hash for map------------------------------
 
-    void HMSetForMap(String k, Map<String, V> kv, int days);
+    void hSetMap(String k, Map<String, V> kv, int days);
 
-    void HMSetForMap(String k, Map<String, V> kv);
+    void hSetMap(String k, Map<String, V> kv);
 
-    void HSetForMap(String k, String hk, V v);
+    void hSet(String k, String hk, V v);
 
-    V HGetForMap(String k, String hk);
+    V hGet(String k, String hk);
 
-    Map<String, V> HMGetForMap(String k);
+    Map<String, V> hGetMap(String k);
 
-    List<V> HValuesForMap(String k);
+    long hLen(String key);
 
 }

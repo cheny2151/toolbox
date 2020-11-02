@@ -41,7 +41,7 @@ public class RateLimiter {
     private RedisExecutor redisExecutor;
 
     public RateLimiter(String path, int maxPermits, int rate) {
-        this(path, maxPermits, rate, RedisConfiguration.DEFAULT.getRedisLockFactory().getRedisExecutor());
+        this(path, maxPermits, rate, RedisConfiguration.DEFAULT.getRedisManagerFactory().getRedisExecutor());
     }
 
     public RateLimiter(String path, int maxPermits, int rate, RedisExecutor redisExecutor) {

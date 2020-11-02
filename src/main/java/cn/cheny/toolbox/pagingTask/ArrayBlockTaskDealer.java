@@ -25,28 +25,37 @@ public class ArrayBlockTaskDealer {
     private final static int DEFAULT_THREAD_NUM = 8;
 
     /**
-     * 默认队列容量
-     */
-    private final static int DEFAULT_QUEUE_CAPACITY = 4;
-
-    /**
      * 线程个数
      */
     private int threadNum;
+
+    /**
+     * 队列容量(默认为线程的2/3倍)
+     */
+    private int queueNum;
 
     /**
      * 结束标识
      */
     private volatile boolean finish;
 
+    /**
+     * 主线程是否帮助执行
+     */
+    private boolean mainHelpTask;
+
     public ArrayBlockTaskDealer() {
-        threadNum = DEFAULT_THREAD_NUM;
-        finish = true;
+        this(DEFAULT_THREAD_NUM, false);
     }
 
     public ArrayBlockTaskDealer(int threadNum) {
-        this.threadNum = threadNum;
-        finish = true;
+        this(threadNum, false);
+    }
+
+    public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask) {
+        this.finish = true;
+        this.mainHelpTask = mainHelpTask;
+        setThreadNum(threadNum);
     }
 
     /**
@@ -67,7 +76,7 @@ public class ArrayBlockTaskDealer {
             return;
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
+        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
@@ -93,7 +102,7 @@ public class ArrayBlockTaskDealer {
             return;
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
+        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
@@ -120,7 +129,7 @@ public class ArrayBlockTaskDealer {
             return FutureResult.empty();
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
+        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
@@ -150,7 +159,7 @@ public class ArrayBlockTaskDealer {
             return FutureResult.empty();
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(DEFAULT_QUEUE_CAPACITY);
+        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
@@ -173,27 +182,21 @@ public class ArrayBlockTaskDealer {
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum);
         // 异步订阅任务
+        Runnable task = createTask(queue, blockTask);
         for (int i = 0; i < this.threadNum; i++) {
-            executorService.submit(() -> {
-                try {
-                    List<T> data;
-                    while ((data = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
-                        try {
-                            if (data != null) {
-                                blockTask.execute(data);
-                            }
-                        } catch (Exception e) {
-                            log.error("执行任务分片异常", e);
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    log.error("队列poll数据异常:", e);
-                }
-            });
+            executorService.submit(task);
         }
 
         // 主线程同步获取数据
         mainTask.run();
+        // 查看主线程帮助执行任务
+        if (mainHelpTask) {
+            try {
+                task.run();
+            } catch (Exception e) {
+                log.error("主线程协助执行异常", e);
+            }
+        }
         // 关闭线程池
         executorService.shutdown();
     }
@@ -212,33 +215,88 @@ public class ArrayBlockTaskDealer {
         List<Future<List<R>>> futures = new ArrayList<>();
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum);
-        // 异步订阅任务
+        // 启动线程池调用任务
         for (int i = 0; i < this.threadNum; i++) {
-            futures.add(executorService.submit(() -> {
-                List<R> rs = new ArrayList<>();
-                List<T> data;
-                try {
-                    while ((data = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
-                        try {
-                            if (data != null) {
-                                rs.addAll(blockTaskWithResult.execute(data));
-                            }
-                        } catch (Exception e) {
-                            log.error("执行任务分片异常", e);
-                        }
-                    }
-                } catch (InterruptedException e) {
-                    log.error("队列poll数据异常:", e);
-                }
-                return rs;
-            }));
+            // 异步订阅任务
+            Callable<List<R>> task = createTaskWithResult(queue, blockTaskWithResult);
+            futures.add(executorService.submit(task));
         }
 
         // 主线程同步获取数据
         mainTask.run();
+        // 查看主线程帮助执行任务
+        if (mainHelpTask) {
+            try {
+                List<R> call = createTaskWithResult(queue, blockTaskWithResult).call();
+                futures.add(new WrapFeature<>(call));
+            } catch (Exception e) {
+                log.error("主线程协助执行异常", e);
+            }
+        }
         // 关闭线程池
         executorService.shutdown();
         return futures;
+    }
+
+    /**
+     * 创建带返回类型的callback任务
+     *
+     * @param queue     队列
+     * @param blockTask 任务体
+     * @param <T>       泛型：数据类型
+     */
+    private <T> Runnable createTask(ArrayBlockingQueue<List<T>> queue,
+                                    BlockTask<T> blockTask) {
+        return () -> {
+            try {
+                List<T> data;
+                while ((data = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                    try {
+                        if (data != null) {
+                            blockTask.execute(data);
+                        }
+                    } catch (Exception e) {
+                        log.error("执行任务分片异常", e);
+                    }
+                }
+            } catch (InterruptedException e) {
+                log.error("队列poll数据异常:", e);
+            }
+        };
+    }
+
+    /**
+     * 创建带返回类型的callback任务
+     *
+     * @param queue               队列
+     * @param blockTaskWithResult 任务体
+     * @param <T>                 泛型：数据类型
+     * @param <R>                 泛型：返回类型
+     * @return callback任务
+     */
+    private <T, R> Callable<List<R>> createTaskWithResult(ArrayBlockingQueue<List<T>> queue,
+                                                          BlockTaskWithResult<T, R> blockTaskWithResult) {
+        List<R> rs = new ArrayList<>();
+        return () -> {
+            List<T> data;
+            try {
+                while ((data = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                    try {
+                        if (data != null) {
+                            List<R> taskResult = blockTaskWithResult.execute(data);
+                            if (taskResult != null) {
+                                rs.addAll(taskResult);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("执行任务分片异常", e);
+                    }
+                }
+            } catch (InterruptedException e) {
+                log.error("队列poll数据异常:", e);
+            }
+            return rs;
+        };
     }
 
     /**
@@ -316,6 +374,36 @@ public class ArrayBlockTaskDealer {
         finish = false;
     }
 
+    public int getThreadNum() {
+        return threadNum;
+    }
+
+    public int getQueueNum() {
+        return queueNum;
+    }
+
+    public boolean isMainHelpTask() {
+        return mainHelpTask;
+    }
+
+    public void setMainHelpTask(boolean mainHelpTask) {
+        this.mainHelpTask = mainHelpTask;
+    }
+
+    public void setThreadNum(int threadNum) {
+        this.threadNum = threadNum;
+        setQueueNum();
+    }
+
+    private void setQueueNum() {
+        // 默认队列容量为线程数的0.75倍
+        int queueNum = (int) (this.threadNum * 0.75);
+        if (queueNum == 0) {
+            queueNum = 1;
+        }
+        this.queueNum = queueNum;
+    }
+
     /**
      * 异步任务执行结果封装
      *
@@ -356,6 +444,40 @@ public class ArrayBlockTaskDealer {
 
     public interface MainTask {
         void run() throws InterruptedException;
+    }
+
+    public static class WrapFeature<V> implements Future<V> {
+
+        private V data;
+
+        public WrapFeature(V data) {
+            this.data = data;
+        }
+
+        @Override
+        public boolean cancel(boolean mayInterruptIfRunning) {
+            return false;
+        }
+
+        @Override
+        public boolean isCancelled() {
+            return false;
+        }
+
+        @Override
+        public boolean isDone() {
+            return true;
+        }
+
+        @Override
+        public V get() throws InterruptedException, ExecutionException {
+            return data;
+        }
+
+        @Override
+        public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
+            return data;
+        }
     }
 
 }

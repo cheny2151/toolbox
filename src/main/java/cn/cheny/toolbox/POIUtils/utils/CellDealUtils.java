@@ -29,7 +29,7 @@ public class CellDealUtils implements CellDealFunction {
     }
 
     @Override
-    public String dealTitle(Object cellVal) {
+    public String dealTitle(String reference,Object cellVal) {
         return dealCellTitle(cellVal == null ? "" : cellVal.toString());
     }
 }

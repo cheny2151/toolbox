@@ -1,16 +1,21 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
+import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.exception.RedisScriptException;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 整合spring执行lua脚本
@@ -21,9 +26,9 @@ import java.util.List;
 @Slf4j
 public class SpringRedisExecutor implements RedisExecutor {
 
-    private RedisTemplate redisTemplate;
+    private final RedisTemplate<String, String> redisTemplate;
 
-    public SpringRedisExecutor(RedisTemplate redisTemplate) {
+    public SpringRedisExecutor(RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
@@ -32,7 +37,40 @@ public class SpringRedisExecutor implements RedisExecutor {
         return execute(redisTemplate, script, keys, args);
     }
 
-    private Object execute(RedisTemplate redisTemplate, String script, List<String> keys, List<String> args) {
+    @Override
+    public void del(String key) {
+        byte[] rawKey = key.getBytes(StandardCharsets.UTF_8);
+        redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
+    }
+
+    @Override
+    public Map<String, String> hgetall(String key) {
+        HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
+        return hashOperations.entries(key);
+    }
+
+    @Override
+    public void expire(String key, long time, TimeUnit timeUnit) {
+        redisTemplate.expire(key, TaskConfig.KEY_EXPIRE_SECONDS, timeUnit);
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        Boolean hasKey = redisTemplate.hasKey(key);
+        return hasKey != null && hasKey;
+    }
+
+    @Override
+    public void hset(String key, Map<String, String> map) {
+        redisTemplate.opsForHash().putAll(key, map);
+    }
+
+    @Override
+    public void publish(String channel, String msg) {
+        redisTemplate.convertAndSend(channel, msg);
+    }
+
+    private Object execute(RedisTemplate<String, String> redisTemplate, String script, List<String> keys, List<String> args) {
         final List<String> finalKeys = keys == null ? Collections.emptyList() : keys;
         final List<String> finalArgs = args == null ? Collections.emptyList() : args;
 

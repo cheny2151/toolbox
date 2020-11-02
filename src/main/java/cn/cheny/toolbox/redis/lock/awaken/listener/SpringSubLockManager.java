@@ -4,8 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;
 
-import java.util.LinkedList;
-
 /**
  * 订阅redis解锁信息
  *
@@ -14,29 +12,29 @@ import java.util.LinkedList;
 @Slf4j
 public class SpringSubLockManager implements MessageListener, SubLockManager {
 
-    private LinkedList<LockListener> LockListeners = new LinkedList<>();
+    private final LockListeners LockListeners;
 
-    private final Object lock = new Object();
+    public SpringSubLockManager() {
+        // 默认为公平队列
+        this(true);
+    }
+
+    public SpringSubLockManager(boolean fair) {
+        LockListeners = fair ? new LockListeners.FairLockListeners() : new LockListeners.NonFairLockListeners();
+    }
 
     @Override
     public void onMessage(Message message, byte[] bytes) {
         String unlockMsg = new String(message.getBody());
         String channel = new String(message.getChannel());
         if (AWAKE_MESSAGE.equals(unlockMsg)) {
-            synchronized (lock) {
-                LockListeners.stream()
-                        .filter(lockListener -> channel.equals(lockListener.getListenerChannel()))
-                        .forEach(LockListener::handleListener);
-                LockListeners.removeIf(lockListener -> channel.equals(lockListener.getListenerChannel()));
-            }
+            LockListeners.awake(channel);
         }
     }
 
     @Override
     public void addMessageListener(LockListener lockListener) {
-        synchronized (lock) {
-            LockListeners.add(lockListener);
-        }
+        LockListeners.addLockListener(lockListener);
     }
 
 }

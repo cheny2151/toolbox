@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.client.impl;
 
-import cn.cheny.toolbox.redis.client.AbstractMapRedisClient;
+import cn.cheny.toolbox.redis.client.spring.AbstractMapRedisClient;
 import cn.cheny.toolbox.redis.client.MapRedisApi;
 import cn.cheny.toolbox.redis.client.ObjectRedisApi;
 import com.alibaba.fastjson.JSON;

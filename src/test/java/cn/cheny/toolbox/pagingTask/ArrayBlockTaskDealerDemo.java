@@ -13,12 +13,12 @@ import java.util.stream.Collectors;
 public class ArrayBlockTaskDealerDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        demo2();
+        demo1();
     }
 
     public static void demo1() throws InterruptedException {
         long l = System.currentTimeMillis();
-        ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8);
+        ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8,true);
         ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.execute(() -> 2000, limit -> {
             System.out.println("put data");
             int num = limit.getNum();
@@ -36,7 +36,7 @@ public class ArrayBlockTaskDealerDemo {
             return hashMaps;
         }, data -> {
             try {
-                System.out.println(data);
+                System.out.println(data.size());
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -44,13 +44,14 @@ public class ArrayBlockTaskDealerDemo {
             return data;
         }, 100);
         List<HashMap<String, Object>> results = futureResult.getResults();
-        System.out.println(results);
+        System.out.println(results.size());
         System.out.println(System.currentTimeMillis() - l);
     }
 
     public static void demo2() throws InterruptedException {
+        long l = System.currentTimeMillis();
         AtomicInteger atomicInteger = new AtomicInteger(0);
-        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer();
+        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8,false);
         ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.executeOrderByExtremum(
                 () -> 2000,
                 limit -> {
@@ -66,6 +67,7 @@ public class ArrayBlockTaskDealerDemo {
                 },
                 data -> {
                     try {
+                        System.out.println(Thread.currentThread().getName());
                         Thread.sleep(3000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -76,6 +78,7 @@ public class ArrayBlockTaskDealerDemo {
                 100);
         find_end.getResults();
         System.out.println("~~~");
+        System.out.println(System.currentTimeMillis() - l);
     }
 
     private static class TestEntity implements ExtremumField<Integer> {

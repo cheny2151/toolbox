@@ -1,6 +1,5 @@
 package cn.cheny.toolbox.redis.lock.awaken;
 
-import cn.cheny.toolbox.redis.factory.RedisLockFactory;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -79,8 +78,8 @@ public class SecondLevelRedisLock extends AwakenRedisLock {
     protected Object LockScript(long leaseTime) {
         List<String> keys = new ArrayList<>();
         keys.add(path);
-        keys.add(LOCK_TYPE_FLAG);
         List<String> args = new ArrayList<>();
+        args.add(LOCK_TYPE_FLAG);
         args.add(String.valueOf(leaseTime));
         args.add(String.valueOf(type));
         if (type == 1) {
@@ -97,9 +96,9 @@ public class SecondLevelRedisLock extends AwakenRedisLock {
     protected Object unLockScript() {
         ArrayList<String> keys = new ArrayList<>();
         keys.add(path);
-        keys.add(LOCK_TYPE_FLAG);
         keys.add(getChannelName());
         ArrayList<String> args = new ArrayList<>();
+        args.add(LOCK_TYPE_FLAG);
         args.add(AWAKE_MESSAGE);
         args.add(String.valueOf(type));
         if (TYPE_SECOND_LEVEL == type) {

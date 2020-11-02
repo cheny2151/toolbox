@@ -1,7 +1,7 @@
 package cn.cheny.toolbox.redis;
 
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
-import cn.cheny.toolbox.redis.factory.RedisLockFactory;
+import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
 
 /**
  * redis全局配置
@@ -13,19 +13,23 @@ public class RedisConfiguration {
 
     public static final RedisConfiguration DEFAULT = new RedisConfiguration();
 
-    private RedisLockFactory redisLockFactory;
+    private RedisManagerFactory redisManagerFactory;
 
     private RedisConfiguration() {
     }
 
-    public RedisLockFactory getRedisLockFactory() {
-        if (redisLockFactory == null) {
+    public RedisManagerFactory getRedisManagerFactory() {
+        if (redisManagerFactory == null) {
             throw new RedisRuntimeException("please check RedisConfiguration.DEFAULT,it has not config RedisLockFactory");
         }
-        return redisLockFactory;
+        return redisManagerFactory;
     }
 
-    public void setRedisLockFactory(RedisLockFactory redisLockFactory) {
-        this.redisLockFactory = redisLockFactory;
+    public void setRedisManagerFactory(RedisManagerFactory redisManagerFactory) {
+        this.redisManagerFactory = redisManagerFactory;
+    }
+
+    public static void setDefaultRedisManagerFactory(RedisManagerFactory redisManagerFactory) {
+        DEFAULT.setRedisManagerFactory(redisManagerFactory);
     }
 }

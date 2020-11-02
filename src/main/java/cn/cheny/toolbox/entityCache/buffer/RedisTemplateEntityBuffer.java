@@ -33,40 +33,40 @@ public class RedisTemplateEntityBuffer<T> extends BaseEntityBuffer<T> {
     public void cache(T entity) {
         String key = getBufferKey();
         String id = extractId(entity);
-        jsonRedisClient.HSetForMap(key, id, entity);
+        jsonRedisClient.hSet(key, id, entity);
     }
 
     @Override
     public void refresh(List<T> entities) {
         String key = getBufferKey();
         jsonRedisClient.delete(key);
-        jsonRedisClient.HMSetForMap(key, toMap(entities));
+        jsonRedisClient.hSetMap(key, toMap(entities));
     }
 
     @Override
     public List<T> getAllCache() {
         String key = getBufferKey();
-        return new ArrayList<>(jsonRedisClient.HMGetForMap(key).values());
+        return new ArrayList<>(jsonRedisClient.hGetMap(key).values());
     }
 
     @Override
     public void remove(T entityWithId) {
         String key = getBufferKey();
         String id = extractId(entityWithId);
-        jsonRedisClient.HDel(key, id);
+        jsonRedisClient.hDel(key, id);
     }
 
     @Override
     public Optional<T> get(T entityWithId) {
         String key = getBufferKey();
         String id = extractId(entityWithId);
-        return Optional.ofNullable(jsonRedisClient.HGetForMap(key, id));
+        return Optional.ofNullable(jsonRedisClient.hGet(key, id));
     }
 
     @Override
     public Optional<T> getById(Object key) {
         String bufferKey = getBufferKey();
-        return Optional.ofNullable(jsonRedisClient.HGetForMap(bufferKey, key == null ? "null" : key.toString()));
+        return Optional.ofNullable(jsonRedisClient.hGet(bufferKey, key == null ? "null" : key.toString()));
     }
 
     /**

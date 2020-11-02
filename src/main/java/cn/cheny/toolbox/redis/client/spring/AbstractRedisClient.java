@@ -1,5 +1,6 @@
-package cn.cheny.toolbox.redis.client;
+package cn.cheny.toolbox.redis.client.spring;
 
+import cn.cheny.toolbox.redis.client.RedisClient;
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -147,27 +148,27 @@ public abstract class AbstractRedisClient<V> implements RedisClient<V> {
     //------------------------------ hash ------------------------------
 
     @Override
-    public boolean HHasKey(String k, String hk) {
+    public boolean hHasKey(String k, String hk) {
         return getHashOperationForMap().hasKey(k, hk);
     }
 
     @Override
-    public Set<String> HKeys(String k) {
+    public Set<String> hKeys(String k) {
         return getHashOperationForMap().keys(k);
     }
 
     @Override
-    public long HDel(String k, String hk) {
+    public long hDel(String k, String hk) {
         return getHashOperationForMap().delete(k, hk);
     }
 
     @Override
-    public List<V> HMGet(String k, Collection<String> hks) {
+    public List<V> hValues(String k, Collection<String> hks) {
         return getHashOperationForMap().multiGet(k, hks);
     }
 
     @Override
-    public List<V> HVals(String k) {
+    public List<V> hValues(String k) {
         return getHashOperationForMap().values(k);
     }
 }
