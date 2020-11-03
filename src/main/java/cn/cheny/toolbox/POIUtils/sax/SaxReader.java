@@ -349,9 +349,7 @@ public class SaxReader {
                     }
                 }
                 case NUMBER: {
-                    return dataFormatString == null ?
-                            parseNumber(lastContents) :
-                            dataFormatter.formatRawCellContents(Double.parseDouble(lastContents), formatIndex, dataFormatString).trim();
+                    return parseNumber(lastContents);
                 }
                 case DATE: {
                     return dataFormatter.formatRawCellContents(Double.parseDouble(lastContents), formatIndex, dataFormatString);
