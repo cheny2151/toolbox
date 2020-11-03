@@ -23,7 +23,9 @@ public class SaxReaderTest {
     @Test
     public void saxReader() throws Exception {
         long l = System.currentTimeMillis();
-        SaxReader saxReader = new SaxReader((row, data) -> System.out.println(data));
+        SaxReader saxReader = new SaxReader((row, data) -> {
+            data.forEach(e -> System.out.println(e.getClass() + ":" + e));
+        });
         saxReader.processSheet(new File("D:\\test.xlsx"), 0);
         System.out.println(System.currentTimeMillis() - l);
         System.out.println(saxReader.getFirstSheetCount());
