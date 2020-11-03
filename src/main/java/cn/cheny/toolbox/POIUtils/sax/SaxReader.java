@@ -328,7 +328,9 @@ public class SaxReader {
                 if (dataFormatString == null) {
                     dataFormatString = BuiltinFormats.getBuiltinFormat(formatIndex);
                 }
-                if (dataFormatString != null &&
+                // 数字类型并且数据格式存在yy的，视为日期类型
+                if (nextType == CellType.NUMBER &&
+                        dataFormatString != null &&
                         dataFormatString.contains("yy")) {
                     nextType = CellType.DATE;
                     dataFormatString = "yyyy-MM-dd HH:mm:ss";
