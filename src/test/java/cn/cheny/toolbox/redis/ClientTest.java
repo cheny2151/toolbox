@@ -28,7 +28,7 @@ public class ClientTest {
         RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
         new Thread(()->{
             try (RedisLock redisLock = new ReentrantRedisLock("test")) {
-                if (redisLock.tryLock(1000, 1000, TimeUnit.MILLISECONDS)) {
+                if (redisLock.tryLock(1000, 1, TimeUnit.SECONDS)) {
                     System.out.println("获取锁成功:A");
                     Thread.sleep(3000);
                 }
@@ -36,7 +36,7 @@ public class ClientTest {
                 e.printStackTrace();
             }
         }).start();
-        new Thread(()->{
+       /* new Thread(()->{
             try (RedisLock redisLock = new ReentrantRedisLock("test")) {
                 if (redisLock.tryLock(5000, 1000, TimeUnit.MILLISECONDS)) {
                     System.out.println("获取锁成功:B");
@@ -45,7 +45,7 @@ public class ClientTest {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        }).start();*/
         Thread.sleep(10000);
     }
 
