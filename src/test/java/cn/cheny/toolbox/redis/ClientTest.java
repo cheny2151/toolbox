@@ -27,26 +27,27 @@ public class ClientTest {
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
         RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
         new Thread(()->{
-            try (RedisLock redisLock = new ReentrantRedisLock("test")) {
-                if (redisLock.tryLock(1000, 1000, TimeUnit.MILLISECONDS)) {
-                    System.out.println("获取锁成功:A");
-                    Thread.sleep(3000);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+        try (RedisLock redisLock = new ReentrantRedisLock("test")) {
+            if (redisLock.tryLock(30000, 20000, TimeUnit.MILLISECONDS)) {
+                System.out.println("获取锁成功:A");
+                Thread.sleep(10000);
+                System.out.println("执行任务完毕");
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         }).start();
-        new Thread(()->{
-            try (RedisLock redisLock = new ReentrantRedisLock("test")) {
-                if (redisLock.tryLock(5000, 1000, TimeUnit.MILLISECONDS)) {
+        new Thread(() -> {
+            try (RedisLock redisLock = new ReentrantRedisLock("test2")) {
+                if (redisLock.tryLock(30000, 12000, TimeUnit.MILLISECONDS)) {
                     System.out.println("获取锁成功:B");
-                    Thread.sleep(3000);
+                    Thread.sleep(10000);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
-        Thread.sleep(10000);
+        Thread.sleep(100000);
     }
 
     /**

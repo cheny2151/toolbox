@@ -10,6 +10,7 @@ import org.apache.poi.xssf.eventusermodel.XSSFReader;
 import org.apache.poi.xssf.model.SharedStringsTable;
 import org.apache.poi.xssf.model.StylesTable;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -29,6 +30,7 @@ import java.util.regex.Pattern;
 /**
  * SAX实现excel读
  * 注意行号列号都从0开始算起
+ * 读取到的数据只会格式化为字符串或者数字
  *
  * @author cheney
  * @date 2020-10-19
@@ -43,7 +45,7 @@ public class SaxReader {
     /**
      * 当读函数不存在时，所有数据的缓存
      */
-    private List<List<String>> allData;
+    private List<List<Object>> allData;
 
     /**
      * sheet页统计信息
@@ -149,11 +151,11 @@ public class SaxReader {
         this.reader = reader;
     }
 
-    public List<List<String>> getAllData() {
+    public List<List<Object>> getAllData() {
         return allData;
     }
 
-    public void setAllData(List<List<String>> allData) {
+    public void setAllData(List<List<Object>> allData) {
         this.allData = allData;
     }
 
@@ -214,8 +216,8 @@ public class SaxReader {
         private int currentRow;
         private int currentCol;
         private boolean cacheAll;
-        private List<String> data;
-        private List<List<String>> allData;
+        private List<Object> data;
+        private List<List<Object>> allData;
         private SheetCount sheetCount;
         // 控制空单元格
         private int c;
@@ -276,7 +278,7 @@ public class SaxReader {
                         data.add(null);
                     }
                 }
-                String nextValue = getNextValue();
+                Object nextValue = getNextValue();
                 data.add(nextValue);
                 c = 0;
             } else if (name.equals("row")) {
@@ -305,12 +307,17 @@ public class SaxReader {
             String cellType = attributes.getValue("t");
             if (cellType == null) {
                 nextType = CellType.NUMBER;
-            } else if (cellType.equals("s")) {
-                nextType = CellType.STRING;
             } else if (cellType.equals("e")) {
                 nextType = CellType.ERROR;
             } else if (cellType.equals("b")) {
                 nextType = CellType.BOOLE;
+            } else if ("str".equals(cellType)) {
+                nextType = CellType.FORMULA;
+            } else if ("inlineStr".equals(cellType)) {
+                nextType = CellType.INLINESTR;
+            } else {
+                // 其余都当作String处理
+                nextType = CellType.STRING;
             }
             String cellStyleStr = attributes.getValue("s");
             if (cellStyleStr != null) {
@@ -321,7 +328,9 @@ public class SaxReader {
                 if (dataFormatString == null) {
                     dataFormatString = BuiltinFormats.getBuiltinFormat(formatIndex);
                 }
-                if (dataFormatString != null &&
+                // 数字类型并且数据格式存在yy的，视为日期类型
+                if (nextType == CellType.NUMBER &&
+                        dataFormatString != null &&
                         dataFormatString.contains("yy")) {
                     nextType = CellType.DATE;
                     dataFormatString = "yyyy-MM-dd HH:mm:ss";
@@ -332,16 +341,18 @@ public class SaxReader {
             this.nextType = nextType;
         }
 
-        public String getNextValue() {
+        public Object getNextValue() {
             switch (nextType) {
                 case STRING: {
-                    int idx = Integer.parseInt(lastContents);
-                    return sst.getItemAt(idx).getString();
+                    try {
+                        int idx = Integer.parseInt(lastContents);
+                        return sst.getItemAt(idx).getString();
+                    } catch (NumberFormatException e) {
+                        return lastContents;
+                    }
                 }
                 case NUMBER: {
-                    return dataFormatString == null ?
-                            parseNumber(lastContents) :
-                            dataFormatter.formatRawCellContents(Double.parseDouble(lastContents), formatIndex, dataFormatString).trim();
+                    return parseNumber(lastContents);
                 }
                 case DATE: {
                     return dataFormatter.formatRawCellContents(Double.parseDouble(lastContents), formatIndex, dataFormatString);
@@ -353,6 +364,9 @@ public class SaxReader {
                 case ERROR: {
                     return "\"ERROR:" + lastContents + "\"";
                 }
+                case INLINESTR: {
+                    return new XSSFRichTextString(lastContents).toString();
+                }
                 default: {
                     return lastContents;
                 }
@@ -363,10 +377,24 @@ public class SaxReader {
         /**
          * 处理科学计数法
          */
-        private String parseNumber(String val) {
-            return val.contains(".") ?
+        private Object parseNumber(String val) {
+            val = val.contains(".") ?
                     new BigDecimal(val).toPlainString() :
                     val;
+            if (val.contains(".")) {
+                return Double.parseDouble(val);
+            }
+            Object number;
+            try {
+                number = Integer.parseInt(val);
+            } catch (NumberFormatException e) {
+                try {
+                    number = Long.parseLong(val);
+                } catch (NumberFormatException e2) {
+                    number = val;
+                }
+            }
+            return number;
         }
 
         /**
@@ -391,12 +419,14 @@ public class SaxReader {
         STRING,
         DATE,
         BOOLE,
-        ERROR
+        ERROR,
+        FORMULA,
+        INLINESTR
     }
 
     @FunctionalInterface
     public interface RowDataReader {
-        void read(int rowNum, List<String> data);
+        void read(int rowNum, List<Object> data);
     }
 
 }

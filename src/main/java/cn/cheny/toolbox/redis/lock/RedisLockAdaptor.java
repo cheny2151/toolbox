@@ -1,6 +1,9 @@
 package cn.cheny.toolbox.redis.lock;
 
 import cn.cheny.toolbox.redis.RedisConfiguration;
+import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
+import cn.cheny.toolbox.redis.lock.autolease.AutoLeaseHolder;
+import cn.cheny.toolbox.redis.lock.autolease.Lease;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,17 +44,37 @@ public abstract class RedisLockAdaptor implements RedisLock {
     protected final String path;
 
     /**
+     * 锁持有时间
+     */
+    protected long leaseTimeTemp;
+
+    /**
      * 当前线程是否持有该锁
      */
     protected ThreadLocal<Boolean> isLock = new ThreadLocal<>();
 
+    /**
+     * redis命令执行器
+     */
     protected final RedisExecutor redisExecutor;
+
+    /**
+     * 自动续租持有者
+     */
+    private final AutoLeaseHolder autoLeaseHolder;
+
+    /**
+     * 是否执行续期
+     */
+    private final ThreadLocal<Boolean> useLease = new ThreadLocal<>();
 
     private static final String SERVER_ID = UUID.randomUUID().toString();
 
     public RedisLockAdaptor(String path) {
-        this.path = "{" + pathPreLabel() + path + "}";
-        this.redisExecutor = RedisConfiguration.DEFAULT.getRedisManagerFactory().getRedisExecutor();
+        this.path = "{" + pathPreLabel() + "}:" + path;
+        RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
+        this.redisExecutor = redisManagerFactory.getRedisExecutor();
+        this.autoLeaseHolder = redisManagerFactory.getAutoLeaseHolder();
     }
 
 
@@ -72,13 +95,22 @@ public abstract class RedisLockAdaptor implements RedisLock {
         }
         Object result = unLockScript();
         if (NOT_EXISTS_LOCK == result) {
-            this.isLock.set(false);
-            log.info("unlock fail:redis未上该锁");
+            resetLockStatus();
+            log.info("Unlock fail:Lock not held");
         } else if (UNLOCK_SUCCESS == (long) result) {
-            this.isLock.set(false);
-            log.info("unlock success");
+            Boolean useLeaseVal = useLease.get();
+            if (useLeaseVal != null && useLeaseVal) {
+                removeLockLease();
+            }
+            resetLockStatus();
+            log.info("Unlock success");
         } else if (REENTRY_COUNT_DOWN == (long) result) {
-            log.info("count down:减少重入次数，并且刷新了锁定时间");
+            // 减少重入,继续续租
+            Boolean useLeaseVal = useLease.get();
+            if (useLeaseVal != null && useLeaseVal) {
+                addLockLease(System.currentTimeMillis(), leaseTimeTemp);
+            }
+            log.info("Count down and refresh");
         }
     }
 
@@ -94,8 +126,37 @@ public abstract class RedisLockAdaptor implements RedisLock {
         return SERVER_ID;
     }
 
+    public boolean isLock() {
+        Boolean isLockVal = this.isLock.get();
+        return isLockVal != null && isLockVal;
+    }
+
+    /**
+     * 添加锁续租
+     *
+     * @param lockTime  加锁时间
+     * @param leaseTime 持有时间
+     */
+    protected void addLockLease(long lockTime, long leaseTime) {
+        Lease lease = new Lease(lockTime, leaseTime, path);
+        this.autoLeaseHolder.addLease(lease);
+        this.useLease.set(true);
+    }
+
+    /**
+     * 删除当前锁续租
+     */
+    protected void removeLockLease() {
+        this.autoLeaseHolder.removeLease(path);
+    }
+
+    private void resetLockStatus() {
+        this.isLock.set(false);
+        this.useLease.set(false);
+    }
+
     @Override
-    public void close() throws Exception {
+    public void close() {
         this.unLock();
     }
 

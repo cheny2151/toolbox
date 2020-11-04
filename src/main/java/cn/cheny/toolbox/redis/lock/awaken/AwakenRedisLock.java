@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.redis.lock.awaken;
 
 import cn.cheny.toolbox.redis.RedisConfiguration;
+import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
 import cn.cheny.toolbox.redis.lock.RedisLockAdaptor;
 import cn.cheny.toolbox.redis.lock.awaken.listener.LockListener;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SubLockManager;
@@ -8,6 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
+import static cn.cheny.toolbox.redis.lock.autolease.LeaseConstant.DURATION;
+import static cn.cheny.toolbox.redis.lock.autolease.LeaseConstant.USE_LEASE_THRESHOLD;
 
 /**
  * 发布订阅redis锁基础类
@@ -24,29 +28,31 @@ import java.util.concurrent.TimeUnit;
 public abstract class AwakenRedisLock extends RedisLockAdaptor {
 
     /**
-     * 锁持有时间
-     */
-    protected long leaseTimeTemp;
-
-    /**
      * 订阅锁状态manger
      */
     protected SubLockManager subLockManager;
 
     public AwakenRedisLock(String path) {
         super(path);
-        subLockManager = RedisConfiguration.DEFAULT.getRedisManagerFactory().getSubLockManager();
+        RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
+        this.subLockManager = redisManagerFactory.getSubLockManager();
     }
 
     public boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit) {
 
         long maxTime = System.currentTimeMillis() + timeUnit.toMillis(waitTime);
-        leaseTimeTemp = leaseTime = timeUnit.toMillis(leaseTime);
+        long firstLease = leaseTimeTemp = leaseTime = timeUnit.toMillis(leaseTime);
+
+        boolean useLease = false;
+        if (leaseTime >= USE_LEASE_THRESHOLD) {
+            useLease = true;
+            firstLease = DURATION;
+        }
 
         //try lock
         Object result;
         try {
-            while ((result = LockScript(leaseTime)) != null) {
+            while ((result = LockScript(firstLease)) != null) {
                 long timeout = maxTime - System.currentTimeMillis();
                 if (timeout <= 0) {
                     //timeout return false
@@ -64,8 +70,13 @@ public abstract class AwakenRedisLock extends RedisLockAdaptor {
             result = 0;
         }
 
+        long currentTimeMillis = System.currentTimeMillis();
         boolean isLock = result == null;
         this.isLock.set(isLock);
+        if (isLock && useLease) {
+            // 执行续租逻辑
+            addLockLease(currentTimeMillis, leaseTime);
+        }
 
         if (!isLock) {
             log.info("Redis try lock fail,lock path:{}", getPath());

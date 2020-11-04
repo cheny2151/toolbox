@@ -111,7 +111,7 @@ public class SaxWorkBookReader {
                 int titleSize = titles.size();
                 // 只处理标题之后的数据
                 HashMap<String, Object> rowMap = new HashMap<>();
-                for (int i = 0; i < dataSize && dataSize <= titleSize; i++) {
+                for (int i = 0; i < dataSize && i < titleSize; i++) {
                     Object val = cellDealFunction.dealVal(data.get(i));
                     rowMap.put(titles.get(i), val);
                 }

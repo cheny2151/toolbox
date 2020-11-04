@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.redis.factory;
 
+import cn.cheny.toolbox.redis.lock.autolease.AutoLeaseHolder;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SubLockManager;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 
@@ -14,12 +15,17 @@ public abstract class CacheManagerFactory implements RedisManagerFactory {
     /**
      * 锁订阅Manager
      */
-    private SubLockManager subLockManagerCache;
+    private volatile SubLockManager subLockManagerCache;
 
     /**
      * redis脚本执行器
      */
-    private RedisExecutor redisExecutorCache;
+    private volatile RedisExecutor redisExecutorCache;
+
+    /**
+     * 自动续租服务
+     */
+    private volatile AutoLeaseHolder autoLeaseHolderCache;
 
     @Override
     public SubLockManager getSubLockManager() {
@@ -43,6 +49,18 @@ public abstract class CacheManagerFactory implements RedisManagerFactory {
             }
         }
         return redisExecutorCache;
+    }
+
+    @Override
+    public AutoLeaseHolder getAutoLeaseHolder() {
+        if (autoLeaseHolderCache == null) {
+            synchronized (this) {
+                if (autoLeaseHolderCache == null) {
+                    autoLeaseHolderCache = new AutoLeaseHolder(getRedisExecutor());
+                }
+            }
+        }
+        return autoLeaseHolderCache;
     }
 
 

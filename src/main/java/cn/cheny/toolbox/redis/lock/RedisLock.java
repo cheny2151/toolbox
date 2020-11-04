@@ -35,7 +35,7 @@ public interface RedisLock extends AutoCloseable {
      * @return 锁path前标识
      */
     default String pathPreLabel() {
-        return "";
+        return "LOCK";
     }
 
 }
