@@ -95,22 +95,22 @@ public abstract class RedisLockAdaptor implements RedisLock {
         }
         Object result = unLockScript();
         if (NOT_EXISTS_LOCK == result) {
-            this.isLock.set(false);
-            log.info("unlock fail:Lock not held");
+            resetLockStatus();
+            log.info("Unlock fail:Lock not held");
         } else if (UNLOCK_SUCCESS == (long) result) {
             Boolean useLeaseVal = useLease.get();
             if (useLeaseVal != null && useLeaseVal) {
                 removeLockLease();
             }
-            this.isLock.set(false);
-            log.info("unlock success");
+            resetLockStatus();
+            log.info("Unlock success");
         } else if (REENTRY_COUNT_DOWN == (long) result) {
             // 减少重入,继续续租
             Boolean useLeaseVal = useLease.get();
             if (useLeaseVal != null && useLeaseVal) {
                 addLockLease(System.currentTimeMillis(), leaseTimeTemp);
             }
-            log.info("count down and refresh");
+            log.info("Count down and refresh");
         }
     }
 
@@ -148,6 +148,10 @@ public abstract class RedisLockAdaptor implements RedisLock {
      */
     protected void removeLockLease() {
         this.autoLeaseHolder.removeLease(path);
+    }
+
+    private void resetLockStatus() {
+        this.isLock.set(false);
         this.useLease.set(false);
     }
 
