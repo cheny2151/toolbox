@@ -22,6 +22,11 @@ public abstract class CacheManagerFactory implements RedisManagerFactory {
      */
     private volatile RedisExecutor redisExecutorCache;
 
+    /**
+     * 自动续租服务
+     */
+    private volatile AutoLeaseHolder autoLeaseHolderCache;
+
     @Override
     public SubLockManager getSubLockManager() {
         if (subLockManagerCache == null) {
@@ -48,7 +53,14 @@ public abstract class CacheManagerFactory implements RedisManagerFactory {
 
     @Override
     public AutoLeaseHolder getAutoLeaseHolder() {
-        return new AutoLeaseHolder(getRedisExecutor());
+        if (autoLeaseHolderCache == null) {
+            synchronized (this) {
+                if (autoLeaseHolderCache == null) {
+                    autoLeaseHolderCache = new AutoLeaseHolder(getRedisExecutor());
+                }
+            }
+        }
+        return autoLeaseHolderCache;
     }
 
 

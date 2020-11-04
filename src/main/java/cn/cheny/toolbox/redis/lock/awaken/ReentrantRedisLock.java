@@ -59,5 +59,9 @@ public class ReentrantRedisLock extends AwakenRedisLock {
         return LOCK_CHANNEL + path;
     }
 
+    @Override
+    public String pathPreLabel() {
+        return "REENTRANT_LOCK";
+    }
 
 }

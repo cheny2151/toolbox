@@ -67,7 +67,7 @@ public class MultiPathRedisLock extends AwakenRedisLock {
 
     @Override
     public String pathPreLabel() {
-        return "MULTI:";
+        return "MULTI_LOCK";
     }
 
 }

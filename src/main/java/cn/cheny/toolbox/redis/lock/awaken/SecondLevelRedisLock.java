@@ -117,7 +117,7 @@ public class SecondLevelRedisLock extends AwakenRedisLock {
 
     @Override
     public String pathPreLabel() {
-        return "SECOND_LEVEL:";
+        return "SECOND_LEVEL_LOCK";
     }
 
     /**

@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.redis.lock.autolease;
 
 import static cn.cheny.toolbox.redis.lock.autolease.LeaseConstant.DURATION;
+import static cn.cheny.toolbox.redis.lock.autolease.LeaseConstant.USE_LEASE_THRESHOLD;
 
 /**
  * redis key续租实体
@@ -21,30 +22,22 @@ public class Lease {
     private String key;
 
     /**
-     * 剩余的续租次数
+     * 是否已完成续租
      */
-    private int remainingLeaseTimes;
-
-    /**
-     * 零碎续租时间（用于记录取模结果,倍数时为0）
-     */
-    private long fragmentaryTime;
+    private boolean finish;
 
     /**
      * 构造函数
      * 调用此构造函数时，redis key已经上锁并设置了一段过期时间
      * 入参currentTimeMillis，即为上锁的大致时间戳
      *
-     * @param currentTimeMillis 首次加锁成功时间戳（非准确值）
-     * @param leaseTime         持有时间
-     * @param key               key
+     * @param lockTime  首次加锁成功时间戳（非准确值）
+     * @param leaseTime 持有时间
+     * @param key       key
      */
-    public Lease(long currentTimeMillis, long leaseTime, String key) {
-        this.expire = currentTimeMillis + leaseTime;
+    public Lease(long lockTime, long leaseTime, String key) {
+        this.expire = lockTime + leaseTime;
         this.key = key;
-        // -1:减去首次加锁
-        this.remainingLeaseTimes = (int) (leaseTime / DURATION) - 1;
-        this.fragmentaryTime = (int) (leaseTime % DURATION);
     }
 
     /**
@@ -53,30 +46,25 @@ public class Lease {
      * @return 续租时间
      */
     public long getLeaseTime() {
-        if (System.currentTimeMillis() > expire) {
+        long currentTime = System.currentTimeMillis();
+        long remainingExpire = expire - currentTime;
+        if (remainingExpire <= 0) {
             // key已过期，强制返回0
-            remainingLeaseTimes = 0;
-            fragmentaryTime = 0;
+            finish = true;
             return 0;
         }
-        int nextTime = --remainingLeaseTimes;
-        if (nextTime > 0) {
-            return DURATION;
-        } else if (nextTime == 0) {
-            // 零碎续租时间直接补充至结尾的续期
-            long fragmentaryTime = this.fragmentaryTime;
-            if (fragmentaryTime > 0) {
-                this.fragmentaryTime = 0;
-                return DURATION + fragmentaryTime;
-            }
+        if (remainingExpire >= USE_LEASE_THRESHOLD) {
+            // 大于阀值，则按默认值续期
             return DURATION;
         } else {
-            return 0;
+            // 小于阀值，则直接按剩余过期时间续期
+            finish = true;
+            return remainingExpire;
         }
     }
 
     public boolean hasNext() {
-        return remainingLeaseTimes > 0 || fragmentaryTime > 0;
+        return !finish;
     }
 
     public long getExpire() {
@@ -87,11 +75,4 @@ public class Lease {
         return key;
     }
 
-    public int getRemainingLeaseTimes() {
-        return remainingLeaseTimes;
-    }
-
-    public long getFragmentaryTime() {
-        return fragmentaryTime;
-    }
 }

@@ -16,7 +16,7 @@ public class LeaseConstant {
     /**
      * 需要执行续期逻辑的阀值
      */
-    public final static long USE_LEASE_THRESHOLD = DURATION * 2;
+    public final static long USE_LEASE_THRESHOLD = (long) (DURATION * 1.5);
 
     /**
      * 定时任务周期
