@@ -6,11 +6,11 @@ TOOLBOX
 ## 目录
 * [redis 分布式锁](#Redis分布式锁)
     * [锁实现类](#锁实现类)
-    * Spring环境下用例
-    * 非Spring环境下用例（jedis）
-* redis分布式任务发布订阅
-    * Spring环境下用例
-    * 非Spring环境下用例（jedis）
+    * [Spring环境下用例](#分布式锁Spring环境下用例)
+    * [非Spring环境下用例（jedis）](#分布式锁非Spring环境下用例（jedis）)
+* [redis分布式任务发布订阅](#Redis分布式集群任务)
+    * [Spring环境下用例](#集群任务Spring环境下用例)
+    * [非Spring环境下用例（jedis）](#集群任务非Spring环境下用例（jedis）)
 * 注解实体缓存
     * mybatis环境下使用
     * ...
@@ -30,7 +30,7 @@ Redis分布式锁
 3. 二级锁 -- SecondLevelRedisLock<br/>
     特点：一级锁被占用，则任务二级锁获取失败；二级锁被占用，则一级锁获取失败，但不会阻塞其他线程获取其他二级锁。
 
-### Spring环境下用例
+### 分布式锁Spring环境下用例
 Spring环境静下，无需其他配置，自动整合spring-boot-starter-data-redis，通过redisTemplate的api实现redis操作。
 ```Java
 try (RedisLock redisLock = new ReentrantRedisLock("test")) {
@@ -44,7 +44,7 @@ try (RedisLock redisLock = new ReentrantRedisLock("test")) {
 注意：
 RedisLock继承了AutoCloseable，在try中创建实例会自动调用Close释放锁。
 
-### 非Spring环境下用例（jedis）
+### 分布式锁非Spring环境下用例（jedis）
 非Spring环境下，需要配置jedis工厂、将JedisManagerFactory实例配置到RedisConfiguration中即可使用。
 ```Java
 // 配置jedis工厂
@@ -65,7 +65,7 @@ try (RedisLock redisLock = new ReentrantRedisLock("test")) {
 ```
 Redis分布式集群任务
 -----------
-### Spring环境下用例
+### 集群任务Spring环境下用例
 Spring环境静下，无需其他配置
 1. 任务发布 -- ClusterTaskPublisher <br/>
     发布任务api
@@ -150,7 +150,7 @@ Spring环境静下，无需其他配置
        }   
    }
     ```
-### 非Spring环境下用例（jedis）
+### 集群任务非Spring环境下用例（jedis）
 1. 配置并初始化 <br/>
     与配置redis分布式锁类型，但需要调用JedisClusterHelper.initJedisCluster(factory)初始化任务发布订阅器。
     ```Java
