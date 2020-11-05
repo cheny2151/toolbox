@@ -38,13 +38,19 @@ public abstract class AwakenRedisLock extends RedisLockAdaptor {
         this.subLockManager = redisManagerFactory.getSubLockManager();
     }
 
+    @Override
+    public boolean tryLock(long waitTime, TimeUnit timeUnit) {
+        return tryLock(waitTime, 0, timeUnit);
+    }
+
+    @Override
     public boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit) {
 
         long maxTime = System.currentTimeMillis() + timeUnit.toMillis(waitTime);
         long firstLease = leaseTimeTemp = leaseTime = timeUnit.toMillis(leaseTime);
 
         boolean useLease = false;
-        if (leaseTime >= USE_LEASE_THRESHOLD) {
+        if (leaseTime <= 0 || leaseTime >= USE_LEASE_THRESHOLD) {
             useLease = true;
             firstLease = DURATION;
         }

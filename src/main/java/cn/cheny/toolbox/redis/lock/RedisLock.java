@@ -18,11 +18,20 @@ public interface RedisLock extends AutoCloseable {
      * 尝试获取redis同步锁
      *
      * @param waitTime  最长等待时间
-     * @param leaseTime 超时自动释放锁时间
+     * @param leaseTime 超时自动释放锁时间(小于等于0则永久)
      * @param timeUnit  时间单位
      * @return 是否成功获取锁
      */
     boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit);
+
+    /**
+     * 尝试获取redis同步锁(无过期时间)
+     *
+     * @param waitTime 最长等待时间
+     * @param timeUnit 时间单位
+     * @return 是否成功获取锁
+     */
+    boolean tryLock(long waitTime, TimeUnit timeUnit);
 
     /**
      * 尝试释放锁

@@ -17,6 +17,7 @@ import static cn.cheny.toolbox.redis.lock.LockConstant.UNLOCK_LUA_SCRIPT;
  * @author cheney
  */
 @Slf4j
+@Deprecated
 public class SpinRedisLock extends RedisLockAdaptor {
 
     private long leaseTimeTemp;
@@ -30,6 +31,12 @@ public class SpinRedisLock extends RedisLockAdaptor {
         super(path);
     }
 
+    @Override
+    public boolean tryLock(long waitTime, TimeUnit timeUnit) {
+        return tryLock(waitTime, 0, timeUnit);
+    }
+
+    @Override
     public boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit) {
         waitTime = timeUnit.toMillis(waitTime);
         leaseTime = timeUnit.toMillis(leaseTime);
@@ -43,7 +50,6 @@ public class SpinRedisLock extends RedisLockAdaptor {
             while (result != null
                     && (waitTime == -1
                     || beginTime + waitTime > System.currentTimeMillis())) {
-                log.debug("未能抢到锁，轮询ing...");
                 Thread.sleep(POLLING_INTERVAL);
                 result = LockScript(leaseTime);
             }
