@@ -27,9 +27,24 @@ public class JedisClient {
     private static final int DEFAULT_MAX_IDLE = 16;
 
     /**
+     * 默认异常最大重试次数
+     */
+    private static final int DEFAULT_MAX_ATTEMPTS = 5;
+
+    /**
      * 默认等待最长毫秒值
      */
     private static final int DEFAULT_WAIT_MILLIS = 30000;
+
+    /**
+     * 默认超时时间
+     */
+    private static final int DEFAULT_WAIT_TIMEOUT = 2000;
+
+    /**
+     * 默认服务器端口
+     */
+    private static final int DEFAULT_WAIT_PORT = 6379;
 
     private final String nodes;
 
@@ -45,14 +60,10 @@ public class JedisClient {
 
     private JedisPoolConfig jedisPoolConfig;
 
-    public JedisClient(String nodes) {
-        this(nodes, null, null, null);
-    }
-
-    public JedisClient(String nodes, Integer timeout, Integer maxAttempts, JedisPoolConfig jedisPoolConfig) {
+    public JedisClient(String nodes, Integer timeout, Integer maxAttempts, String password, JedisPoolConfig jedisPoolConfig) {
         this.nodes = nodes;
-        this.timeout = timeout;
-        this.maxAttempts = maxAttempts;
+        this.timeout = timeout == null ? DEFAULT_WAIT_TIMEOUT : timeout;
+        this.maxAttempts = maxAttempts == null ? DEFAULT_MAX_ATTEMPTS : maxAttempts;
         if (jedisPoolConfig == null) {
             jedisPoolConfig = new JedisPoolConfig();
             jedisPoolConfig.setMaxIdle(DEFAULT_MAX_IDLE);
@@ -60,7 +71,7 @@ public class JedisClient {
             jedisPoolConfig.setMaxWaitMillis(DEFAULT_WAIT_MILLIS);
         }
         this.jedisPoolConfig = jedisPoolConfig;
-        initClient();
+        initClient(password);
     }
 
     /**
@@ -68,7 +79,7 @@ public class JedisClient {
      * 单点->JedisPool
      * 集群->JedisCluster
      */
-    private void initClient() {
+    private void initClient(String password) {
         if (nodes.contains(",")) {
             String[] nodeArray = nodes.split(",");
             HashSet<HostAndPort> nodeAndPorts = new HashSet<>(nodeArray.length);
@@ -76,23 +87,17 @@ public class JedisClient {
                 String[] split = nodeAndPort.split(":");
                 nodeAndPorts.add(new HostAndPort(split[0], Integer.parseInt(split[1])));
             }
-            if (timeout != null) {
-                if (maxAttempts != null) {
-                    jedisCluster = new JedisCluster(nodeAndPorts, timeout, maxAttempts, jedisPoolConfig);
-                } else {
-                    jedisCluster = new JedisCluster(nodeAndPorts, timeout, jedisPoolConfig);
-                }
-            } else {
-                jedisCluster = new JedisCluster(nodeAndPorts, jedisPoolConfig);
-            }
+            jedisCluster = new JedisCluster(nodeAndPorts, timeout, timeout, maxAttempts, password, jedisPoolConfig);
             isCluster = true;
         } else {
+            String host = nodes;
+            int port = DEFAULT_WAIT_PORT;
             if (nodes.contains(":")) {
                 String[] split = nodes.split(":");
-                jedisPool = new JedisPool(jedisPoolConfig, split[0], Integer.parseInt(split[1]));
-            } else {
-                jedisPool = new JedisPool(jedisPoolConfig, nodes);
+                port = Integer.parseInt(split[1]);
+                host = split[0];
             }
+            jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password);
             isCluster = false;
         }
     }

@@ -22,20 +22,20 @@ public class ClientTest {
      */
     @Test
     public void testForRedisKey() throws InterruptedException {
-        JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
+        JedisClientFactory factory = new JedisClientFactory("localhost");
         JedisClient jedisClient = factory.cacheClient();
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
         RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
-        new Thread(()->{
-        try (RedisLock redisLock = new ReentrantRedisLock("test")) {
-            if (redisLock.tryLock(30000, 20000, TimeUnit.MILLISECONDS)) {
-                System.out.println("获取锁成功:A");
-                Thread.sleep(10000);
-                System.out.println("执行任务完毕");
+        new Thread(() -> {
+            try (RedisLock redisLock = new ReentrantRedisLock("test")) {
+                if (redisLock.tryLock(30000, 1000 * 60 * 3, TimeUnit.MILLISECONDS)) {
+                    System.out.println("获取锁成功:A");
+                    Thread.sleep(1000 * 60 * 3);
+                    System.out.println("执行任务完毕");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         }).start();
         new Thread(() -> {
             try (RedisLock redisLock = new ReentrantRedisLock("test2")) {
@@ -47,7 +47,7 @@ public class ClientTest {
                 e.printStackTrace();
             }
         }).start();
-        Thread.sleep(100000);
+        Thread.sleep(10000000);
     }
 
     /**
