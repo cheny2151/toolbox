@@ -71,4 +71,6 @@ public interface RedisClient<V> {
 
     void close();
 
+    boolean isClose();
+
 }

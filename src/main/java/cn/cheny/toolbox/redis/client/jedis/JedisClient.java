@@ -192,6 +192,11 @@ public class JedisClient implements RedisClient<String> {
         jedisPool.destroy();
     }
 
+    @Override
+    public boolean isClose() {
+        return jedisPool.isClosed();
+    }
+
     public String getHost() {
         return host;
     }

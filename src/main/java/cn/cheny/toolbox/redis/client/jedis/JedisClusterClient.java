@@ -29,6 +29,8 @@ public class JedisClusterClient implements RedisClient<String> {
 
     private JedisPoolConfig jedisPoolConfig;
 
+    private volatile boolean closed;
+
     public JedisClusterClient(Set<HostAndPort> hostAndPorts, Integer timeout, Integer maxAttempts, String password, JedisPoolConfig jedisPoolConfig) {
         this.hostAndPorts = hostAndPorts;
         this.timeout = timeout;
@@ -183,6 +185,12 @@ public class JedisClusterClient implements RedisClient<String> {
     @Override
     public void close() {
         jedisCluster.close();
+        closed = true;
+    }
+
+    @Override
+    public boolean isClose() {
+        return closed;
     }
 
     public Set<HostAndPort> getHostAndPorts() {
