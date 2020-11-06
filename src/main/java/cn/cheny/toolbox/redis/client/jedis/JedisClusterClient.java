@@ -1,8 +1,8 @@
 package cn.cheny.toolbox.redis.client.jedis;
 
 import cn.cheny.toolbox.redis.client.RedisClient;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.JedisPubSub;
 
@@ -10,31 +10,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
 /**
- * jedis客户端单节点模式
+ * jedis客户端多节点模式
  *
  * @author cheney
  * @date 2020-10-26
  */
-public class JedisClient implements RedisClient<String> {
+public class JedisClusterClient implements RedisClient<String> {
 
-    private final String host;
-
-    private final int port;
+    private final Set<HostAndPort> hostAndPorts;
 
     private final Integer timeout;
 
     private final Integer maxAttempts;
 
-    private JedisPool jedisPool;
+    private JedisCluster jedisCluster;
 
     private JedisPoolConfig jedisPoolConfig;
 
-    public JedisClient(String host, int port, Integer timeout, Integer maxAttempts, String password, JedisPoolConfig jedisPoolConfig) {
-        this.host = host;
-        this.port = port;
+    public JedisClusterClient(Set<HostAndPort> hostAndPorts, Integer timeout, Integer maxAttempts, String password, JedisPoolConfig jedisPoolConfig) {
+        this.hostAndPorts = hostAndPorts;
         this.timeout = timeout;
         this.maxAttempts = maxAttempts;
         this.jedisPoolConfig = jedisPoolConfig;
@@ -42,162 +38,155 @@ public class JedisClient implements RedisClient<String> {
     }
 
     /**
-     * 初始化JedisPool
+     * 初始化JedisCluster
      */
     private void initClient(String password) {
-        jedisPool = new JedisPool(jedisPoolConfig, host, port, timeout, password);
+        jedisCluster = new JedisCluster(hostAndPorts, timeout, timeout, maxAttempts, password, jedisPoolConfig);
     }
 
     @Override
     public Boolean exists(String key) {
-        return execAndClose(jedis -> jedis.exists(key));
+        return jedisCluster.exists(key);
     }
 
     @Override
     public void del(String... key) {
-        execAndClose(jedis -> jedis.del(key));
+        jedisCluster.del(key);
     }
 
     @Override
     public String get(String key) {
-        return execAndClose(jedis -> jedis.get(key));
+        return jedisCluster.get(key);
     }
 
     @Override
     public Long decrBy(String key, long decrement) {
-        return execAndClose(jedis -> jedis.decrBy(key, decrement));
+        return jedisCluster.decrBy(key, decrement);
+
     }
 
     @Override
     public Long decr(String key) {
-        return execAndClose(jedis -> jedis.decr(key));
+        return jedisCluster.decr(key);
     }
 
     @Override
     public Long incrBy(String key, long increment) {
-        return execAndClose(jedis -> jedis.incrBy(key, increment));
+        return jedisCluster.incrBy(key, increment);
     }
 
     @Override
     public Double incrByFloat(String key, double increment) {
-        return execAndClose(jedis -> jedis.incrByFloat(key, increment));
+        return jedisCluster.incrByFloat(key, increment);
     }
 
     @Override
     public Long incr(String key) {
-        return execAndClose(jedis -> jedis.incr(key));
+        return jedisCluster.incr(key);
     }
 
     @Override
     public void hset(String key, String hkey, String hval) {
-        execAndClose(jedis -> jedis.hset(key, hkey, hval));
+        jedisCluster.hset(key, hkey, hval);
     }
 
     @Override
     public void hset(String key, Map<String, String> map) {
-        execAndClose(jedis -> jedis.hset(key, map));
+        jedisCluster.hset(key, map);
     }
 
     @Override
     public String hget(String key, String hkey) {
-        return execAndClose(jedis -> jedis.hget(key, hkey));
+        return jedisCluster.hget(key, hkey);
     }
 
     @Override
     public String hmset(String key, Map<String, String> hash) {
-        return execAndClose(jedis -> jedis.hmset(key, hash));
+        return jedisCluster.hmset(key, hash);
     }
 
     @Override
     public List<String> hmget(String key, String... fields) {
-        return execAndClose(jedis -> jedis.hmget(key, fields));
+        return jedisCluster.hmget(key, fields);
     }
 
     @Override
     public Map<String, String> hgetall(String key) {
-        return execAndClose(jedis -> jedis.hgetAll(key));
+        return jedisCluster.hgetAll(key);
     }
 
     @Override
     public Long hincrBy(String key, String field, long value) {
-        return execAndClose(jedis -> jedis.hincrBy(key, field, value));
+        return jedisCluster.hincrBy(key, field, value);
     }
 
     @Override
     public boolean hexists(String key, String field) {
-        Boolean exists = execAndClose(jedis -> jedis.hexists(key, field));
-        return exists != null && exists;
+        return jedisCluster.hexists(key, field);
     }
 
     @Override
     public Long hdel(String key, String... field) {
-        return execAndClose(jedis -> jedis.hdel(key, field));
+        return jedisCluster.hdel(key, field);
     }
 
     @Override
     public Long hlen(String key) {
-        return execAndClose(jedis -> jedis.hlen(key));
+        return jedisCluster.hlen(key);
     }
 
     @Override
     public Set<String> hkeys(String key) {
-        return execAndClose(jedis -> jedis.hkeys(key));
+        return jedisCluster.hkeys(key);
     }
 
     @Override
     public List<String> hvals(String key) {
-        return execAndClose(jedis -> jedis.hvals(key));
+        return jedisCluster.hvals(key);
     }
 
     @Override
     public void expire(String key, long time, TimeUnit timeUnit) {
-        execAndClose(jedis -> jedis.pexpire(key, timeUnit.toMillis(time)));
+        jedisCluster.pexpire(key, timeUnit.toMillis(time));
     }
 
     @Override
     public Long expireAt(String key, long unixTime) {
-        return execAndClose(jedis -> jedis.expireAt(key, unixTime));
+        return jedisCluster.expireAt(key, unixTime);
     }
 
     @Override
     public Long pexpireAt(String key, long millisecondsTimestamp) {
-        return execAndClose(jedis -> jedis.pexpireAt(key, millisecondsTimestamp));
+        return jedisCluster.pexpireAt(key, millisecondsTimestamp);
     }
 
     @Override
     public Object eval(String script, List<String> finalKeys, List<String> finalArgs) {
-        return execAndClose(jedis -> jedis.eval(script, finalKeys, finalArgs));
+        return jedisCluster.eval(script, finalKeys, finalArgs);
     }
 
     @Override
     public void publish(String channel, String msg) {
-        execAndClose(jedis -> jedis.publish(channel, msg));
+        jedisCluster.publish(channel, msg);
     }
 
     @Override
     public void psubscribe(JedisPubSub jedisPubSub, String channel) {
-        execAndClose(jedis -> {
-            jedis.psubscribe(jedisPubSub, channel);
-            return null;
-        });
+        jedisCluster.psubscribe(jedisPubSub, channel);
     }
 
     @Override
     public Object getSource() {
-        return jedisPool;
+        return jedisCluster;
     }
 
     @Override
     public void close() {
-        jedisPool.destroy();
+        jedisCluster.close();
     }
 
-    public String getHost() {
-        return host;
-    }
-
-    public int getPort() {
-        return port;
+    public Set<HostAndPort> getHostAndPorts() {
+        return hostAndPorts;
     }
 
     public Integer getTimeout() {
@@ -208,23 +197,12 @@ public class JedisClient implements RedisClient<String> {
         return maxAttempts;
     }
 
-    public JedisPool getJedisPool() {
-        return jedisPool;
+    public JedisCluster getJedisCluster() {
+        return jedisCluster;
     }
 
     public JedisPoolConfig getJedisPoolConfig() {
         return jedisPoolConfig;
-    }
-
-    private <T> T execAndClose(Function<Jedis, T> jedisCommand) {
-        Jedis jedis = jedisPool.getResource();
-        T result;
-        try {
-            result = jedisCommand.apply(jedis);
-        } finally {
-            jedis.close();
-        }
-        return result;
     }
 
 }

@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
-import cn.cheny.toolbox.redis.client.jedis.JedisClient;
+import cn.cheny.toolbox.redis.client.RedisClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -8,16 +8,16 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * jedis实现Lua脚本执行器
+ * jedis命令执行器
  *
  * @author cheney
  * @date 2020-10-26
  */
 public class JedisExecutor implements RedisExecutor {
 
-    private JedisClient jedisClient;
+    private RedisClient<String> jedisClient;
 
-    public JedisExecutor(JedisClient jedisClient) {
+    public JedisExecutor(RedisClient<String> jedisClient) {
         this.jedisClient = jedisClient;
     }
 
@@ -45,8 +45,7 @@ public class JedisExecutor implements RedisExecutor {
 
     @Override
     public boolean hasKey(String key) {
-        Boolean hasKey = jedisClient.hasKey(key);
-        return hasKey != null && hasKey;
+        return jedisClient.exists(key);
     }
 
     @Override

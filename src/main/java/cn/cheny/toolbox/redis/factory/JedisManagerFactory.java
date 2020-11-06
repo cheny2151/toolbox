@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.factory;
 
-import cn.cheny.toolbox.redis.client.jedis.JedisClient;
+import cn.cheny.toolbox.redis.client.RedisClient;
 import cn.cheny.toolbox.redis.lock.awaken.listener.JedisSubLockManager;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SubLockManager;
 import cn.cheny.toolbox.redis.lock.executor.JedisExecutor;
@@ -14,9 +14,9 @@ import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
  */
 public class JedisManagerFactory extends CacheManagerFactory {
 
-    private JedisClient jedisClient;
+    private RedisClient<String> jedisClient;
 
-    public JedisManagerFactory(JedisClient jedisClient) {
+    public JedisManagerFactory(RedisClient<String> jedisClient) {
         this.jedisClient = jedisClient;
     }
 

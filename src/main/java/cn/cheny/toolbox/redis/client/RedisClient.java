@@ -1,66 +1,74 @@
 package cn.cheny.toolbox.redis.client;
 
-import java.util.Collection;
+import redis.clients.jedis.JedisPubSub;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 定义通用的redis api接口
+ *
+ * @author cheney
+ * @date 2020-11-06
+ */
 public interface RedisClient<V> {
 
-    //------------------------------ common ------------------------------
+    Boolean exists(String key);
 
-    void expire(String k, int days);
+    void expire(String key, long time, TimeUnit timeUnit);
 
-    void expire(String k, long timeout, TimeUnit timeUnit);
+    Long expireAt(String key, long unixTime);
 
-    void delete(String k);
+    Long pexpireAt(String key, long millisecondsTimestamp);
 
-    void removeKey(String k);
+    void del(String... key);
 
-    boolean exists(String k);
+    V get(String key);
 
-    long getExpire(String k, TimeUnit timeUnit);
+    Long decrBy(String key, long decrement);
 
-    //------------------------------ value ------------------------------
+    Long decr(String key);
 
-    void setValue(String k, V v, int days);
+    Long incrBy(String key, long increment);
 
-    void setValue(String k, V v);
+    Double incrByFloat(String key, double increment);
 
-    V getValue(String k);
+    Long incr(String key);
 
-    //------------------------------ list ------------------------------
+    void hset(String key, String hkey, V hval);
 
-    void addList(String k, List<V> values);
+    void hset(String key, Map<String, V> map);
 
-    void addList(String k, V v);
+    V hget(String key, String hkey);
 
-    void rightPushList(String k, List<V> values);
+    String hmset(String key, Map<String, V> hash);
 
-    void rightPush(String k, V v);
+    List<V> hmget(String key, String... fields);
 
-    void leftPushList(String k, List<V> values);
+    Map<String, V> hgetall(String key);
 
-    void leftPush(String k, V v);
+    Long hincrBy(String key, String field, long value);
 
-    List<V> getList(String k);
+    boolean hexists(String key, String field);
 
-    V rightPop(String k);
+    Long hdel(String key, String... field);
 
-    V leftPop(String k);
+    Long hlen(String key);
 
-    Long listSize(String k);
+    Set<String> hkeys(String key);
 
-    //------------------------------ hash common------------------------------
+    List<V> hvals(String key);
 
-    boolean hHasKey(String k, String hk);
+    Object eval(String script, List<String> Keys, List<String> Args);
 
-    Set<String> hKeys(String k);
+    void publish(String channel, String msg);
 
-    long hDel(String k, String hk);
+    void psubscribe(JedisPubSub jedisPubSub, String channel);
 
-    List<V> hValues(String k, Collection<String> hks);
+    Object getSource();
 
-    List<V> hValues(String k);
+    void close();
 
 }

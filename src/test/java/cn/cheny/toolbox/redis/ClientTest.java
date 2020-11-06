@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis;
 
-import cn.cheny.toolbox.redis.client.jedis.JedisClient;
+import cn.cheny.toolbox.redis.client.RedisClient;
 import cn.cheny.toolbox.redis.clustertask.jedis.JedisClusterHelper;
 import cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher;
 import cn.cheny.toolbox.redis.factory.JedisClientFactory;
@@ -23,7 +23,7 @@ public class ClientTest {
     @Test
     public void testForRedisKey() throws InterruptedException {
         JedisClientFactory factory = new JedisClientFactory("localhost");
-        JedisClient jedisClient = factory.cacheClient();
+        RedisClient<String> jedisClient = factory.cacheClient();
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
         RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
         new Thread(() -> {
@@ -56,7 +56,7 @@ public class ClientTest {
     @Test
     public void testForCluster() throws InterruptedException {
         JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
-        JedisClient jedisClient = factory.cacheClient();
+        RedisClient<String> jedisClient = factory.cacheClient();
         RedisConfiguration.setDefaultRedisManagerFactory(new JedisManagerFactory(jedisClient));
         ClusterTaskPublisher clusterTaskPublisher = JedisClusterHelper.initJedisCluster(factory);
         clusterTaskPublisher.publish("test", 100, 10, 1, true);
