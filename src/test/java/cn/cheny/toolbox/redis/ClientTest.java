@@ -9,6 +9,11 @@ import cn.cheny.toolbox.redis.lock.RedisLock;
 import cn.cheny.toolbox.redis.lock.awaken.ReentrantRedisLock;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -48,6 +53,34 @@ public class ClientTest {
             }
         }).start();
         Thread.sleep(10000000);
+    }
+
+    @Test
+    public void testForConcurrent() throws InterruptedException {
+        JedisClientFactory factory = new JedisClientFactory("localhost");
+        RedisClient<String> jedisClient = factory.cacheClient();
+        JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
+        RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
+        int[] num = new int[]{0};
+        ExecutorService executorService = Executors.newFixedThreadPool(16);
+        List<Callable<Integer>> runnables = new ArrayList<>();
+        ReentrantRedisLock lock = new ReentrantRedisLock("Test");
+        for (int i = 0; i < 100000; i++) {
+            Callable<Integer> test = () -> {
+                try {
+                    if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) {
+                        num[0]++;
+                    }
+                } finally {
+                    lock.unLock();
+                }
+                return num[0];
+            };
+            runnables.add(test);
+        }
+        executorService.invokeAll(runnables);
+        System.out.println(num[0]);
+        Thread.sleep(10000);
     }
 
     /**

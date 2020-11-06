@@ -103,14 +103,18 @@ public abstract class RedisLockAdaptor implements RedisLock {
                 removeLockLease();
             }
             resetLockStatus();
-            log.info("Unlock success");
+            if (log.isDebugEnabled()) {
+                log.debug("Unlock success:" + path);
+            }
         } else if (REENTRY_COUNT_DOWN == (long) result) {
             // 减少重入,继续续租
             Boolean useLeaseVal = useLease.get();
             if (useLeaseVal != null && useLeaseVal) {
                 addLockLease(System.currentTimeMillis(), leaseTimeTemp);
             }
-            log.info("Count down and refresh");
+            if (log.isDebugEnabled()) {
+                log.debug("Count down and refresh");
+            }
         }
     }
 
