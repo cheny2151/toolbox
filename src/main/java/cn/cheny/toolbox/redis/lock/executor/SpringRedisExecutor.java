@@ -27,7 +27,19 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class SpringRedisExecutor implements RedisExecutor {
 
+    /**
+     * 连接模式
+     * 1:jedis;2:JedisCluster;3:lettuce
+     */
+    private final static int CONNECTION_UNCHECK = 0;
+    private final static int CONNECTION_JEDIS = 1;
+    private final static int CONNECTION_JEDISCLUSTER = 2;
+    private final static int CONNECTION_LETTUCE = 3;
+
+    private int connectionModel = CONNECTION_UNCHECK;
+
     private final RedisTemplate<String, String> redisTemplate;
+
 
     public SpringRedisExecutor(RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -79,46 +91,33 @@ public class SpringRedisExecutor implements RedisExecutor {
             return redisTemplate.execute((RedisCallback<Object>) (redisConnection) -> {
 
                 Object nativeConnection = redisConnection.getNativeConnection();
-                Object result = null;
-                // jedis单机模式
-                try {
-                    if (nativeConnection instanceof Jedis) {
-                        result = ((Jedis) nativeConnection).eval(script, finalKeys, finalArgs);
-                    }
-                } catch (NoClassDefFoundError e) {
-                    // do nothing
-                }
-                // jedis集群模式
-                try {
-                    if (nativeConnection instanceof JedisCluster) {
-                        result = ((JedisCluster) nativeConnection).eval(script, finalKeys, finalArgs);
-                    }
-                } catch (NoClassDefFoundError e) {
-                    // do nothing
-                }
-                // lettuce
-                try {
-                    if (nativeConnection instanceof RedisScriptingAsyncCommands) {
-                        try {
-                            @SuppressWarnings("unchecked")
-                            RedisScriptingAsyncCommands<Object, Object> commands = (RedisScriptingAsyncCommands<Object, Object>) nativeConnection;
-                            result = commands
-                                    .eval(script, ScriptOutputType.INTEGER,
-                                            toBytes(finalKeys),
-                                            toBytes(finalArgs))
-                                    .get();
-                        } catch (Exception e) {
-                            if (log.isDebugEnabled()) {
-                                log.debug("Error running redis lua script", e);
-                            }
-                            throw new RedisScriptException("Error running redis lua script", e);
+                Object result;
+                if (connectionModel == CONNECTION_JEDIS || tryJedis(nativeConnection)) {
+                    // jedis单机模式
+                    result = ((Jedis) nativeConnection).eval(script, finalKeys, finalArgs);
+                } else if (connectionModel == CONNECTION_JEDISCLUSTER || tryJedisCluster(nativeConnection)) {
+                    // jedis集群模式
+                    result = ((JedisCluster) nativeConnection).eval(script, finalKeys, finalArgs);
+                } else if (connectionModel == CONNECTION_LETTUCE || tryLettuce(nativeConnection)) {
+                    // lettuce
+                    try {
+                        @SuppressWarnings("unchecked")
+                        RedisScriptingAsyncCommands<Object, Object> commands = (RedisScriptingAsyncCommands<Object, Object>) nativeConnection;
+                        result = commands
+                                .eval(script, ScriptOutputType.INTEGER,
+                                        toBytes(finalKeys),
+                                        toBytes(finalArgs))
+                                .get();
+                    } catch (Exception e) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("Error running redis lua script", e);
                         }
+                        throw new RedisScriptException("Error running redis lua script", e);
                     }
-                } catch (NoClassDefFoundError e) {
+                } else {
                     throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
                             + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
                 }
-
                 return result;
             });
         } catch (RedisRuntimeException rre) {
@@ -131,5 +130,41 @@ public class SpringRedisExecutor implements RedisExecutor {
 
     private Object[] toBytes(List<String> list) {
         return list.stream().map(String::getBytes).toArray();
+    }
+
+    private boolean tryJedis(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof Jedis) {
+                this.connectionModel = CONNECTION_JEDIS;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
+    }
+
+    private boolean tryJedisCluster(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof JedisCluster) {
+                this.connectionModel = CONNECTION_JEDISCLUSTER;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
+    }
+
+    private boolean tryLettuce(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof RedisScriptingAsyncCommands) {
+                this.connectionModel = CONNECTION_LETTUCE;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
     }
 }
