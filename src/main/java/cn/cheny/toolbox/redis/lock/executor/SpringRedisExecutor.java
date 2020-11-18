@@ -1,6 +1,5 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
-import cn.cheny.toolbox.redis.clustertask.TaskConfig;
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import cn.cheny.toolbox.redis.exception.RedisScriptException;
 import io.lettuce.core.ScriptOutputType;
@@ -64,7 +63,7 @@ public class SpringRedisExecutor implements RedisExecutor {
 
     @Override
     public void expire(String key, long time, TimeUnit timeUnit) {
-        redisTemplate.expire(key, TaskConfig.KEY_EXPIRE_SECONDS, timeUnit);
+        redisTemplate.expire(key, time, timeUnit);
     }
 
     @Override
