@@ -18,7 +18,7 @@ public @interface ExcelData {
     enum SwitchType{
         // 根据列号选中
         COLUMN_NUM,
-        // 根据列明选中
+        // 根据列名选中
         COLUMN_TITLE
     }
 
