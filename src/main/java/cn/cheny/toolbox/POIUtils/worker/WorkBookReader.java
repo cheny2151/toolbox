@@ -114,7 +114,7 @@ public class WorkBookReader {
     private <T> ReadResult<T> read(Workbook workbook, Class<T> targetClass) throws IllegalAccessException, InvocationTargetException {
         //数据出现行数,从0开始算
         ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
-        int titleRowNum = 1;
+        int titleRowNum = 0;
         int lastRowNum;
         String sheetName = null;
         if (excelHead != null) {
