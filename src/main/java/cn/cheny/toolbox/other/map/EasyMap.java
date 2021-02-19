@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.other.map;
 
+import cn.cheny.toolbox.other.page.Limit;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
@@ -11,6 +12,7 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -22,6 +24,8 @@ import java.util.stream.Stream;
  */
 @SuppressWarnings("unchecked")
 public class EasyMap extends HashMap<String, Object> {
+
+    private final Map<Class<?>, Map<String, Method>> typeWriterCache = new ConcurrentHashMap<>();
 
     public EasyMap(int initialCapacity, float loadFactor) {
         super(initialCapacity, loadFactor);
@@ -102,49 +106,70 @@ public class EasyMap extends HashMap<String, Object> {
         }
     }
 
-    @SuppressWarnings("SuspiciousToArrayCall")
     public <T> T[] getArray(String key, Class<T> tClass) {
         Object val = getObject(key);
         if (val == null) {
             return null;
         } else if (val.getClass().isArray()) {
-            return (T[]) val;
+            Object[] array = (Object[]) val;
+            Class<?> componentType = array.getClass().getComponentType();
+            if (tClass.isAssignableFrom(componentType)) {
+                return (T[]) val;
+            } else if (Map.class.isAssignableFrom(componentType)) {
+                return Stream.of((Map<String, Object>[]) val)
+                        .map(m -> mapToObject(m, tClass))
+                        .toArray(len -> (T[]) Array.newInstance(tClass, len));
+            } else {
+                throw new ParseTokenException("property '" + key + "' array is " + componentType + " ,expect " + tClass);
+            }
         } else if (val instanceof Collection) {
             Collection<?> collection = (Collection<?>) val;
             int size = collection.size();
             T[] array = (T[]) Array.newInstance(tClass, size);
-            if (size == 0) {
-                return array;
+            int i = 0;
+            for (Object o : collection) {
+                array[i++] = caseToObject(key, o, tClass);
             }
-            try {
-                return collection.toArray(array);
-            } catch (ArrayStoreException e) {
-                throw new ParseTokenException("property '" + key + "' array is " + collection.iterator().next().getClass() + " ,expect " + tClass);
-            }
+            return array;
         }
         throw new ParseTokenException("property '" + key + "' is " + val.getClass() + " ,expect collection or array");
     }
 
-    public <T> ArrayList<T> getArrayList(String key) {
+    public <T> List<T> getList(String key, Class<T> tClass) {
         Object val = getObject(key);
         if (val == null) {
             return null;
         } else if (val.getClass().isArray()) {
-            return (ArrayList<T>) Stream.of((T[]) val).collect(Collectors.toList());
+            Object[] array = (Object[]) val;
+            Class<?> componentType = array.getClass().getComponentType();
+            if (tClass.isAssignableFrom(componentType)) {
+                return Stream.of((T[]) val).collect(Collectors.toList());
+            } else if (Map.class.isAssignableFrom(componentType)) {
+                return Stream.of((Map<String, Object>[]) val)
+                        .map(m -> mapToObject(m, tClass))
+                        .collect(Collectors.toList());
+            } else {
+                throw new ParseTokenException("property '" + key + "' array is " + componentType + " ,expect " + tClass);
+            }
         } else if (val instanceof Collection) {
-            return new ArrayList<>((Collection<? extends T>) val);
+            Collection<?> collection = (Collection<?>) val;
+            List<T> list = new ArrayList<>();
+            for (Object o : collection) {
+                list.add(caseToObject(key, o, tClass));
+            }
+            return list;
         }
         throw new ParseTokenException("property '" + key + "' is " + val.getClass() + " ,expect collection or array");
     }
 
-    public Map<String, Object> getMap(String key) {
+    public EasyMap getMap(String key) {
         Object val = getObject(key);
         if (val == null) {
             return null;
         } else if (val instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) val;
             if (map instanceof EasyMap) {
-                return map;
+                return (EasyMap) map;
             }
             return new EasyMap(map);
         }
@@ -153,23 +178,7 @@ public class EasyMap extends HashMap<String, Object> {
 
     public <T> T getObject(String key, Class<T> tClass) {
         Object val = getObject(key);
-        if (val == null) {
-            return null;
-        } else if (tClass.isAssignableFrom(val.getClass())) {
-            return (T) val;
-        } else if (val instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) val;
-            Map<String, Method> writerMethod = ReflectUtils.getAllWriterMethod(tClass, Object.class);
-            T t = ReflectUtils.newObject(tClass, null, null);
-            writerMethod.forEach((f, m) -> {
-                Object fieldVal = map.get(f);
-                if (fieldVal != null) {
-                    ReflectUtils.writeValue(t, m, fieldVal);
-                }
-            });
-            return t;
-        }
-        throw new ParseTokenException("property '" + key + "' is " + val.getClass() + " ,expect map");
+        return caseToObject(key, val, tClass);
     }
 
     public Object getObject(String key) {
@@ -200,21 +209,43 @@ public class EasyMap extends HashMap<String, Object> {
         return cur;
     }
 
+    private <T> T caseToObject(String property, Object obj, Class<T> objType) {
+        if (obj == null) {
+            return null;
+        } else if (objType.isAssignableFrom(obj.getClass())) {
+            return (T) obj;
+        } else if (obj instanceof Map) {
+            return mapToObject((Map<String, Object>) obj, objType);
+        } else {
+            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
+        }
+    }
+
+    private <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
+        Map<String, Method> writerMethod =
+                typeWriterCache.computeIfAbsent(objType, k -> ReflectUtils.getAllWriterMethod(objType, Object.class));
+        T t = ReflectUtils.newObject(objType, null, null);
+        writerMethod.forEach((f, m) -> {
+            Object fieldVal = map.get(f);
+            if (fieldVal != null) {
+                ReflectUtils.writeValue(t, m, fieldVal);
+            }
+        });
+        return t;
+    }
+
     public static void main(String[] args) {
         EasyMap easyMap = new EasyMap();
         HashMap<String, Object> test = new HashMap<>();
-        ArrayList<String> test1 = new ArrayList<>();
-        test1.add("test0");
-        test1.add("test1");
-        test1.add("test2");
-        test1.add("test3");
-        test1.add("test4");
-        test1.add("test5");
-        String[] test2 = test1.toArray(new String[test.size()]);
-        test.put("test1", test2);
+        ArrayList<HashMap<String, Object>> test1 = new ArrayList<>();
+        HashMap<String, Object> limit = new HashMap<>();
+        limit.put("num", 0);
+        limit.put("size", 10);
+        test1.add(limit);
+        test.put("test1", test1);
         easyMap.put("test", test);
-        Integer[] array = easyMap.getArray("test.test1", Integer.class);
-        System.out.println(JSON.toJSONString(array));
+        Limit limit1 = easyMap.getObject("test.test1[0]", Limit.class);
+        System.out.println(JSON.toJSONString(limit1));
     }
 
 }
