@@ -4,11 +4,11 @@ import cn.cheny.toolbox.other.page.Limit;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
+import cn.cheny.toolbox.reflect.TypeReference;
 import com.alibaba.fastjson.JSON;
 import org.apache.commons.lang3.time.DateUtils;
 
-import java.lang.reflect.Array;
-import java.lang.reflect.Method;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.util.*;
@@ -26,6 +26,8 @@ import java.util.stream.Stream;
 public class EasyMap extends HashMap<String, Object> {
 
     private final Map<Class<?>, Map<String, Method>> typeWriterCache = new ConcurrentHashMap<>();
+
+    private final Map<Class<?>, Map<String, Method>> typeReaderCache = new ConcurrentHashMap<>();
 
     public EasyMap(int initialCapacity, float loadFactor) {
         super(initialCapacity, loadFactor);
@@ -209,6 +211,38 @@ public class EasyMap extends HashMap<String, Object> {
         return cur;
     }
 
+    public <T> T getObject(String key, TypeReference<T> typeReference) {
+        Object object = getObject(key);
+        Type actualType = typeReference.getActualType();
+        if (object instanceof Map) {
+
+        } else if (object instanceof Collection) {
+
+        } else if (object.getClass().isArray()) {
+
+        }
+        if (actualType instanceof ParameterizedType) {
+
+        } else if (actualType instanceof TypeVariable) {
+
+        }
+        return null;
+    }
+
+    private <T> T caseToObject(String property, Object obj, Type objType) {
+        if (obj == null) {
+            return null;
+        } else if (objType instanceof Class) {
+            return caseToObject(property, obj, (Class<T>) objType);
+        } else if (obj instanceof ParameterizedType) {
+            return caseToObject(property, obj, (ParameterizedType) objType);
+        } else if (obj instanceof TypeVariable) {
+            return caseToObject(property, obj, (TypeVariable<?>) objType);
+        } else {
+            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
+        }
+    }
+
     private <T> T caseToObject(String property, Object obj, Class<T> objType) {
         if (obj == null) {
             return null;
@@ -216,6 +250,27 @@ public class EasyMap extends HashMap<String, Object> {
             return (T) obj;
         } else if (obj instanceof Map) {
             return mapToObject((Map<String, Object>) obj, objType);
+        } else {
+            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
+        }
+    }
+
+    private <T> T caseToObject(String property, Object obj, ParameterizedType objType) {
+        Type rawType = objType.getRawType();
+        if (obj == null) {
+            return null;
+        } else if (false) {
+            return null;
+        } else {
+            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
+        }
+    }
+
+    private <T> T caseToObject(String property, Object obj, TypeVariable<?> objType) {
+        if (obj == null) {
+            return null;
+        } else if (false) {
+            return null;
         } else {
             throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
         }
@@ -234,6 +289,17 @@ public class EasyMap extends HashMap<String, Object> {
         return t;
     }
 
+    private Map<String, Object> objectToMap(Object obj) {
+        Class<?> objClass = obj.getClass();
+        Map<String, Method> writerMethod =
+                typeReaderCache.computeIfAbsent(objClass, k -> ReflectUtils.getAllReadMethod(objClass, Object.class));
+        Map<String, Object> map = new LinkedHashMap<>();
+        writerMethod.forEach((f, m) -> {
+            map.put(f, ReflectUtils.readValue(obj, m));
+        });
+        return map;
+    }
+
     public static void main(String[] args) {
         EasyMap easyMap = new EasyMap();
         HashMap<String, Object> test = new HashMap<>();
@@ -244,8 +310,13 @@ public class EasyMap extends HashMap<String, Object> {
         test1.add(limit);
         test.put("test1", test1);
         easyMap.put("test", test);
-        Limit limit1 = easyMap.getObject("test.test1[0]", Limit.class);
-        System.out.println(JSON.toJSONString(limit1));
+        TypeReference<ArrayList<String>> typeReference = new TypeReference<ArrayList<String>>() {
+        };
+//        ArrayList<HashMap<String, Object>> list =
+//                easyMap.getObject("test.test1", typeReference);
+//        System.out.println(JSON.toJSONString(list));
+        Type actualType = typeReference.getActualType();
+        System.out.println(actualType.getClass());
     }
 
 }
