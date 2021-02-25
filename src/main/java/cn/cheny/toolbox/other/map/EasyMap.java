@@ -5,7 +5,6 @@ import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
-import com.alibaba.fastjson.JSON;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -120,13 +119,7 @@ public class EasyMap extends HashMap<String, Object> {
             }
         } else if (val instanceof Collection) {
             Collection<?> collection = (Collection<?>) val;
-            int size = collection.size();
-            T[] array = (T[]) Array.newInstance(tClass, size);
-            int i = 0;
-            for (Object o : collection) {
-                array[i++] = caseToObject(key, o, tClass);
-            }
-            return array;
+            return collectionToArray(key, collection, tClass);
         }
         throw new ParseTokenException("property '" + key + "' is " + val.getClass() + " ,expect collection or array");
     }
@@ -348,16 +341,47 @@ public class EasyMap extends HashMap<String, Object> {
         Class<?> componentType = array.getClass().getComponentType();
         if (tClass.isAssignableFrom(componentType)) {
             return Stream.of((T[]) array).collect(Collectors.toList());
-        } else if (array instanceof int[]) {
+        } else {
             ArrayList<T> rs = new ArrayList<>();
-            for (int i : ((int[]) array)) {
-                rs.add(tryCoverBase(property, i, tClass));
+            int length = Array.getLength(array);
+            for (int i = 0; i < length; i++) {
+                Object o = Array.get(array, i);
+                rs.add(caseToObject(property, o, tClass));
             }
             return rs;
-            // todo
-        } else {
-            return Stream.of(array).map(e -> caseToObject(property, e, tClass)).collect(Collectors.toList());
         }
+    }
+
+    private <T> T[] collectionToArray(String property, Collection<?> collection, Class<T> tClass) {
+        Class<?> class0 = ifPrimitiveToWrapClass(tClass);
+        Object array = Array.newInstance(class0, collection.size());
+        int i = 0;
+        for (Object o : collection) {
+            T t = (T) caseToObject(property, o, class0);
+            Array.set(array, i++, t);
+        }
+        return (T[]) array;
+    }
+
+    private Class<?> ifPrimitiveToWrapClass(Class<?> pc) {
+        if (int.class.equals(pc)) {
+            return Integer.class;
+        } else if (long.class.equals(pc)) {
+            return Long.class;
+        } else if (float.class.equals(pc)) {
+            return Float.class;
+        } else if (double.class.equals(pc)) {
+            return Double.class;
+        } else if (char.class.equals(pc)) {
+            return Character.class;
+        } else if (byte.class.equals(pc)) {
+            return Byte.class;
+        } else if (boolean.class.equals(pc)) {
+            return Boolean.class;
+        } else if (short.class.equals(pc)) {
+            return Short.class;
+        }
+        return pc;
     }
 
     public static void main(String[] args) {
@@ -383,7 +407,11 @@ public class EasyMap extends HashMap<String, Object> {
     }
 
     private static void test(Object c) {
-
+        Integer[] a = new Integer[]{1, 2};
+        List<Integer> list = Arrays.asList(a);
+        EasyMap easyMap = new EasyMap();
+        Object tests = easyMap.collectionToArray("test", list, int.class);
+        System.out.println(tests.getClass());
     }
 
 
