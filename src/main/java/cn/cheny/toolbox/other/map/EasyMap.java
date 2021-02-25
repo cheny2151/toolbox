@@ -1,16 +1,14 @@
 package cn.cheny.toolbox.other.map;
 
-import cn.cheny.toolbox.other.page.Limit;
+import cn.cheny.toolbox.other.DateUtils;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
 import com.alibaba.fastjson.JSON;
-import org.apache.commons.lang3.time.DateUtils;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
-import java.text.ParseException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -101,11 +99,7 @@ public class EasyMap extends HashMap<String, Object> {
         if (val instanceof Date || val == null) {
             return (Date) val;
         }
-        try {
-            return DateUtils.parseDate(val.toString(), "yyyy-MM-dd", "yyyy-MM-dd HH:mm:ss");
-        } catch (ParseException e) {
-            throw new IllegalArgumentException("不支持的日期格式:" + key);
-        }
+        return DateUtils.parseDate(val.toString());
     }
 
     public <T> T[] getArray(String key, Class<T> tClass) {
@@ -146,12 +140,8 @@ public class EasyMap extends HashMap<String, Object> {
             Class<?> componentType = array.getClass().getComponentType();
             if (tClass.isAssignableFrom(componentType)) {
                 return Stream.of((T[]) val).collect(Collectors.toList());
-            } else if (Map.class.isAssignableFrom(componentType)) {
-                return Stream.of((Map<String, Object>[]) val)
-                        .map(m -> mapToObject(m, tClass))
-                        .collect(Collectors.toList());
             } else {
-                throw new ParseTokenException("property '" + key + "' array is " + componentType + " ,expect " + tClass);
+                return arrayToList(key, val, tClass);
             }
         } else if (val instanceof Collection) {
             Collection<?> collection = (Collection<?>) val;
@@ -248,18 +238,72 @@ public class EasyMap extends HashMap<String, Object> {
             return null;
         } else if (objType.isAssignableFrom(obj.getClass())) {
             return (T) obj;
-        } else if (obj instanceof Map) {
+        } else if ((obj instanceof Map) && !(Map.class.isAssignableFrom(objType))) {
             return mapToObject((Map<String, Object>) obj, objType);
+        } else if (!(obj instanceof Map) && (Map.class.isAssignableFrom(objType))) {
+            return (T) objectToMap(obj);
+        } else if (obj instanceof Collection && objType.isArray()) {
+
+            return null;
+        } else if (isBaseClass(obj.getClass()) && isBaseClass(objType)) {
+            return tryCoverBase(property, obj, objType);
         } else {
             throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
         }
     }
 
+    private boolean isBaseClass(Class<?> aClass) {
+        return aClass.isPrimitive()
+                || aClass.equals(Integer.class)
+                || aClass.equals(Short.class)
+                || aClass.equals(Double.class)
+                || aClass.equals(Float.class)
+                || aClass.equals(String.class)
+                || aClass.equals(Boolean.class)
+                || aClass.equals(Long.class)
+                || aClass.equals(Byte.class)
+                || aClass.equals(BigDecimal.class)
+                || aClass.equals(Date.class);
+    }
+
+    private static <T> T tryCoverBase(String property, Object obj, Class<T> targetClass) {
+        try {
+            if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
+                return (T) Integer.valueOf(obj.toString());
+            } else if (targetClass.equals(short.class) || targetClass.equals(Short.class)) {
+                return (T) Short.valueOf(obj.toString());
+            } else if (targetClass.equals(double.class) || targetClass.equals(Double.class)) {
+                return (T) Double.valueOf(obj.toString());
+            } else if (targetClass.equals(float.class) || targetClass.equals(Float.class)) {
+                return (T) Float.valueOf(obj.toString());
+            } else if (targetClass.equals(boolean.class) || targetClass.equals(Boolean.class)) {
+                if (obj instanceof String) {
+                    return (T) Boolean.valueOf((String) obj);
+                }
+            } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
+                return (T) Long.valueOf(obj.toString());
+            } else if (targetClass.equals(byte.class) || targetClass.equals(Byte.class)) {
+                return (T) Byte.valueOf(obj.toString());
+            } else if (targetClass.equals(String.class)) {
+                return (T) obj.toString();
+            } else if (targetClass.equals(BigDecimal.class)) {
+                return (T) new BigDecimal(obj.toString());
+            } else if (targetClass.equals(Date.class)) {
+                return (T) DateUtils.toDate(obj);
+            }
+        } catch (Exception e) {
+            // do nothing
+        }
+        throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + targetClass);
+    }
+
     private <T> T caseToObject(String property, Object obj, ParameterizedType objType) {
         Type rawType = objType.getRawType();
-        if (obj == null) {
+        Object obj0 = caseToObject(property, obj, rawType);
+        if (obj0 == null) {
             return null;
-        } else if (false) {
+        } else if (obj0 instanceof Map) {
+            Type[] argTypes = objType.getActualTypeArguments();
             return null;
         } else {
             throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
@@ -300,6 +344,22 @@ public class EasyMap extends HashMap<String, Object> {
         return map;
     }
 
+    private <T> List<T> arrayToList(String property, Object array, Class<T> tClass) {
+        Class<?> componentType = array.getClass().getComponentType();
+        if (tClass.isAssignableFrom(componentType)) {
+            return Stream.of((T[]) array).collect(Collectors.toList());
+        } else if (array instanceof int[]) {
+            ArrayList<T> rs = new ArrayList<>();
+            for (int i : ((int[]) array)) {
+                rs.add(tryCoverBase(property, i, tClass));
+            }
+            return rs;
+            // todo
+        } else {
+            return Stream.of(array).map(e -> caseToObject(property, e, tClass)).collect(Collectors.toList());
+        }
+    }
+
     public static void main(String[] args) {
         EasyMap easyMap = new EasyMap();
         HashMap<String, Object> test = new HashMap<>();
@@ -317,6 +377,14 @@ public class EasyMap extends HashMap<String, Object> {
 //        System.out.println(JSON.toJSONString(list));
         Type actualType = typeReference.getActualType();
         System.out.println(actualType.getClass());
+
+        int i = 2;
+        test(i);
     }
+
+    private static void test(Object c) {
+
+    }
+
 
 }
