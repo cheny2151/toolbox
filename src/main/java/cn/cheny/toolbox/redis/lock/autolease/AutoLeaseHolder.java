@@ -108,8 +108,8 @@ public class AutoLeaseHolder implements Closeable {
                 if (log.isDebugEnabled()) {
                     log.debug("删除续租,keys:{}", waitRemoveKeys);
                 }
+                waitRemoveKeys.forEach(leaseMap::remove);
             }
-            waitRemoveKeys.forEach(leaseMap::remove);
         } catch (Throwable t) {
             log.error("执行续租任务异常", t);
         }
