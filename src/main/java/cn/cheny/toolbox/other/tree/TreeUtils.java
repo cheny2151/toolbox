@@ -77,8 +77,13 @@ public class TreeUtils {
                 if (i == length - 1) {
                     BeanUtils.copyProperties(next, t, "children", "code", "codeSequence", "parent");
                 }
-                if (!parent.getChildren().contains(next)) {
-                    parent.getChildren().add(next);
+                Collection<T> children = parent.getChildren();
+                if (children == null){
+                    children = new ArrayList<>();
+                    parent.setChildren(children);
+                }
+                if (!children.contains(next)) {
+                    children.add(next);
                 }
                 //next
                 parent = next;
@@ -115,7 +120,6 @@ public class TreeUtils {
             String[] codes = splitSequence(key);
             treeType.setCodeSequence(key);
             treeType.setCode(codes[codes.length - 1]);
-            treeType.setChildren(new ArrayList<>());
             map.put(key, treeType);
         }
         return treeType;
