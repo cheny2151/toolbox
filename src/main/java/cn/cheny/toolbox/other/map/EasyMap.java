@@ -271,53 +271,6 @@ public class EasyMap extends HashMap<String, Object> {
         }
     }
 
-    private boolean isBaseClass(Class<?> aClass) {
-        return aClass.isPrimitive()
-                || aClass.equals(Integer.class)
-                || aClass.equals(Short.class)
-                || aClass.equals(Double.class)
-                || aClass.equals(Float.class)
-                || aClass.equals(String.class)
-                || aClass.equals(Boolean.class)
-                || aClass.equals(Long.class)
-                || aClass.equals(Byte.class)
-                || aClass.equals(BigDecimal.class)
-                || aClass.equals(Date.class);
-    }
-
-    private static <T> T tryCoverBase(String property, Object obj, Class<T> targetClass) {
-        try {
-            if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
-                return (T) Integer.valueOf(obj.toString());
-            } else if (targetClass.equals(short.class) || targetClass.equals(Short.class)) {
-                return (T) Short.valueOf(obj.toString());
-            } else if (targetClass.equals(double.class) || targetClass.equals(Double.class)) {
-                return (T) Double.valueOf(obj.toString());
-            } else if (targetClass.equals(float.class) || targetClass.equals(Float.class)) {
-                return (T) Float.valueOf(obj.toString());
-            } else if (targetClass.equals(boolean.class) || targetClass.equals(Boolean.class)) {
-                if (obj instanceof String) {
-                    return (T) Boolean.valueOf((String) obj);
-                }
-            } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
-                return (T) Long.valueOf(obj.toString());
-            } else if (targetClass.equals(byte.class) || targetClass.equals(Byte.class)) {
-                return (T) Byte.valueOf(obj.toString());
-            } else if (targetClass.equals(char.class) || targetClass.equals(Character.class)) {
-                return (T) Character.valueOf((char) obj);
-            } else if (targetClass.equals(String.class)) {
-                return (T) obj.toString();
-            } else if (targetClass.equals(BigDecimal.class)) {
-                return (T) new BigDecimal(obj.toString());
-            } else if (targetClass.equals(Date.class)) {
-                return (T) DateUtils.toDate(obj);
-            }
-        } catch (Exception e) {
-            // do nothing
-        }
-        throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + targetClass);
-    }
-
     private <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
         Map<String, Method> writerMethod =
                 typeWriterCache.computeIfAbsent(objType, k -> ReflectUtils.getAllWriterMethod(objType, Object.class));
@@ -366,6 +319,74 @@ public class EasyMap extends HashMap<String, Object> {
         return (T[]) array;
     }
 
+    /**
+     * 判断是否是基础类型，或者基础类型的包装类，或者BigDecimal，Date
+     *
+     * @param aClass 类型
+     * @return 是否基础类型
+     */
+    private boolean isBaseClass(Class<?> aClass) {
+        return aClass.isPrimitive()
+                || aClass.equals(Integer.class)
+                || aClass.equals(Short.class)
+                || aClass.equals(Double.class)
+                || aClass.equals(Float.class)
+                || aClass.equals(String.class)
+                || aClass.equals(Boolean.class)
+                || aClass.equals(Long.class)
+                || aClass.equals(Byte.class)
+                || aClass.equals(BigDecimal.class)
+                || aClass.equals(Date.class);
+    }
+
+    /**
+     * 尝试基础类型数据的转换
+     *
+     * @param property    属性key
+     * @param obj         对应的值
+     * @param targetClass 目标转换类型
+     * @param <T>         对应泛型
+     * @return 转换结果
+     */
+    private static <T> T tryCoverBase(String property, Object obj, Class<T> targetClass) {
+        try {
+            if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
+                return (T) Integer.valueOf(obj.toString());
+            } else if (targetClass.equals(short.class) || targetClass.equals(Short.class)) {
+                return (T) Short.valueOf(obj.toString());
+            } else if (targetClass.equals(double.class) || targetClass.equals(Double.class)) {
+                return (T) Double.valueOf(obj.toString());
+            } else if (targetClass.equals(float.class) || targetClass.equals(Float.class)) {
+                return (T) Float.valueOf(obj.toString());
+            } else if (targetClass.equals(boolean.class) || targetClass.equals(Boolean.class)) {
+                if (obj instanceof String) {
+                    return (T) Boolean.valueOf((String) obj);
+                }
+            } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
+                return (T) Long.valueOf(obj.toString());
+            } else if (targetClass.equals(byte.class) || targetClass.equals(Byte.class)) {
+                return (T) Byte.valueOf(obj.toString());
+            } else if (targetClass.equals(char.class) || targetClass.equals(Character.class)) {
+                return (T) Character.valueOf((char) obj);
+            } else if (targetClass.equals(String.class)) {
+                return (T) obj.toString();
+            } else if (targetClass.equals(BigDecimal.class)) {
+                return (T) new BigDecimal(obj.toString());
+            } else if (targetClass.equals(Date.class)) {
+                return (T) DateUtils.toDate(obj);
+            }
+        } catch (Exception e) {
+            // do nothing
+        }
+        throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + targetClass);
+    }
+
+    /**
+     * 判断是否是基础类型
+     *
+     * @param pc 类型
+     * @return
+     */
     private Class<?> ifPrimitiveToWrapClass(Class<?> pc) {
         if (int.class.equals(pc)) {
             return Integer.class;
@@ -391,13 +412,15 @@ public class EasyMap extends HashMap<String, Object> {
         EasyMap easyMap = new EasyMap();
         HashMap<String, Object> test = new HashMap<>();
         ArrayList<HashMap<String, Object>> test1 = new ArrayList<>();
-        HashMap<String, Object> limit = new HashMap<>();
-        limit.put("num", 0);
-        limit.put("size", 10);
-        test1.add(limit);
-        test.put("test1", test1);
+        HashMap<String, Limit> limit = new HashMap<>();
+        limit.put("test", Limit.create(0, 1));
+//        limit.put("num", 0);
+//        limit.put("size", 10);
+//        test1.add(limit);
+//        test.put("test1", test1);
+        Object a = limit;
         easyMap.put("test", test);
-        TypeReference<Collection<? super Limit>> typeReference = new TypeReference<Collection<? super Limit>>() {
+        TypeReference<Map<String, Limit>> typeReference = new TypeReference<Map<String, Limit>>() {
         };
 //        ArrayList<HashMap<String, Object>> list =
 //                easyMap.getObject("test.test1", typeReference);
@@ -405,10 +428,8 @@ public class EasyMap extends HashMap<String, Object> {
         Type actualType = typeReference.getActualType();
         System.out.println(actualType);
         ParameterizedType parameterizedType = ((ParameterizedType) actualType);
-        System.out.println(parameterizedType.getRawType());
-        System.out.println(((WildcardType) parameterizedType.getActualTypeArguments()[0]).getLowerBounds()[0]);
-//        System.out.println(((WildcardType)parameterizedType.getActualTypeArguments()[0]).getUpperBounds()[0]);
-
+        Object test2 = easyMap.caseToObject("test", a, parameterizedType);
+        System.out.println(test2);
         int i = 2;
         test(i);
     }
