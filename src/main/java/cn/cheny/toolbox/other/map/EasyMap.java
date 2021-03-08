@@ -246,11 +246,8 @@ public class EasyMap extends HashMap<String, Object> {
                     .collect(Collectors.toList());
             return (T) results;
         } else {
-            // todo object
             Type[] argTypes = objType.getActualTypeArguments();
-//            objType.
             TypeVariable<? extends Class<?>>[] superTypeVariables = obj0.getClass().getTypeParameters();
-//            if ()
             List<Field> fields = ReflectUtils.getAllFields(obj0.getClass(), Object.class);
             for (Field field : fields) {
                 if (field.getGenericType() instanceof TypeVariable) {
