@@ -1,11 +1,13 @@
 package cn.cheny.toolbox.reflect;
 
+import cn.cheny.toolbox.other.fun.FilterFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -268,15 +270,19 @@ public class ReflectUtils {
      * @return
      */
     public static List<Field> getAllFields(Class<?> clazz, Class<?> stop) {
-        List<Field> fields = new ArrayList<>();
-        for (; clazz != stop; clazz = clazz.getSuperclass()) {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (field.getName().equalsIgnoreCase("serialVersionUID")) continue;
-                field.setAccessible(true);
-                fields.add(field);
-            }
-        }
-        return fields;
+        return getFields(clazz, stop, null);
+    }
+
+    /**
+     * 获取对象属性字段(除find & status)
+     *
+     * @param clazz 所属对象class
+     * @param stop  终止递归父类
+     * @return 字段
+     */
+    public static List<Field> getPropertyFields(Class<?> clazz, Class<?> stop) {
+        return getFields(clazz, stop, field -> (field.getModifiers() & Modifier.FINAL) == 0 ||
+                (field.getModifiers() & Modifier.STATIC) == 0);
     }
 
     /**
@@ -324,7 +330,7 @@ public class ReflectUtils {
         if (name == null || "".equals(name)) {
             throw new IllegalArgumentException();
         }
-        Class currentClass = clazz;
+        Class<?> currentClass = clazz;
         // 尝试查找Field直到Object类
         while (!Object.class.equals(currentClass)) {
             try {
@@ -347,9 +353,59 @@ public class ReflectUtils {
      * @return K:属性名,v:字段
      */
     public static Map<String, Field> getAllFieldHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        List<Field> allFields = getAllFields(clazz, Object.class);
-        return allFields.stream().filter(field -> field.getDeclaredAnnotation(annotationClass) != null)
-                .collect(Collectors.toMap(Field::getName, field -> field));
+        return getFields(clazz, Object.class, field -> field.getDeclaredAnnotation(annotationClass) != null)
+                .stream().collect(Collectors.toMap(Field::getName, field -> field));
+    }
+
+    /**
+     * 获取并过滤字段
+     *
+     * @param clazz               所属对象class
+     * @param stop                终止递归父类
+     * @param fieldFilterFunction 过滤函数,返回true则添加到结果
+     * @return 字段集合
+     */
+    public static List<Field> getFields(Class<?> clazz, Class<?> stop, FilterFunction<Field> fieldFilterFunction) {
+        List<Field> fields = new ArrayList<>();
+        for (; clazz != stop; clazz = clazz.getSuperclass()) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.getName().equalsIgnoreCase("serialVersionUID")
+                        || (fieldFilterFunction != null
+                        && !fieldFilterFunction.filter(field))) continue;
+                field.setAccessible(true);
+                fields.add(field);
+            }
+        }
+        return fields;
+    }
+
+    /**
+     * 获取object对应field的值
+     *
+     * @param field 字段
+     * @param obj   对象
+     * @return 字段值
+     */
+    public static Object getFieldVal(Field field, Object obj) {
+        try {
+            return field.get(obj);
+        } catch (IllegalAccessException e) {
+            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass());
+        }
+    }
+
+    /**
+     * 设置object对应field的值
+     *
+     * @param field 字段
+     * @param obj   对象
+     */
+    public static void setFieldVal(Field field, Object obj, Object val) {
+        try {
+            field.set(obj, val);
+        } catch (IllegalAccessException e) {
+            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass());
+        }
     }
 
     /**

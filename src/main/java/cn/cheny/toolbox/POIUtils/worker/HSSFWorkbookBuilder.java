@@ -83,7 +83,7 @@ public class HSSFWorkbookBuilder {
         //获取头部style
         HSSFCellStyle headStyle = getHeadStyle(workbook);
 
-        for (Field field : ReflectUtils.getAllFields(targetClass, Object.class)) {
+        for (Field field : ReflectUtils.getPropertyFields(targetClass, Object.class)) {
             if (field.isAnnotationPresent(ExcelCell.class)) {
                 ExcelCell cellAnnotation = field.getAnnotation(ExcelCell.class);
                 //行高
