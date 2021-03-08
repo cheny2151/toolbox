@@ -1,7 +1,7 @@
 package cn.cheny.toolbox.other.map;
 
 import cn.cheny.toolbox.other.DateUtils;
-import cn.cheny.toolbox.other.page.Limit;
+import cn.cheny.toolbox.other.tree.TreeType;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
@@ -190,11 +190,11 @@ public class EasyMap extends HashMap<String, Object> {
             return null;
         } else if (objType instanceof Class) {
             return caseToObject(property, obj, (Class<T>) objType);
-        } else if (obj instanceof ParameterizedType) {
+        } else if (objType instanceof ParameterizedType) {
             return caseToObject(property, obj, (ParameterizedType) objType);
-        } else if (obj instanceof TypeVariable) {
+        } else if (objType instanceof TypeVariable) {
             return caseToObject(property, obj, (TypeVariable<?>) objType);
-        } else if (obj instanceof WildcardType) {
+        } else if (objType instanceof WildcardType) {
             return caseToObject(property, obj, (WildcardType) objType);
         } else {
             throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
@@ -240,14 +240,41 @@ public class EasyMap extends HashMap<String, Object> {
             return (T) results;
         } else if (obj0 instanceof Collection) {
             Type[] argTypes = objType.getActualTypeArguments();
-            Collection<?> map = (Collection<?>) obj0;
-            Collection<Object> results = map.stream()
+            Collection<?> col = (Collection<?>) obj0;
+            Collection<Object> results = col.stream()
                     .map(e -> caseToObject(property, e, argTypes[0]))
                     .collect(Collectors.toList());
             return (T) results;
         } else {
             // todo object
-            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
+            Type[] argTypes = objType.getActualTypeArguments();
+//            objType.
+            TypeVariable<? extends Class<?>>[] superTypeVariables = obj0.getClass().getTypeParameters();
+//            if ()
+            List<Field> fields = ReflectUtils.getAllFields(obj0.getClass(), Object.class);
+            for (Field field : fields) {
+                if (field.getGenericType() instanceof TypeVariable) {
+                    Integer typeIdx = null;
+                    for (int i = 0; i < superTypeVariables.length; i++) {
+                        if (superTypeVariables[i].equals(field.getGenericType())) {
+                            typeIdx = i;
+                        }
+                    }
+                    if (typeIdx == null) {
+                        continue;
+                    }
+                    try {
+                        Object fv = field.get(obj0);
+                        Object newVal = caseToObject(property, fv, argTypes[typeIdx]);
+                        if (newVal != fv) {
+                            field.set(obj0, newVal);
+                        }
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            return (T) obj0;
         }
     }
 
@@ -274,6 +301,8 @@ public class EasyMap extends HashMap<String, Object> {
     private <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
         Map<String, Method> writerMethod =
                 typeWriterCache.computeIfAbsent(objType, k -> ReflectUtils.getAllWriterMethod(objType, Object.class));
+        // todo
+        ReflectUtils.getAllFields(objType,Object.class).forEach(e-> System.out.println(e.getGenericType()));
         T t = ReflectUtils.newObject(objType, null, null);
         writerMethod.forEach((f, m) -> {
             Object fieldVal = map.get(f);
@@ -410,37 +439,22 @@ public class EasyMap extends HashMap<String, Object> {
 
     public static void main(String[] args) {
         EasyMap easyMap = new EasyMap();
-        HashMap<String, Object> test = new HashMap<>();
-        ArrayList<HashMap<String, Object>> test1 = new ArrayList<>();
-        HashMap<String, Limit> limit = new HashMap<>();
-        limit.put("test", Limit.create(0, 1));
-//        limit.put("num", 0);
-//        limit.put("size", 10);
-//        test1.add(limit);
-//        test.put("test1", test1);
-        Object a = limit;
-        easyMap.put("test", test);
-        TypeReference<Map<String, Limit>> typeReference = new TypeReference<Map<String, Limit>>() {
+        HashMap<String, Object> map0 = new HashMap<>();
+        map0.put("code", "0");
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("parent", map0);
+        map.put("code", "1");
+        List<Object> testTypes = Collections.singletonList(map);
+        TypeReference<List<TestType>> typeReference = new TypeReference<List<TestType>>() {
         };
-//        ArrayList<HashMap<String, Object>> list =
-//                easyMap.getObject("test.test1", typeReference);
-//        System.out.println(JSON.toJSONString(list));
         Type actualType = typeReference.getActualType();
-        System.out.println(actualType);
         ParameterizedType parameterizedType = ((ParameterizedType) actualType);
-        Object test2 = easyMap.caseToObject("test", a, parameterizedType);
-        System.out.println(test2);
-        int i = 2;
-        test(i);
+        List<TreeType<TestType>> test2 = easyMap.caseToObject("test", testTypes, parameterizedType);
+        System.out.println(test2.get(0).getParent());
     }
 
-    private static void test(Object c) {
-        Integer[] a = new Integer[]{1, 2};
-        List<Integer> list = Arrays.asList(a);
-        EasyMap easyMap = new EasyMap();
-        Object tests = easyMap.collectionToArray("test", list, int.class);
-        System.out.println(tests.getClass());
-    }
+    public static class TestType extends TreeType<TestType> {
 
+    }
 
 }
