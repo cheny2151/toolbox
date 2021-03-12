@@ -90,7 +90,7 @@ public class Filters extends ArrayList<Filter> {
 
     public boolean isHasOtherParams() {
         Map<String, Object> otherParams = this.otherParams;
-        return otherParams == null || otherParams.size() == 0;
+        return otherParams != null && otherParams.size() > 0;
     }
 
     public static Filter eq(String property, Object value) {
