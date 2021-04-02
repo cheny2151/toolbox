@@ -1,11 +1,13 @@
 package cn.cheny.toolbox.other.map;
 
 import cn.cheny.toolbox.other.DateUtils;
+import cn.cheny.toolbox.other.tree.TreeType;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.reflect.TypeVariableParser;
+import com.alibaba.fastjson.JSONObject;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -231,26 +233,32 @@ public class EasyMap extends HashMap<String, Object> {
     private <T> T caseToObject(String property, Object obj, Class<T> objType) {
         if (obj == null) {
             return null;
-        } else if (objType.isAssignableFrom(obj.getClass())) {
+        }
+        Class<?> class0 = obj.getClass();
+        if (objType.isAssignableFrom(class0)) {
             return (T) obj;
-        } else if (isBaseClass(obj.getClass()) && isBaseClass(objType)) {
+        } else if (isBaseClass(class0) && isBaseClass(objType)) {
             return tryCoverBase(property, obj, objType);
-        } else if (obj instanceof Map && !objType.isArray() &&
-                !Collection.class.isAssignableFrom(objType) &&
-                !isBaseClass(objType)) {
-            return mapToObject((Map<String, Object>) obj, objType);
+        } else if (obj instanceof Map) {
+            if (Map.class.isAssignableFrom(objType)) {
+                return (T) coverMapInstance((Map<String, Object>) obj, (Class<? extends Map<String, Object>>) objType);
+            } else if (!objType.isArray() &&
+                    !Collection.class.isAssignableFrom(objType) &&
+                    !isBaseClass(objType)) {
+                return mapToObject((Map<String, Object>) obj, objType);
+            }
+            throw new ParseTokenException("property '" + property + "' is " + class0 + " ,expect " + objType);
         } else if (Map.class.isAssignableFrom(objType) &&
-                !obj.getClass().isArray() &&
-                !Collection.class.isAssignableFrom(obj.getClass()) &&
-                !isBaseClass(obj.getClass())) {
+                !class0.isArray() &&
+                !Collection.class.isAssignableFrom(class0) &&
+                !isBaseClass(class0)) {
             return (T) objectToMap(obj);
         } else if (obj instanceof Collection && objType.isArray()) {
             return (T) collectionToArray(property, (Collection<?>) obj, objType.getComponentType());
-        } else if (obj.getClass().isArray() && Collection.class.isAssignableFrom(objType)) {
-            return (T) arrayToList(property, obj, obj.getClass().getComponentType());
-        } else {
-            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
+        } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
+            return (T) arrayToList(property, obj, class0.getComponentType());
         }
+        throw new ParseTokenException("property '" + property + "' is " + class0 + " ,expect " + objType);
     }
 
     /**
@@ -373,6 +381,12 @@ public class EasyMap extends HashMap<String, Object> {
         Map<String, Object> map = new EasyMap();
         writerMethod.forEach((f, m) -> map.put(f, ReflectUtils.readValue(obj, m)));
         return map;
+    }
+
+    private <T extends Map<String, Object>> T coverMapInstance(Map<String, Object> obj, Class<T> objType) {
+        T newMap = ReflectUtils.newObject(objType, null, null);
+        newMap.putAll(obj);
+        return newMap;
     }
 
     private <T> List<T> arrayToList(String property, Object array, Class<T> tClass) {
