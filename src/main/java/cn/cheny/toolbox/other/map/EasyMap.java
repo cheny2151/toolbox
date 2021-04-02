@@ -1,7 +1,6 @@
 package cn.cheny.toolbox.other.map;
 
 import cn.cheny.toolbox.other.DateUtils;
-import cn.cheny.toolbox.other.tree.TreeType;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
@@ -152,6 +151,18 @@ public class EasyMap extends HashMap<String, Object> {
         return caseToObject(key, val, tClass);
     }
 
+    public <T> T getObject(String key, TypeReference<T> typeReference) {
+        Object object = getObject(key);
+        Type actualType = typeReference.getActualType();
+        return caseToObject(key, object, actualType);
+    }
+
+    /**
+     * 获取key对应的值（支持a.b.c直接获取c）
+     *
+     * @param key 属性key（支持多级：a.b.c）
+     * @return 获取结果
+     */
     public Object getObject(String key) {
         TokenParser tokenParser = new TokenParser(key);
         Object cur = this;
@@ -176,16 +187,22 @@ public class EasyMap extends HashMap<String, Object> {
                     }
                 }
             }
+            if (cur == null) {
+                return null;
+            }
         } while ((tokenParser = tokenParser.next()) != null);
         return cur;
     }
 
-    public <T> T getObject(String key, TypeReference<T> typeReference) {
-        Object object = getObject(key);
-        Type actualType = typeReference.getActualType();
-        return caseToObject(key, object, actualType);
-    }
-
+    /**
+     * object转换为Type对应的类型
+     *
+     * @param property 属性key
+     * @param obj      对象
+     * @param objType  参数泛型
+     * @param <T>      泛型
+     * @return 转换后结果
+     */
     private <T> T caseToObject(String property, Object obj, Type objType) {
         if (obj == null) {
             return null;
@@ -202,6 +219,15 @@ public class EasyMap extends HashMap<String, Object> {
         }
     }
 
+    /**
+     * object转换为Class<T>类型
+     *
+     * @param property 属性key
+     * @param obj      对象
+     * @param objType  参数泛型
+     * @param <T>      泛型
+     * @return 转换后结果
+     */
     private <T> T caseToObject(String property, Object obj, Class<T> objType) {
         if (obj == null) {
             return null;
@@ -227,6 +253,15 @@ public class EasyMap extends HashMap<String, Object> {
         }
     }
 
+    /**
+     * object转换为ParameterizedType对应的类型
+     *
+     * @param property 属性key
+     * @param obj      对象
+     * @param objType  参数泛型
+     * @param <T>      泛型
+     * @return 转换后结果
+     */
     private <T> T caseToObject(String property, Object obj, ParameterizedType objType) {
         Type rawType = objType.getRawType();
         Object obj0 = caseToObject(property, obj, rawType);
@@ -272,6 +307,9 @@ public class EasyMap extends HashMap<String, Object> {
         }
     }
 
+    /**
+     * todo
+     */
     private <T> T caseToObject(String property, Object obj, TypeVariable<?> objType) {
         if (obj == null) {
             return null;
@@ -282,6 +320,9 @@ public class EasyMap extends HashMap<String, Object> {
         }
     }
 
+    /**
+     * todo
+     */
     private <T> T caseToObject(String property, Object obj, WildcardType objType) {
         if (obj == null) {
             return null;
@@ -447,26 +488,6 @@ public class EasyMap extends HashMap<String, Object> {
             return Short.class;
         }
         return pc;
-    }
-
-    public static void main(String[] args) throws NoSuchFieldException {
-        EasyMap easyMap = new EasyMap();
-        HashMap<String, Object> map0 = new HashMap<>();
-        map0.put("code", "0");
-        HashMap<String, Object> map = new HashMap<>();
-        map.put("parent", map0);
-        map.put("code", "1");
-        List<Object> testTypes = Collections.singletonList(map);
-        TypeReference<List<TestType>> typeReference = new TypeReference<List<TestType>>() {
-        };
-        Type actualType = typeReference.getActualType();
-        ParameterizedType parameterizedType = ((ParameterizedType) actualType);
-        List<TestType> test2 = easyMap.caseToObject("test", testTypes, parameterizedType);
-        System.out.println(test2.get(0).getParent().getClass());
-    }
-
-    public static class TestType extends TreeType<TestType> {
-
     }
 
 }
