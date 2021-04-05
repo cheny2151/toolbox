@@ -6,6 +6,7 @@ import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.reflect.TypeVariableParser;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -317,26 +318,14 @@ public class EasyMap extends HashMap<String, Object> {
      * todo
      */
     private <T> T caseToObject(String property, Object obj, TypeVariable<?> objType) {
-        if (obj == null) {
-            return null;
-        } else if (false) {
-            return null;
-        } else {
-            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
-        }
+        throw new NotImplementedException("not implement");
     }
 
     /**
      * todo
      */
     private <T> T caseToObject(String property, Object obj, WildcardType objType) {
-        if (obj == null) {
-            return null;
-        } else if (false) {
-            return null;
-        } else {
-            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + objType);
-        }
+        throw new NotImplementedException("not implement");
     }
 
     private <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
