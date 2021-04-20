@@ -432,6 +432,9 @@ public class EasyMap extends HashMap<String, Object> {
      * @return 转换结果
      */
     private static <T> T tryCoverBase(String property, Object obj, Class<T> targetClass) {
+        if (obj == null) {
+            return null;
+        }
         try {
             if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
                 return (T) Integer.valueOf(obj.toString());
