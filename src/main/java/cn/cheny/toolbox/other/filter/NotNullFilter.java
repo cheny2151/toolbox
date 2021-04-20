@@ -2,10 +2,12 @@ package cn.cheny.toolbox.other.filter;
 
 public class NotNullFilter extends Filter {
 
-    private static final String noNullSymbol = "is not null";
-
-    public NotNullFilter(String property) {
-        super(noNullSymbol, property, null);
+    protected NotNullFilter(String property, String connectionSymbol) {
+        super(Filters.Operator.IS_NOT_NULL.getScript(), property, null, connectionSymbol);
     }
-    
+
+    @Override
+    public String toString() {
+        return this.getProperty() + " " + this.getSymbol();
+    }
 }
