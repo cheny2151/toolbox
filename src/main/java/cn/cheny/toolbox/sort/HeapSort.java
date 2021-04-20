@@ -79,10 +79,20 @@ public class HeapSort<T extends Comparable<T>> {
         return array;
     }
 
+    /**
+     * 从index开始修复最大堆
+     *
+     * @param index 位置
+     */
     public void fixMaxHeap(int index) {
         this.makeHeap(index, array.length, maxHeapCompare);
     }
 
+    /**
+     * 从index开始修复最小堆
+     *
+     * @param index 位置
+     */
     public void fixMinHeap(int index) {
         this.makeHeap(index, array.length, minHeapCompare);
     }
@@ -118,20 +128,24 @@ public class HeapSort<T extends Comparable<T>> {
         }
     }
 
+    /**
+     * 获取左子节点的index
+     *
+     * @param index 当前节点index
+     * @return 左子节点的index
+     */
     private int leftNodeIndex(int index) {
         return 2 * index + 1;
     }
 
-    private T leftNodeVal(int index) {
-        return array[2 * index + 1];
-    }
-
+    /**
+     * 获取右子节点的index
+     *
+     * @param index 当前节点index
+     * @return 右子节点的index
+     */
     private int rightNodeIndex(int index) {
         return 2 * index + 2;
-    }
-
-    private T rightNodeVal(int index) {
-        return array[2 * index + 2];
     }
 
     /**
