@@ -20,8 +20,14 @@ public class ScanFilter {
         hasAnnotations = new ArrayList<>();
     }
 
-    public void addAnnotation(Class<? extends Annotation> annotation) {
+    public ScanFilter addAnnotation(Class<? extends Annotation> annotation) {
         hasAnnotations.add(annotation);
+        return this;
+    }
+
+    public ScanFilter superClass(Class<?> superClass) {
+        this.superClass = superClass;
+        return this;
     }
 
     public List<Class<? extends Annotation>> getHasAnnotations() {

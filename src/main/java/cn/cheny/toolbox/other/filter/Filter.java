@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 public class Filter {
 
     // 转为下划线
-    private final static boolean USE_UNDERLINE = true;
+    private static boolean USE_UNDERLINE = true;
 
     // 过滤符号
     private String symbol;
@@ -34,7 +34,6 @@ public class Filter {
     private Filter next;
 
     public Filter() {
-        this.connectionSymbol = Filters.Operator.AND.getScript();
     }
 
     protected Filter(String symbol, String property, Object value, String connectionSymbol) {
@@ -72,7 +71,7 @@ public class Filter {
     }
 
     public String getConnectionSymbol() {
-        return connectionSymbol;
+        return connectionSymbol == null ? Filters.Operator.AND.getScript() : connectionSymbol;
     }
 
     public void setConnectionSymbol(String connectionSymbol) {
@@ -235,7 +234,7 @@ public class Filter {
         StringBuilder sqlBuilder = new StringBuilder();
         Filter cur = this;
         while (cur != null) {
-            sqlBuilder.append(" ").append(cur.connectionSymbol).append(" ").append(cur);
+            sqlBuilder.append(" ").append(cur.getConnectionSymbol()).append(" ").append(cur);
             cur = cur.next;
         }
         return sqlBuilder.substring(2);
@@ -342,6 +341,10 @@ public class Filter {
 
     public static Filter isNotNull(String property) {
         return new NotNullFilter(property, "");
+    }
+
+    public static void setUseUnderline(boolean underline) {
+        Filter.USE_UNDERLINE = underline;
     }
 
 }

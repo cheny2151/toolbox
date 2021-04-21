@@ -28,25 +28,36 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
+        getBeansOfType(SpringUtilsAware.class).forEach(SpringUtilsAware::after);
     }
 
     public static <T> T getBean(String name, Class<T> tClass) {
+        checkInSpring();
         return applicationContext.getBean(name, tClass);
     }
 
     public static Object getBean(String name) {
+        checkInSpring();
         return applicationContext.getBean(name);
     }
 
     public static <T> Collection<T> getBeansOfType(Class<T> tClass) {
+        checkInSpring();
         return applicationContext.getBeansOfType(tClass).values();
     }
 
     public static Environment getEnvironment() {
+        checkInSpring();
         return env;
     }
 
     public static boolean isInSpring() {
         return inSpring;
+    }
+
+    public static void checkInSpring() {
+        if (!inSpring) {
+            throw new NotInSpringException();
+        }
     }
 }

@@ -141,13 +141,4 @@ public class Filters {
         }
     }
 
-    public static void main(String[] args) {
-        Filter filter = Filter.eq("test", new Date()).andEq("test2", 2)
-                .andEq("test3", LocalDateTime.now()).andIsNull("test4").orGt("test5", "5");
-        Filter filter2 = Filter.in("test6", new String[]{"1", "2", "3", "4", "5", "6", "7"})
-                .andLike("test7", "100");
-        String sql = Filters.build().andFilter(filter).orFilter(filter2).toSql();
-        System.out.println(sql);
-    }
-
 }
