@@ -1,8 +1,10 @@
 package cn.cheny.toolbox.other.filter;
 
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 属性过滤实体
@@ -101,6 +103,10 @@ public class Filters {
     public boolean isHasOtherParams() {
         Map<String, Object> otherParams = this.otherParams;
         return otherParams != null && otherParams.size() > 0;
+    }
+
+    public List<FilterSegment> getFilters() {
+        return filters;
     }
 
     public static Filters build() {
