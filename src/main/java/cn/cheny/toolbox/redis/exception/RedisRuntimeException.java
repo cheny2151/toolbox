@@ -1,11 +1,13 @@
 package cn.cheny.toolbox.redis.exception;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+
 /**
  * redis异常
  *
  * @author cheney
  */
-public class RedisRuntimeException extends RuntimeException {
+public class RedisRuntimeException extends ToolboxRuntimeException {
 
     public RedisRuntimeException() {
         super();

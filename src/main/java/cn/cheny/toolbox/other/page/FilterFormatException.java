@@ -1,10 +1,12 @@
 package cn.cheny.toolbox.other.page;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+
 /**
  * 过滤信息错误类
  * Created by cheny on 2017/9/24.
  */
-public class FilterFormatException extends RuntimeException {
+public class FilterFormatException extends ToolboxRuntimeException {
 
     public FilterFormatException() {
         super();

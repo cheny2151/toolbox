@@ -1,5 +1,7 @@
 package cn.cheny.toolbox.entityCache.exception;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 
@@ -9,7 +11,7 @@ import java.lang.reflect.AnnotatedElement;
  * @author cheney
  * @date 2020-08-31
  */
-public class AnnotationTypeMissException extends RuntimeException {
+public class AnnotationTypeMissException extends ToolboxRuntimeException {
 
     /**
      * 未发现的注解

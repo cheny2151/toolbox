@@ -1,12 +1,14 @@
 package cn.cheny.toolbox.pagingTask.exception;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+
 /**
  * 并发执行任务异常
  *
  * @author cheney
  * @date 2020-01-14
  */
-public class ConcurrentTaskException extends RuntimeException {
+public class ConcurrentTaskException extends ToolboxRuntimeException {
 
     public ConcurrentTaskException() {
     }

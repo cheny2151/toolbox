@@ -1,6 +1,8 @@
 package cn.cheny.toolbox.other.map;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.DateUtils;
+import cn.cheny.toolbox.other.filter.Filter;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
@@ -41,6 +43,15 @@ public class EasyMap extends HashMap<String, Object> {
 
     public EasyMap(Map<? extends String, ?> m) {
         super(m);
+    }
+
+    public <T> T toObject(Class<T> tClass) {
+        return caseToObject("", this, tClass);
+    }
+
+    public <T> T toObject(TypeReference<T> typeReference) {
+        Type actualType = typeReference.getActualType();
+        return caseToObject("", this, actualType);
     }
 
     public String getString(String key) {
@@ -116,7 +127,7 @@ public class EasyMap extends HashMap<String, Object> {
             if (tClass.isAssignableFrom(componentType)) {
                 return Stream.of((T[]) val).collect(Collectors.toList());
             } else {
-                return arrayToList(key, val, tClass);
+                return (List<T>) arrayToList(key, val, ArrayList.class, tClass);
             }
         } else if (val instanceof Collection) {
             Collection<?> collection = (Collection<?>) val;
@@ -142,7 +153,7 @@ public class EasyMap extends HashMap<String, Object> {
         } else if (!isBaseClass(val.getClass()) &&
                 !val.getClass().isArray() &&
                 !(val instanceof Collection)) {
-            return (EasyMap) objectToMap(val);
+            return (EasyMap) objectToMap(val, EasyMap.class);
         }
         throw new ParseTokenException("property '" + key + "' is " + val.getClass() + " ,expect map");
     }
@@ -251,11 +262,11 @@ public class EasyMap extends HashMap<String, Object> {
                 !class0.isArray() &&
                 !Collection.class.isAssignableFrom(class0) &&
                 !isBaseClass(class0)) {
-            return (T) objectToMap(obj);
+            return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
         } else if (obj instanceof Collection && objType.isArray()) {
             return (T) collectionToArray(property, (Collection<?>) obj, objType.getComponentType());
         } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
-            return (T) arrayToList(property, obj, class0.getComponentType());
+            return (T) arrayToList(property, obj, objType, class0.getComponentType());
         }
         throw new ParseTokenException("property '" + property + "' is " + class0 + " ,expect " + objType);
     }
@@ -276,17 +287,21 @@ public class EasyMap extends HashMap<String, Object> {
             return null;
         } else if (obj0 instanceof Map) {
             Type[] argTypes = objType.getActualTypeArguments();
-            Map<?, ?> map = (Map<?, ?>) obj0;
-            Map<Object, Object> results = map.entrySet().stream()
-                    .collect(Collectors.toMap(entry -> caseToObject(property, entry.getKey(), argTypes[0]),
-                            entry -> caseToObject(property, entry.getValue(), argTypes[1])));
+            Map<Object, Object> map = (Map<Object, Object>) obj0;
+            Map<Object, Object> results = newMap((Class<? extends Map<Object, Object>>) map.getClass());
+            for (Entry<?, ?> entry : map.entrySet()) {
+                results.put(caseToObject(property, entry.getKey(), argTypes[0]),
+                        caseToObject(property, entry.getValue(), argTypes[1]));
+            }
             return (T) results;
         } else if (obj0 instanceof Collection) {
             Type[] argTypes = objType.getActualTypeArguments();
-            Collection<?> col = (Collection<?>) obj0;
-            Collection<Object> results = col.stream()
-                    .map(e -> caseToObject(property, e, argTypes[0]))
-                    .collect(Collectors.toList());
+            Collection<Object> col = (Collection<Object>) obj0;
+            Collection<Object> results = newCollection((Class<? extends Collection<Object>>) col.getClass());
+            for (Object e : col) {
+                Object o = caseToObject(property, e, argTypes[0]);
+                results.add(o);
+            }
             return (T) results;
         } else {
             Type[] argTypes = objType.getActualTypeArguments();
@@ -361,34 +376,75 @@ public class EasyMap extends HashMap<String, Object> {
         return t;
     }
 
-    private Map<String, Object> objectToMap(Object obj) {
+    private Map<String, Object> objectToMap(Object obj, Class<? extends Map<String, Object>> mapClass) {
         Class<?> objClass = obj.getClass();
         Map<String, Method> writerMethod =
                 typeReaderCache.computeIfAbsent(objClass, k -> ReflectUtils.getAllReadMethod(objClass, Object.class));
-        Map<String, Object> map = new EasyMap();
+        Map<String, Object> map = newMap(mapClass);
         writerMethod.forEach((f, m) -> map.put(f, ReflectUtils.readValue(obj, m)));
         return map;
     }
 
+    /**
+     * 转换Map实现类
+     */
     private <T extends Map<String, Object>> T coverMapInstance(Map<String, Object> obj, Class<T> objType) {
-        T newMap = ReflectUtils.newObject(objType, null, null);
+        Map<String, Object> newMap = newMap(objType);
         newMap.putAll(obj);
-        return newMap;
+        return (T) newMap;
     }
 
-    private <T> List<T> arrayToList(String property, Object array, Class<T> tClass) {
+    /**
+     * Map子类实例化
+     *
+     * @param mapClass map class
+     * @param <K>      key
+     * @param <V>      value
+     * @return Map实例
+     */
+    private <K, V> Map<K, V> newMap(Class<? extends Map<K, V>> mapClass) {
+        if (mapClass.isInterface()) {
+            if (!mapClass.equals(Map.class)) {
+                throw new ToolboxRuntimeException("not support type interface " + mapClass.getName());
+            } else {
+                return new HashMap<>();
+            }
+        }
+        return ReflectUtils.newObject(mapClass, null, null);
+    }
+
+    private <T> Collection<T> arrayToList(String property, Object array, Class<?> collectionClass, Class<T> tClass) {
         Class<?> componentType = array.getClass().getComponentType();
+        Collection<T> rs = newCollection((Class<? extends Collection<T>>) collectionClass);
         if (tClass.isAssignableFrom(componentType)) {
-            return Stream.of((T[]) array).collect(Collectors.toList());
+            rs.addAll(Arrays.asList(((T[]) array)));
         } else {
-            ArrayList<T> rs = new ArrayList<>();
             int length = Array.getLength(array);
             for (int i = 0; i < length; i++) {
                 Object o = Array.get(array, i);
                 rs.add(caseToObject(property, o, tClass));
             }
-            return rs;
         }
+        return rs;
+    }
+
+    /**
+     * Collection子类实例化
+     *
+     * @param collectionClass Collection class
+     * @return Collection实例
+     */
+    private <T> Collection<T> newCollection(Class<? extends Collection<T>> collectionClass) {
+        if (collectionClass.isInterface()) {
+            if (collectionClass.equals(List.class)) {
+                return new ArrayList<>();
+            } else if (collectionClass.equals(Set.class)) {
+                return new HashSet<>();
+            } else {
+                throw new ToolboxRuntimeException("not support type interface " + collectionClass.getName());
+            }
+        }
+        return ReflectUtils.newObject(collectionClass, null, null);
     }
 
     private <T> T[] collectionToArray(String property, Collection<?> collection, Class<T> tClass) {
@@ -492,6 +548,26 @@ public class EasyMap extends HashMap<String, Object> {
             return Short.class;
         }
         return pc;
+    }
+
+    public static void main(String[] args) {
+        EasyMap easyMap = new EasyMap();
+        easyMap.put("property", "test");
+        easyMap.put("value", "val");
+        Filter filter = easyMap.toObject(new TypeReference<Filter>() {
+        });
+        System.out.println(filter.getProperty());
+        System.out.println(filter.getValue());
+        HashMap<String, Filter> filterHashMap = new HashMap<>();
+        filterHashMap.put("test", filter);
+        EasyMap easyMap1 = new EasyMap(filterHashMap);
+        Map<String, Filter> stringFilterMap = easyMap1.toObject(new TypeReference<TestMap<String, Filter>>() {
+        });
+        System.out.println(stringFilterMap.getClass());
+    }
+
+    public interface TestMap<K, V> extends Map<K, V> {
+
     }
 
 }
