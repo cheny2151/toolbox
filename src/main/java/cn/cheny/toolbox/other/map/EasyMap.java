@@ -1,14 +1,13 @@
 package cn.cheny.toolbox.other.map;
 
+import cn.cheny.toolbox.exception.NotImplementedException;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.DateUtils;
-import cn.cheny.toolbox.other.filter.Filter;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.reflect.TypeVariableParser;
-import org.apache.commons.lang3.NotImplementedException;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
@@ -142,20 +141,7 @@ public class EasyMap extends HashMap<String, Object> {
 
     public EasyMap getMap(String key) {
         Object val = getObject(key);
-        if (val == null) {
-            return null;
-        } else if (val instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) val;
-            if (map instanceof EasyMap) {
-                return (EasyMap) map;
-            }
-            return new EasyMap(map);
-        } else if (!isBaseClass(val.getClass()) &&
-                !val.getClass().isArray() &&
-                !(val instanceof Collection)) {
-            return (EasyMap) objectToMap(val, EasyMap.class);
-        }
-        throw new ParseTokenException("property '" + key + "' is " + val.getClass() + " ,expect map");
+        return caseToObject(key, val, EasyMap.class);
     }
 
     public <T> T getObject(String key, Class<T> tClass) {
@@ -182,7 +168,7 @@ public class EasyMap extends HashMap<String, Object> {
             Class<?> curClass = cur.getClass();
             String property = tokenParser.getProperty();
             if (cur instanceof Map) {
-                cur = ((Map<String, Object>) cur).get(property);
+                cur = ((Map<Object, Object>) cur).get(property);
             } else if (cur instanceof Collection || curClass.isArray() || curClass.isPrimitive()) {
                 throw new ParseTokenException("property '" + property + "' is " + curClass + " ,expect map or object");
             } else {
@@ -251,7 +237,7 @@ public class EasyMap extends HashMap<String, Object> {
             return tryCoverBase(property, obj, objType);
         } else if (obj instanceof Map) {
             if (Map.class.isAssignableFrom(objType)) {
-                return (T) coverMapInstance((Map<String, Object>) obj, (Class<? extends Map<String, Object>>) objType);
+                return (T) coverMapInstance((Map<Object, Object>) obj, (Class<? extends Map<Object, Object>>) objType);
             } else if (!objType.isArray() &&
                     !Collection.class.isAssignableFrom(objType) &&
                     !isBaseClass(objType)) {
@@ -388,8 +374,8 @@ public class EasyMap extends HashMap<String, Object> {
     /**
      * 转换Map实现类
      */
-    private <T extends Map<String, Object>> T coverMapInstance(Map<String, Object> obj, Class<T> objType) {
-        Map<String, Object> newMap = newMap(objType);
+    private <T extends Map<Object, Object>> T coverMapInstance(Map<Object, Object> obj, Class<T> objType) {
+        Map<Object, Object> newMap = newMap(objType);
         newMap.putAll(obj);
         return (T) newMap;
     }
@@ -548,26 +534,6 @@ public class EasyMap extends HashMap<String, Object> {
             return Short.class;
         }
         return pc;
-    }
-
-    public static void main(String[] args) {
-        EasyMap easyMap = new EasyMap();
-        easyMap.put("property", "test");
-        easyMap.put("value", "val");
-        Filter filter = easyMap.toObject(new TypeReference<Filter>() {
-        });
-        System.out.println(filter.getProperty());
-        System.out.println(filter.getValue());
-        HashMap<String, Filter> filterHashMap = new HashMap<>();
-        filterHashMap.put("test", filter);
-        EasyMap easyMap1 = new EasyMap(filterHashMap);
-        Map<String, Filter> stringFilterMap = easyMap1.toObject(new TypeReference<TestMap<String, Filter>>() {
-        });
-        System.out.println(stringFilterMap.getClass());
-    }
-
-    public interface TestMap<K, V> extends Map<K, V> {
-
     }
 
 }
