@@ -1,5 +1,8 @@
 package cn.cheny.toolbox.spring;
 
+import cn.cheny.toolbox.scan.PathImplementationClassBuilder;
+import cn.cheny.toolbox.scan.ScanException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -15,6 +18,7 @@ import java.util.Collection;
  * 原理：@Component会创建一个类，@DependsOn("springUtils")会使该类依赖于SpringUtils创建
  * ，@PostConstruct通过创建类后将spring管理的bean通过SpringUtils获取并写入静态变量中
  */
+@Slf4j
 public class SpringUtils implements ApplicationContextAware {
 
     private static ApplicationContext applicationContext;
@@ -28,7 +32,13 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
-        getBeansOfType(SpringUtilsAware.class).forEach(SpringUtilsAware::after);
+        try {
+            PathImplementationClassBuilder
+                    .createInstances(SpringUtilsAware.class)
+                    .forEach(SpringUtilsAware::after);
+        } catch (ScanException e) {
+            log.error("扫描SpringUtilsAware实现类失败", e);
+        }
     }
 
     public static <T> T getBean(String name, Class<T> tClass) {

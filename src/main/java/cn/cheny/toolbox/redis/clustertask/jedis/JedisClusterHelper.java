@@ -9,16 +9,12 @@ import cn.cheny.toolbox.redis.factory.JedisManagerFactory;
 import cn.cheny.toolbox.redis.factory.RedisClientFactory;
 import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
-import cn.cheny.toolbox.reflect.ReflectUtils;
-import cn.cheny.toolbox.scan.PathScanner;
+import cn.cheny.toolbox.scan.PathImplementationClassBuilder;
 import cn.cheny.toolbox.scan.ScanException;
-import cn.cheny.toolbox.scan.filter.ScanFilter;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPubSub;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Executors;
 
 import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTER_TASK_CHANNEL_PRE_KEY;
@@ -65,25 +61,12 @@ public class JedisClusterHelper {
      * @return ClusterTaskSubscriber实现类集合
      */
     public static Collection<ClusterTaskSubscriber> createSubscriberInstances() {
-        ScanFilter scanFilter = new ScanFilter();
-        scanFilter.setSuperClass(ClusterTaskSubscriber.class);
-        scanFilter.addAnnotation(SubTask.class);
-        PathScanner pathScanner = new PathScanner(scanFilter);
-        List<ClusterTaskSubscriber> instances = new ArrayList<>();
         try {
-            List<Class<?>> targetClass = pathScanner.scanClass(".");
-            targetClass.forEach(c -> {
-                try {
-                    instances.add((ClusterTaskSubscriber) ReflectUtils.newObject(c, null, null));
-                } catch (Exception e) {
-                    log.error("can not create class instance,class:{}", c, e);
-                }
-            });
+            return PathImplementationClassBuilder.createInstances(ClusterTaskSubscriber.class, SubTask.class);
         } catch (ScanException e) {
             log.error("集群订阅类扫描异常", e);
             throw new RuntimeException(e);
         }
-        return instances;
     }
 
     public static int getThreads() {

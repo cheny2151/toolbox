@@ -1,7 +1,6 @@
 package cn.cheny.toolbox.spring;
 
 import cn.cheny.toolbox.other.filter.Filter;
-import org.springframework.stereotype.Component;
 
 /**
  * 静态属性环境变量设置
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Component;
  * @Date 2021/4/21
  * @Created by chenyi
  */
-@Component
 public class StatusPropertySpringUtils implements SpringUtilsAware {
 
     @Override

@@ -113,6 +113,10 @@ public class Filters {
         return new Filters();
     }
 
+    public static Filters build(Filter filter) {
+        return new Filters().andFilter(filter);
+    }
+
     public String toSql() {
         StringBuilder sqlBuilder = new StringBuilder();
         boolean first = true;
