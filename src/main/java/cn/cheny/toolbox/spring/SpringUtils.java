@@ -34,7 +34,7 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.inSpring = true;
         try {
             PathImplementationClassBuilder
-                    .createInstances(SpringUtilsAware.class)
+                    .createInstances(true, url -> url.getFile().contains("io/github/cheny2151/toolbox"), SpringUtilsAware.class)
                     .forEach(SpringUtilsAware::after);
         } catch (ScanException e) {
             log.error("扫描SpringUtilsAware实现类失败", e);

@@ -24,8 +24,18 @@ public class PathImplementationClassBuilder {
      *
      * @return ClusterTaskSubscriber实现类集合
      */
-    @SuppressWarnings("unchecked")
     public static <T> Collection<T> createInstances(Class<T> superClass, Class<?>... annotations) throws ScanException {
+        return createInstances(false, null, superClass, annotations);
+    }
+
+    /**
+     * 扫描接口实现类并实例化
+     *
+     * @return ClusterTaskSubscriber实现类集合
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Collection<T> createInstances(boolean allClassPath, IsLoadingJar isLoadingJar,
+                                                    Class<T> superClass, Class<?>... annotations) throws ScanException {
         ScanFilter scanFilter = new ScanFilter();
         scanFilter.setSuperClass(superClass);
         if (annotations != null) {
@@ -37,7 +47,9 @@ public class PathImplementationClassBuilder {
         }
         PathScanner pathScanner = new PathScanner(scanFilter);
         List<T> instances = new ArrayList<>();
-        List<Class<?>> targetClass = pathScanner.scanClass(".");
+        List<Class<?>> targetClass = pathScanner.findInClassPathJar(allClassPath)
+                .isLoadingJar(isLoadingJar)
+                .scanClass(".");
         targetClass.forEach(c -> {
             try {
                 instances.add((T) ReflectUtils.newObject(c, null, null));

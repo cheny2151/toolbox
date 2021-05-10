@@ -38,6 +38,12 @@ public class PathScanner {
     // 分隔符
     private final static String SEPARATE_CHARACTER = ".";
 
+    // 是否扫描class path声明的jar
+    private boolean findInClassPathJar = false;
+
+    // 判断是否加载某个jar包
+    private IsLoadingJar isLoadingJar;
+
     // 过滤器
     private ScanFilter scanFilter;
 
@@ -60,20 +66,23 @@ public class PathScanner {
         String scanPath0 = SEPARATE_CHARACTER.equals(scanPath) ? EMPTY_PATH : scanPath;
         String resourcePath = scanPath0.replaceAll("\\.", "/");
 
-        URL resource = getResource(scanPath, resourcePath);
+        List<URL> resources = getResources(scanPath, resourcePath);
+        boolean oneResource = resources.size() == 1;
+        List<Class<?>> results = new ArrayList<>();
 
-        String protocol = resource.getProtocol();
-        if (log.isDebugEnabled()) {
-            log.debug("file protocol:{}", protocol);
-        }
+        for (URL resource : resources) {
+            String protocol = resource.getProtocol();
+            if (log.isDebugEnabled()) {
+                log.debug("file protocol:{}", protocol);
+            }
 
-        String pathBuilder = extractEffectivePath(scanPath0);
-        ArrayList<Class<?>> results = new ArrayList<>();
-        if ("file".equals(protocol)) {
-            String file = resource.getFile();
-            scanClassInFile(pathBuilder, new File(file), results);
-        } else if ("jar".equals(protocol)) {
-            scanClassInJar(pathBuilder, resource, results);
+            String pathBuilder = extractEffectivePath(scanPath0);
+            if ("file".equals(protocol)) {
+                String file = resource.getFile();
+                scanClassInFile(pathBuilder, new File(file), results);
+            } else if ("jar".equals(protocol)) {
+                scanClassInJar(pathBuilder, resource, results, oneResource);
+            }
         }
 
         return results;
@@ -141,11 +150,14 @@ public class PathScanner {
      * @param parentPath 上级目录,以'.'为分隔符
      * @param url        jar包的url资源
      * @param result     扫描结果集
+     * @param oneJar     class path是否只有一个jar
      */
-    private void scanClassInJar(String parentPath, URL url, List<Class<?>> result)
+    private void scanClassInJar(String parentPath, URL url, List<Class<?>> result, boolean oneJar)
             throws ScanException {
         url = extractRealJarUrl(url);
-        if (url == null || !isJar(url)) {
+        if (url == null || (!loadingJar(url) && !oneJar)) {
+            return;
+        } else if (!isJar(url)) {
             if (log.isDebugEnabled()) {
                 log.debug("url:{} not a jar", url);
             }
@@ -159,6 +171,10 @@ public class PathScanner {
         }
     }
 
+    private boolean loadingJar(URL url) {
+        return this.isLoadingJar == null || this.isLoadingJar.isLoading(url);
+    }
+
     /**
      * 从资源路径中获取URL实例
      *
@@ -167,19 +183,29 @@ public class PathScanner {
      * @return 资源URL
      * @throws ScanException 扫描异常
      */
-    private URL getResource(String scanPath, String resourcePath) throws ScanException {
+    private List<URL> getResources(String scanPath, String resourcePath) throws ScanException {
+        List<URL> urls = new ArrayList<>();
         URL resource = PathScanner.class.getClassLoader().getResource(resourcePath);
-        if (resource == null && EMPTY_PATH.equals(resourcePath)) {
-            try {
-                resource = getRootUrlForJar();
-            } catch (MalformedURLException e) {
-                throw new ScanException("获取资源失败", e);
+        try {
+            if (resource != null) {
+                urls.add(resource);
+            } else {
+                // 以jar包形式运行时所有以来都打在一个jar包
+                List<URL> classPathForJar = getClassPathForJar();
+                if (classPathForJar.size() == 1) {
+                    return classPathForJar;
+                }
             }
+            if (findInClassPathJar) {
+                urls.addAll(getClassPathForJar());
+            }
+        } catch (MalformedURLException e) {
+            throw new ScanException("获取资源失败", e);
         }
-        if (resource == null) {
+        if (urls.size() == 0) {
             throw new ScanException("资源'" + scanPath + "'不存在");
         }
-        return resource;
+        return urls;
     }
 
     /**
@@ -241,6 +267,8 @@ public class PathScanner {
                 log.debug("can not find class,name:{}", ClassFileName);
             }
             return;
+        } catch (Throwable e) {
+            return;
         }
         if (scanFilter != null) {
             Class<?> superClass = scanFilter.getSuperClass();
@@ -294,13 +322,24 @@ public class PathScanner {
     }
 
     /**
-     * 由于jar包内无法获取根目录，参数以jar包的形式创建根目录URL
+     * 获取class path声明的jar
      *
      * @return 根目录URL
      * @throws MalformedURLException
      */
-    private URL getRootUrlForJar() throws MalformedURLException {
-        return new URL("jar:file:" + System.getProperty("java.class.path") + "!/");
+    private List<URL> getClassPathForJar() throws MalformedURLException {
+        String classPath = System.getProperty("java.class.path");
+        if (StringUtils.isEmpty(classPath)) {
+            return Collections.emptyList();
+        }
+        List<URL> list = new ArrayList<>();
+        for (String path : classPath.split(":")) {
+            if (path.endsWith("jar")) {
+                URL url = new URL("jar:file:" + path + "!/");
+                list.add(url);
+            }
+        }
+        return list;
     }
 
     /**
@@ -339,6 +378,20 @@ public class PathScanner {
         }
 
         return false;
+    }
+
+    public boolean isFindInClassPathJar() {
+        return findInClassPathJar;
+    }
+
+    public PathScanner findInClassPathJar(boolean findInClassPathJar) {
+        this.findInClassPathJar = findInClassPathJar;
+        return this;
+    }
+
+    public PathScanner isLoadingJar(IsLoadingJar isLoadingJar) {
+        this.isLoadingJar = isLoadingJar;
+        return this;
     }
 
 }
