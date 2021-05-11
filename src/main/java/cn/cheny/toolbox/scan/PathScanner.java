@@ -10,10 +10,8 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.net.URLClassLoader;
+import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 
@@ -66,8 +64,7 @@ public class PathScanner {
         String scanPath0 = SEPARATE_CHARACTER.equals(scanPath) ? EMPTY_PATH : scanPath;
         String resourcePath = scanPath0.replaceAll("\\.", "/");
 
-        List<URL> resources = getResources(scanPath, resourcePath);
-        boolean oneResource = resources.size() == 1;
+        Collection<URL> resources = getResources(scanPath, resourcePath);
         List<Class<?>> results = new ArrayList<>();
 
         for (URL resource : resources) {
@@ -81,7 +78,7 @@ public class PathScanner {
                 String file = resource.getFile();
                 scanClassInFile(pathBuilder, new File(file), results);
             } else if ("jar".equals(protocol)) {
-                scanClassInJar(pathBuilder, resource, results, oneResource);
+                scanClassInJar(pathBuilder, resource, results);
             }
         }
 
@@ -150,12 +147,11 @@ public class PathScanner {
      * @param parentPath 上级目录,以'.'为分隔符
      * @param url        jar包的url资源
      * @param result     扫描结果集
-     * @param oneJar     class path是否只有一个jar
      */
-    private void scanClassInJar(String parentPath, URL url, List<Class<?>> result, boolean oneJar)
+    private void scanClassInJar(String parentPath, URL url, List<Class<?>> result)
             throws ScanException {
         url = extractRealJarUrl(url);
-        if (url == null || (!loadingJar(url) && !oneJar)) {
+        if (url == null || !loadingJar(url)) {
             return;
         } else if (!isJar(url)) {
             if (log.isDebugEnabled()) {
@@ -183,23 +179,26 @@ public class PathScanner {
      * @return 资源URL
      * @throws ScanException 扫描异常
      */
-    private List<URL> getResources(String scanPath, String resourcePath) throws ScanException {
-        List<URL> urls = new ArrayList<>();
-        URL resource = PathScanner.class.getClassLoader().getResource(resourcePath);
+    private Collection<URL> getResources(String scanPath, String resourcePath) throws ScanException {
+        Set<URL> urls = new LinkedHashSet<>();
+        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
         try {
-            if (resource != null) {
-                urls.add(resource);
+            if (EMPTY_PATH.equals(resourcePath)) {
+                Enumeration<URL> resources = classLoader.getResources(resourcePath);
+                while (resources.hasMoreElements()) {
+                    URL url = resources.nextElement();
+                    addIfUsefulRoot(url, urls);
+                }
             } else {
-                // 以jar包形式运行时所有以来都打在一个jar包
-                List<URL> classPathForJar = getClassPathForJar();
-                if (classPathForJar.size() == 1) {
-                    return classPathForJar;
+                URL url = classLoader.getResource(resourcePath);
+                if (url != null) {
+                    urls.add(url);
                 }
             }
-            if (findInClassPathJar) {
-                urls.addAll(getClassPathForJar());
+            if (EMPTY_PATH.equals(resourcePath) && findInClassPathJar) {
+                getJarUrls(classLoader, urls);
             }
-        } catch (MalformedURLException e) {
+        } catch (Exception e) {
             throw new ScanException("获取资源失败", e);
         }
         if (urls.size() == 0) {
@@ -322,12 +321,47 @@ public class PathScanner {
     }
 
     /**
+     * 获取jar urls
+     *
+     * @throws MalformedURLException
+     */
+    private void getJarUrls(ClassLoader classLoader, Set<URL> results) throws MalformedURLException {
+        if (classLoader instanceof URLClassLoader) {
+            URLClassLoader urlClassLoader = (URLClassLoader) classLoader;
+            URL[] urLs = urlClassLoader.getURLs();
+            for (URL url : urLs) {
+                if (url.getProtocol().equals("jar")) {
+                    results.add(url);
+                } else if (url.getPath().endsWith("jar")) {
+                    results.add(new URL("jar:" + url + "!/"));
+                } else {
+                    addIfUsefulRoot(url, results);
+                }
+            }
+        }
+        if (classLoader == ClassLoader.getSystemClassLoader()) {
+            getClassPathForJar(results);
+        }
+        if (classLoader.getParent() != null) {
+            getJarUrls(classLoader.getParent(), results);
+        }
+    }
+
+    private void addIfUsefulRoot(URL url, Set<URL> results) {
+        String path = url.getPath();
+        String[] split = path.split(File.separator);
+        if (split[split.length - 1].equals("classes")) {
+            results.add(url);
+        }
+    }
+
+    /**
      * 获取class path声明的jar
      *
      * @return 根目录URL
      * @throws MalformedURLException
      */
-    private List<URL> getClassPathForJar() throws MalformedURLException {
+    private List<URL> getClassPathForJar(Set<URL> results) throws MalformedURLException {
         String classPath = System.getProperty("java.class.path");
         if (StringUtils.isEmpty(classPath)) {
             return Collections.emptyList();
