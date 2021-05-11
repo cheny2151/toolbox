@@ -5,6 +5,7 @@ import cn.cheny.toolbox.scan.filter.ScanFilter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,6 +52,11 @@ public class PathImplementationClassBuilder {
                 .isLoadingJar(isLoadingJar)
                 .scanClass(".");
         targetClass.forEach(c -> {
+            int modifiers = c.getModifiers();
+            if (c.isInterface() || (modifiers & Modifier.ABSTRACT) > 0
+                    || (modifiers & Modifier.PUBLIC) == 0) {
+                return;
+            }
             try {
                 instances.add((T) ReflectUtils.newObject(c, null, null));
             } catch (Exception e) {
