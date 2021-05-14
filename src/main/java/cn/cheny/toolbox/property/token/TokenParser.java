@@ -6,7 +6,7 @@ import java.util.List;
  * 字符串规则提取
  *
  * @Date 2021/2/8
- * @Created by chenyi
+ * @author by chenyi
  */
 public class TokenParser {
 

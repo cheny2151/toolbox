@@ -20,7 +20,7 @@ import java.util.stream.Stream;
  * 简化map获取操作
  *
  * @Date 2021/2/8
- * @Created by chenyi
+ * @author by chenyi
  */
 @SuppressWarnings("unchecked")
 public class EasyMap extends HashMap<String, Object> {

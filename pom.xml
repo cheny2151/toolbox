@@ -57,6 +57,8 @@
         <spring-boot.version>2.4.5</spring-boot.version>
         <jedis.version>3.5.2</jedis.version>
         <mybatis.version>2.1.4</mybatis.version>
+        <commons-text>1.9</commons-text>
+        <jsoup>1.13.1</jsoup>
     </properties>
 
     <dependencies>
@@ -147,6 +149,17 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
             <version>${spring-boot.version}</version>
             <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+            <version>${commons-text}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>${jsoup}</version>
         </dependency>
 
         <!-- mybatis -->
