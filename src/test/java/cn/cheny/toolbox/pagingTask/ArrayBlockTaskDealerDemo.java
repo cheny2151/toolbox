@@ -20,6 +20,7 @@ public class ArrayBlockTaskDealerDemo {
         long l = System.currentTimeMillis();
         ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8, true);
         taskDealer.setThreadName("test");
+        taskDealer.setContinueWhereSliceTaskError(false);
         ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.execute(() -> 2000, limit -> {
             System.out.println(Thread.currentThread().getName() + ":put data");
             int num = limit.getNum();
@@ -36,6 +37,7 @@ public class ArrayBlockTaskDealerDemo {
             }
             return hashMaps;
         }, data -> {
+            int i = 1/0;
             try {
                 System.out.println(Thread.currentThread().getName() + ":" + data.size());
                 Thread.sleep(2000);

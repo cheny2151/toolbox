@@ -5,6 +5,7 @@ import cn.cheny.toolbox.other.NamePrefixThreadFactory;
 import cn.cheny.toolbox.other.page.ExtremumLimit;
 import cn.cheny.toolbox.other.page.Limit;
 import cn.cheny.toolbox.pagingTask.exception.ConcurrentTaskException;
+import cn.cheny.toolbox.pagingTask.exception.TaskInterruptedException;
 import cn.cheny.toolbox.pagingTask.function.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -50,6 +51,16 @@ public class ArrayBlockTaskDealer {
      * 结束标识
      */
     private volatile boolean finish;
+
+    /**
+     * 中断标识
+     */
+    private volatile boolean interrupted;
+
+    /**
+     * 中断原因
+     */
+    public Throwable interruptedCause;
 
     /**
      * 主线程是否帮助执行
@@ -224,6 +235,9 @@ public class ArrayBlockTaskDealer {
         }
         // 关闭线程池
         executorService.shutdown();
+        if (interrupted) {
+            throw new TaskInterruptedException("任务运行异常终止" + interruptedCause.getMessage(), interruptedCause);
+        }
     }
 
     /**
@@ -260,6 +274,9 @@ public class ArrayBlockTaskDealer {
         }
         // 关闭线程池
         executorService.shutdown();
+        if (interrupted) {
+            throw new TaskInterruptedException("任务运行异常终止:" + interruptedCause.getMessage(), interruptedCause);
+        }
         return futures;
     }
 
@@ -276,16 +293,24 @@ public class ArrayBlockTaskDealer {
             try {
                 TaskPackage<List<T>> taskPackage;
                 while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                    if (interrupted) {
+                        continue;
+                    }
                     try {
                         if (taskPackage != null) {
                             blockTask.execute(taskPackage.getData());
                         }
-                    } catch (Exception e) {
-                        log.error("执行任务分片异常", e);
+                    } catch (Throwable e) {
+                        if (continueWhereSliceTaskError) {
+                            log.error("执行任务分片异常", e);
+                        } else {
+                            this.interrupted = true;
+                            this.interruptedCause = e;
+                        }
                     }
                 }
             } catch (InterruptedException e) {
-                log.error("队列poll数据异常:", e);
+                throw new ToolboxRuntimeException("队列poll数据异常", e);
             }
         };
     }
@@ -306,6 +331,9 @@ public class ArrayBlockTaskDealer {
             TaskPackage<List<T>> taskPackage;
             try {
                 while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                    if (interrupted) {
+                        continue;
+                    }
                     try {
                         if (taskPackage != null) {
                             List<R> taskResult = blockTaskWithResult.execute(taskPackage.getData());
@@ -313,11 +341,12 @@ public class ArrayBlockTaskDealer {
                                 rs.add(new TaskPackage<>(taskResult, taskPackage.getIndex()));
                             }
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         if (continueWhereSliceTaskError) {
                             log.error("执行任务分片异常", e);
                         } else {
-                            throw new ToolboxRuntimeException("执行任务分片异常", e);
+                            this.interrupted = true;
+                            this.interruptedCause = e;
                         }
                     }
                 }
@@ -346,6 +375,9 @@ public class ArrayBlockTaskDealer {
         try {
             Limit limit = Limit.create(0, step);
             while (count > 0) {
+                if (interrupted) {
+                    break;
+                }
                 if (count >= step) {
                     limit.setNum(count -= step);
                 } else {
@@ -382,6 +414,9 @@ public class ArrayBlockTaskDealer {
             ExtremumLimit extremumLimit = ExtremumLimit.create(null, step, ExtremumLimit.ExtremumType.MINIMUM);
             Object extremum = null;
             while (count > 0) {
+                if (interrupted) {
+                    break;
+                }
                 extremumLimit.setExtremum(extremum);
                 if (count < step) {
                     extremumLimit.setSize(count);
@@ -407,6 +442,7 @@ public class ArrayBlockTaskDealer {
             throw new ConcurrentTaskException();
         }
         finish = false;
+        interrupted = false;
     }
 
     public int getThreadNum() {
