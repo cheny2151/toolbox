@@ -18,9 +18,10 @@ public class ArrayBlockTaskDealerDemo {
 
     public static void demo1() throws InterruptedException {
         long l = System.currentTimeMillis();
-        ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8,true);
+        ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8, true);
+        taskDealer.setThreadName("test");
         ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.execute(() -> 2000, limit -> {
-            System.out.println("put data");
+            System.out.println(Thread.currentThread().getName() + ":put data");
             int num = limit.getNum();
             ArrayList<HashMap<String, Object>> hashMaps = new ArrayList<>();
             for (int i = 0; i < limit.getSize(); i++) {
@@ -36,7 +37,7 @@ public class ArrayBlockTaskDealerDemo {
             return hashMaps;
         }, data -> {
             try {
-                System.out.println(data.size());
+                System.out.println(Thread.currentThread().getName() + ":" + data.size());
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -46,12 +47,13 @@ public class ArrayBlockTaskDealerDemo {
         List<HashMap<String, Object>> results = futureResult.getResults();
         System.out.println(results.size());
         System.out.println(System.currentTimeMillis() - l);
+        results.forEach(System.out::println);
     }
 
     public static void demo2() throws InterruptedException {
         long l = System.currentTimeMillis();
         AtomicInteger atomicInteger = new AtomicInteger(0);
-        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8,false);
+        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8, false);
         ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.executeOrderByExtremum(
                 () -> 2000,
                 limit -> {

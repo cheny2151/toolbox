@@ -1,9 +1,13 @@
 package cn.cheny.toolbox.pagingTask;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+import cn.cheny.toolbox.other.NamePrefixThreadFactory;
 import cn.cheny.toolbox.other.page.ExtremumLimit;
 import cn.cheny.toolbox.other.page.Limit;
 import cn.cheny.toolbox.pagingTask.exception.ConcurrentTaskException;
 import cn.cheny.toolbox.pagingTask.function.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -12,6 +16,9 @@ import java.util.stream.Collectors;
 
 /**
  * 使用{@link ArrayBlockingQueue}提供生产消费功能，主线程负责查询数据，线程池线程负责消费数据
+ * 适用于生产速度比消费速度快的任务
+ * <p>
+ * v1.1 新增任务包{@link TaskPackage}，用于对任务结果进行排序
  *
  * @author cheney
  * @date 2020-01-14
@@ -23,6 +30,11 @@ public class ArrayBlockTaskDealer {
      * 默认线程个数
      */
     private final static int DEFAULT_THREAD_NUM = 8;
+
+    /**
+     * 默认任务线程名
+     */
+    private final static String DEFAULT_THREAD_NAME = "ArrayBlockTaskDealer";
 
     /**
      * 线程个数
@@ -44,17 +56,30 @@ public class ArrayBlockTaskDealer {
      */
     private boolean mainHelpTask;
 
+    /**
+     * 分片异常是否继续执行
+     */
+    private boolean continueWhereSliceTaskError;
+
+    private String threadName;
+
     public ArrayBlockTaskDealer() {
-        this(DEFAULT_THREAD_NUM, false);
+        this(DEFAULT_THREAD_NUM, false, true);
     }
 
     public ArrayBlockTaskDealer(int threadNum) {
-        this(threadNum, false);
+        this(threadNum, false, true);
     }
 
     public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask) {
+        this(threadNum, mainHelpTask, true);
+    }
+
+    public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhereSliceTaskError) {
         this.finish = true;
         this.mainHelpTask = mainHelpTask;
+        this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+        this.threadName = DEFAULT_THREAD_NAME;
         setThreadNum(threadNum);
     }
 
@@ -76,7 +101,7 @@ public class ArrayBlockTaskDealer {
             return;
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
+        ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
@@ -102,7 +127,7 @@ public class ArrayBlockTaskDealer {
             return;
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
+        ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
@@ -129,11 +154,11 @@ public class ArrayBlockTaskDealer {
             return FutureResult.empty();
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
+        ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
-        List<Future<List<R>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
+        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
 
         return new FutureResult<>(futures);
     }
@@ -159,11 +184,11 @@ public class ArrayBlockTaskDealer {
             return FutureResult.empty();
         }
         // 新建阻塞队列
-        ArrayBlockingQueue<List<T>> queue = new ArrayBlockingQueue<>(queueNum);
+        ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
-        List<Future<List<R>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
+        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
 
         return new FutureResult<>(futures);
     }
@@ -177,10 +202,10 @@ public class ArrayBlockTaskDealer {
      * @param <T>       类型
      * @throws InterruptedException 任务中断异常
      */
-    private <T> void startTask(MainTask mainTask, ArrayBlockingQueue<List<T>> queue,
+    private <T> void startTask(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                BlockTask<T> blockTask) throws InterruptedException {
         // 初始化线程池，阻塞队列
-        ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum);
+        ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
         // 异步订阅任务
         Runnable task = createTask(queue, blockTask);
         for (int i = 0; i < this.threadNum; i++) {
@@ -210,15 +235,15 @@ public class ArrayBlockTaskDealer {
      * @param <T>                 类型
      * @throws InterruptedException 任务中断异常
      */
-    private <T, R> List<Future<List<R>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<List<T>> queue,
-                                                             BlockTaskWithResult<T, R> blockTaskWithResult) throws InterruptedException {
-        List<Future<List<R>>> futures = new ArrayList<>();
+    private <T, R> List<Future<List<TaskPackage<List<R>>>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                                                                BlockTaskWithResult<T, R> blockTaskWithResult) throws InterruptedException {
+        List<Future<List<TaskPackage<List<R>>>>> futures = new ArrayList<>();
         // 初始化线程池，阻塞队列
-        ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum);
+        ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
         // 启动线程池调用任务
         for (int i = 0; i < this.threadNum; i++) {
             // 异步订阅任务
-            Callable<List<R>> task = createTaskWithResult(queue, blockTaskWithResult);
+            Callable<List<TaskPackage<List<R>>>> task = createTaskWithResult(queue, blockTaskWithResult);
             futures.add(executorService.submit(task));
         }
 
@@ -227,7 +252,7 @@ public class ArrayBlockTaskDealer {
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
             try {
-                List<R> call = createTaskWithResult(queue, blockTaskWithResult).call();
+                List<TaskPackage<List<R>>> call = createTaskWithResult(queue, blockTaskWithResult).call();
                 futures.add(new WrapFeature<>(call));
             } catch (Exception e) {
                 log.error("主线程协助执行异常", e);
@@ -245,15 +270,15 @@ public class ArrayBlockTaskDealer {
      * @param blockTask 任务体
      * @param <T>       泛型：数据类型
      */
-    private <T> Runnable createTask(ArrayBlockingQueue<List<T>> queue,
+    private <T> Runnable createTask(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                     BlockTask<T> blockTask) {
         return () -> {
             try {
-                List<T> data;
-                while ((data = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                TaskPackage<List<T>> taskPackage;
+                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
                     try {
-                        if (data != null) {
-                            blockTask.execute(data);
+                        if (taskPackage != null) {
+                            blockTask.execute(taskPackage.getData());
                         }
                     } catch (Exception e) {
                         log.error("执行任务分片异常", e);
@@ -274,26 +299,30 @@ public class ArrayBlockTaskDealer {
      * @param <R>                 泛型：返回类型
      * @return callback任务
      */
-    private <T, R> Callable<List<R>> createTaskWithResult(ArrayBlockingQueue<List<T>> queue,
-                                                          BlockTaskWithResult<T, R> blockTaskWithResult) {
-        List<R> rs = new ArrayList<>();
+    private <T, R> Callable<List<TaskPackage<List<R>>>> createTaskWithResult(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                                                             BlockTaskWithResult<T, R> blockTaskWithResult) {
         return () -> {
-            List<T> data;
+            List<TaskPackage<List<R>>> rs = new ArrayList<>();
+            TaskPackage<List<T>> taskPackage;
             try {
-                while ((data = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
                     try {
-                        if (data != null) {
-                            List<R> taskResult = blockTaskWithResult.execute(data);
+                        if (taskPackage != null) {
+                            List<R> taskResult = blockTaskWithResult.execute(taskPackage.getData());
                             if (taskResult != null) {
-                                rs.addAll(taskResult);
+                                rs.add(new TaskPackage<>(taskResult, taskPackage.getIndex()));
                             }
                         }
                     } catch (Exception e) {
-                        log.error("执行任务分片异常", e);
+                        if (continueWhereSliceTaskError) {
+                            log.error("执行任务分片异常", e);
+                        } else {
+                            throw new ToolboxRuntimeException("执行任务分片异常", e);
+                        }
                     }
                 }
             } catch (InterruptedException e) {
-                log.error("队列poll数据异常:", e);
+                throw new ToolboxRuntimeException("队列poll数据异常", e);
             }
             return rs;
         };
@@ -311,7 +340,9 @@ public class ArrayBlockTaskDealer {
      */
     private <T> void putDataToQueueByLimit(FindDataFunction<T> findDataFunction,
                                            int step, int count,
-                                           ArrayBlockingQueue<List<T>> queue) throws InterruptedException {
+                                           ArrayBlockingQueue<TaskPackage<List<T>>> queue) throws InterruptedException {
+        // 只有主线程跑，无原子性问题
+        int index = 0;
         try {
             Limit limit = Limit.create(0, step);
             while (count > 0) {
@@ -322,7 +353,9 @@ public class ArrayBlockTaskDealer {
                     limit.setSize(count);
                     count -= step;
                 }
-                queue.put(findDataFunction.findData(limit));
+                List<T> data = findDataFunction.findData(limit);
+                TaskPackage<List<T>> taskPackage = new TaskPackage<>(data, index++);
+                queue.put(taskPackage);
             }
             finish = true;
         } finally {
@@ -343,7 +376,8 @@ public class ArrayBlockTaskDealer {
     private <T extends ExtremumField<V>, V extends Comparable<V>> void
     putDataToQueueOrderByExtremum(FindDataExtremumLimitFunction<T> findDataFunction,
                                   int step, int count,
-                                  ArrayBlockingQueue<List<T>> queue) throws InterruptedException {
+                                  ArrayBlockingQueue<TaskPackage<List<T>>> queue) throws InterruptedException {
+        int index = 0;
         try {
             ExtremumLimit extremumLimit = ExtremumLimit.create(null, step, ExtremumLimit.ExtremumType.MINIMUM);
             Object extremum = null;
@@ -356,7 +390,8 @@ public class ArrayBlockTaskDealer {
                 List<T> data = findDataFunction.findData(extremumLimit);
                 Optional<T> max = data.parallelStream().max(Comparator.comparing(ExtremumField::getExtremumValue));
                 extremum = max.orElseThrow(() -> new ConcurrentTaskException("data extremum not exists")).getExtremumValue();
-                queue.put(data);
+                TaskPackage<List<T>> taskPackage = new TaskPackage<>(data, index++);
+                queue.put(taskPackage);
             }
         } finally {
             finish = true;
@@ -390,6 +425,18 @@ public class ArrayBlockTaskDealer {
         this.mainHelpTask = mainHelpTask;
     }
 
+    public void setContinueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
+        this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+    }
+
+    public String getThreadName() {
+        return threadName;
+    }
+
+    public void setThreadName(String threadName) {
+        this.threadName = threadName;
+    }
+
     public void setThreadNum(int threadNum) {
         this.threadNum = threadNum;
         setQueueNum();
@@ -411,17 +458,17 @@ public class ArrayBlockTaskDealer {
      */
     public static class FutureResult<R> {
 
-        public FutureResult(List<Future<List<R>>> futures) {
+        public FutureResult(List<Future<List<TaskPackage<List<R>>>>> futures) {
             this.futures = futures;
         }
 
-        private final List<Future<List<R>>> futures;
+        private final List<Future<List<TaskPackage<List<R>>>>> futures;
 
         public static <R> FutureResult<R> empty() {
             return new FutureResult<>(null);
         }
 
-        public List<Future<List<R>>> getFutures() {
+        public List<Future<List<TaskPackage<List<R>>>>> getFutures() {
             return futures;
         }
 
@@ -431,14 +478,16 @@ public class ArrayBlockTaskDealer {
          * @return 任务返回数据
          */
         public List<R> getResults() {
-            return futures == null ? Collections.emptyList() : futures.stream().map(e -> {
+            return futures == null ? Collections.emptyList() : futures.stream().flatMap(e -> {
                 try {
-                    return e.get();
+                    // 获取taskPackage的stream
+                    return e.get().stream();
                 } catch (Exception ex) {
-                    log.error("Future#get()异常", ex);
-                    return null;
+                    throw new ToolboxRuntimeException("Fail to do Future#get()", ex);
                 }
-            }).filter(Objects::nonNull).flatMap(List::stream).collect(Collectors.toList());
+            }).sorted(Comparator.comparingInt(TaskPackage::getIndex))
+                    .flatMap(taskPackage -> taskPackage.getData().stream())
+                    .collect(Collectors.toList());
         }
     }
 
@@ -478,6 +527,13 @@ public class ArrayBlockTaskDealer {
         public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
             return data;
         }
+    }
+
+    @Data
+    @AllArgsConstructor
+    private static class TaskPackage<DT> {
+        private DT data;
+        private int index;
     }
 
 }
