@@ -52,7 +52,11 @@ public class Filters {
         }
     }
 
-    private List<FilterSegment> filters;
+    private Integer skip;
+
+    private Integer limit;
+
+    private final List<FilterSegment> filters;
 
     /**
      * 存储以map为载体的其他过滤参数
@@ -121,6 +125,24 @@ public class Filters {
 
     public List<FilterSegment> getFilters() {
         return filters;
+    }
+
+    public Integer getSkip() {
+        return skip;
+    }
+
+    public Filters skip(Integer skip) {
+        this.skip = skip;
+        return this;
+    }
+
+    public Integer getLimit() {
+        return limit;
+    }
+
+    public Filters limit(Integer limit) {
+        this.limit = limit;
+        return this;
     }
 
     public static Filters build() {
