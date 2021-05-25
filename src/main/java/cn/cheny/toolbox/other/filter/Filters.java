@@ -1,6 +1,8 @@
 package cn.cheny.toolbox.other.filter;
 
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -76,6 +78,18 @@ public class Filters {
         return this;
     }
 
+    public Filters andFilter(Filter filter, String tableName) {
+        concatTableName(filter, tableName);
+        this.filters.add(new FilterSegment(filter, Operator.AND.getScript()));
+        return this;
+    }
+
+    public Filters orFilter(Filter filter, String tableName) {
+        concatTableName(filter, tableName);
+        this.filters.add(new FilterSegment(filter, Operator.OR.getScript()));
+        return this;
+    }
+
     public Filters addOtherParams(String key, Object value) {
         if (this.otherParams == null) {
             this.otherParams = new HashMap<>();
@@ -117,6 +131,10 @@ public class Filters {
         return new Filters().andFilter(filter);
     }
 
+    public static Filters build(Filter filter, String tableName) {
+        return new Filters().andFilter(filter, tableName);
+    }
+
     public String toSql() {
         StringBuilder sqlBuilder = new StringBuilder();
         boolean first = true;
@@ -126,11 +144,26 @@ public class Filters {
                 first = false;
                 sqlBuilder.append(" ").append(filter.toSql());
             } else {
-                sqlBuilder.append(" ").append(filterSegment.connection).append(" （")
-                        .append(" ").append(filter.toSql()).append(")");
+                sqlBuilder.append(" ").append(filterSegment.connection)
+                        .append(" (").append(filter.toSql()).append(")");
             }
         }
         return sqlBuilder.substring(1);
+    }
+
+    /**
+     * 拼装表名
+     *
+     * @param filter    过滤实体
+     * @param tableName 表名
+     */
+    private void concatTableName(Filter filter, String tableName) {
+        if (StringUtils.isNotBlank(tableName)) {
+            while (filter != null) {
+                filter.setProperty(tableName + "." + filter.getProperty());
+                filter = filter.getNext();
+            }
+        }
     }
 
     private static class FilterSegment {

@@ -264,7 +264,7 @@ public class Filter {
         } else if (value.getClass().isArray()) {
             return Stream.of((Object[]) value).map(this::formatSqlVal).collect(Collectors.joining(","));
         } else if (value instanceof Collection) {
-            return Stream.of((Collection<?>) value).map(this::formatSqlVal).collect(Collectors.joining(","));
+            return ((Collection<?>) value).stream().map(this::formatSqlVal).collect(Collectors.joining(","));
         } else if (value instanceof Date) {
             stringVal = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(((Date) value));
         } else if (value instanceof ChronoLocalDateTime) {
