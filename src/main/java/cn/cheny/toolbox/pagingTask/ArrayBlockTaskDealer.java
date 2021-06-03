@@ -95,7 +95,6 @@ public class ArrayBlockTaskDealer {
         this.continueWhereSliceTaskError = continueWhereSliceTaskError;
         this.threadName = DEFAULT_THREAD_NAME;
         setThreadNum(threadNum);
-        setQueueNum();
     }
 
     /**
@@ -519,6 +518,7 @@ public class ArrayBlockTaskDealer {
 
     public void setThreadNum(int threadNum) {
         this.threadNum = threadNum;
+        setQueueNum();
     }
 
     public void setQueueNum(int queueNum) {
