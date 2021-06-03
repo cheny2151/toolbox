@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.pagingTask;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -13,7 +14,7 @@ import java.util.stream.Collectors;
 public class ArrayBlockTaskDealerDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        demo1();
+        demo3();
     }
 
     public static void demo1() throws InterruptedException {
@@ -21,7 +22,7 @@ public class ArrayBlockTaskDealerDemo {
         ArrayBlockTaskDealer taskDealer = new ArrayBlockTaskDealer(8, true);
         taskDealer.setThreadName("test");
         taskDealer.setContinueWhereSliceTaskError(false);
-        ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.execute(() -> 2000, limit -> {
+        ArrayBlockTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.submit(() -> 2000, limit -> {
             System.out.println(Thread.currentThread().getName() + ":put data");
             int num = limit.getNum();
             ArrayList<HashMap<String, Object>> hashMaps = new ArrayList<>();
@@ -55,8 +56,8 @@ public class ArrayBlockTaskDealerDemo {
     public static void demo2() throws InterruptedException {
         long l = System.currentTimeMillis();
         AtomicInteger atomicInteger = new AtomicInteger(0);
-        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8, false);
-        ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.executeOrderByExtremum(
+        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8, true);
+        ArrayBlockTaskDealer.FutureResult<TestEntity> find_end = arrayBlockTaskDealer.submitOrderByExtremum(
                 () -> 2000,
                 limit -> {
                     System.out.println("max:" + limit.getExtremum());
@@ -82,6 +83,27 @@ public class ArrayBlockTaskDealerDemo {
                 100);
         find_end.getResults();
         System.out.println("~~~");
+        System.out.println(System.currentTimeMillis() - l);
+    }
+
+    public static void demo3() throws InterruptedException {
+        long l = System.currentTimeMillis();
+        ArrayList<String> objects = new ArrayList<>();
+        for (int i = 0; i < 2000; i++) {
+            objects.add("test" + i);
+        }
+        ArrayBlockTaskDealer arrayBlockTaskDealer = new ArrayBlockTaskDealer(8, false);
+        ArrayBlockTaskDealer.FutureResult<String> futureResult = arrayBlockTaskDealer.map(objects, 10, data -> {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            return Collections.singletonList("fin");
+        });
+        System.out.println("test");
+        List<String> results = futureResult.getResults();
+        System.out.println(results);
         System.out.println(System.currentTimeMillis() - l);
     }
 

@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
  * 适用于生产速度比消费速度快的任务
  * <p>
  * v1.1 新增任务包{@link TaskPackage}，用于对任务结果进行排序
+ * v1.2 新增衍生方法foreach,map
  *
  * @author cheney
  * @date 2020-01-14
@@ -43,7 +44,9 @@ public class ArrayBlockTaskDealer {
     private int threadNum;
 
     /**
-     * 队列容量(默认为线程的2/3倍)
+     * 队列容量(默认为线程的2倍),队列容量越大，
+     * 生产者可以生产更多的数据存放于缓存中，
+     * 意味着主线程越容易出逃
      */
     private int queueNum;
 
@@ -75,15 +78,15 @@ public class ArrayBlockTaskDealer {
     private String threadName;
 
     public ArrayBlockTaskDealer() {
-        this(DEFAULT_THREAD_NUM, false, true);
+        this(DEFAULT_THREAD_NUM, false, false);
     }
 
     public ArrayBlockTaskDealer(int threadNum) {
-        this(threadNum, false, true);
+        this(threadNum, false, false);
     }
 
     public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask) {
-        this(threadNum, mainHelpTask, true);
+        this(threadNum, mainHelpTask, false);
     }
 
     public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhereSliceTaskError) {
@@ -146,6 +149,23 @@ public class ArrayBlockTaskDealer {
     }
 
     /**
+     * 衍生方法，切割集合任务进行执行
+     *
+     * @param data      集合数据
+     * @param splitSize 任务包分片大小
+     * @param blockTask 任务函数
+     * @param <T>       数据泛型
+     * @throws InterruptedException 任务中断异常
+     */
+    public <T> void foreach(List<T> data, int splitSize, BlockTask<T> blockTask) throws InterruptedException {
+        if (data.size() <= splitSize) {
+            blockTask.execute(data);
+            return;
+        }
+        this.execute(data::size, this.listFindDataFunction(data), blockTask, splitSize);
+    }
+
+    /**
      * 执行多线程阻塞任务，主线程生产数据，异步线程消费数据并返回数据
      *
      * @param countFunction       count函数
@@ -155,10 +175,10 @@ public class ArrayBlockTaskDealer {
      * @param <T>                 类型
      * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
-    public <T, R> FutureResult<R> execute(CountFunction countFunction,
-                                          FindDataFunction<T> findDataFunction,
-                                          BlockTaskWithResult<T, R> blockTaskWithResult,
-                                          int step) throws InterruptedException {
+    public <T, R> FutureResult<R> submit(CountFunction countFunction,
+                                         FindDataFunction<T> findDataFunction,
+                                         BlockTaskWithResult<T, R> blockTaskWithResult,
+                                         int step) throws InterruptedException {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -185,10 +205,10 @@ public class ArrayBlockTaskDealer {
      * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
     public <T extends ExtremumField<V>, V extends Comparable<V>, R>
-    FutureResult<R> executeOrderByExtremum(CountFunction countFunction,
-                                           FindDataExtremumLimitFunction<T> findDataFunction,
-                                           BlockTaskWithResult<T, R> blockTaskWithResult,
-                                           int step) throws InterruptedException {
+    FutureResult<R> submitOrderByExtremum(CountFunction countFunction,
+                                          FindDataExtremumLimitFunction<T> findDataFunction,
+                                          BlockTaskWithResult<T, R> blockTaskWithResult,
+                                          int step) throws InterruptedException {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -202,6 +222,25 @@ public class ArrayBlockTaskDealer {
         List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
 
         return new FutureResult<>(futures);
+    }
+
+
+    /**
+     * 衍生方法，切割集合任务进行执行
+     *
+     * @param data                集合数据
+     * @param splitSize           任务包分片大小
+     * @param blockTaskWithResult 任务函数（返回数据）
+     * @param <T>                 数据泛型
+     * @throws InterruptedException 任务中断异常
+     */
+    public <T, R> FutureResult<R> map(List<T> data, int splitSize, BlockTaskWithResult<T, R> blockTaskWithResult) throws InterruptedException {
+        if (data.size() <= splitSize) {
+            List<R> rs = blockTaskWithResult.execute(data);
+            WrapFeature<List<TaskPackage<List<R>>>> wrapFeature = new WrapFeature<>(Collections.singletonList(new TaskPackage<>(rs, 0)));
+            return new FutureResult<>(Collections.singletonList(wrapFeature));
+        }
+        return this.submit(data::size, this.listFindDataFunction(data), blockTaskWithResult, splitSize);
     }
 
     /**
@@ -433,6 +472,18 @@ public class ArrayBlockTaskDealer {
         }
     }
 
+    private <T> FindDataFunction<T> listFindDataFunction(List<T> data) {
+        return limit -> {
+            int num = limit.getNum();
+            int size = limit.getSize();
+            List<T> splitData = new ArrayList<>();
+            for (int i = 0; i < size; i++) {
+                splitData.add(data.get(num++));
+            }
+            return splitData;
+        };
+    }
+
     /**
      * 任务并发安全检查
      */
@@ -457,14 +508,6 @@ public class ArrayBlockTaskDealer {
         return mainHelpTask;
     }
 
-    public void setMainHelpTask(boolean mainHelpTask) {
-        this.mainHelpTask = mainHelpTask;
-    }
-
-    public void setContinueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
-        this.continueWhereSliceTaskError = continueWhereSliceTaskError;
-    }
-
     public String getThreadName() {
         return threadName;
     }
@@ -478,9 +521,21 @@ public class ArrayBlockTaskDealer {
         setQueueNum();
     }
 
+    public void setQueueNum(int queueNum) {
+        this.queueNum = queueNum;
+    }
+
+    public void setMainHelpTask(boolean mainHelpTask) {
+        this.mainHelpTask = mainHelpTask;
+    }
+
+    public void setContinueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
+        this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+    }
+
     private void setQueueNum() {
-        // 默认队列容量为线程数的0.75倍
-        int queueNum = (int) (this.threadNum * 0.75);
+        // 默认队列容量为线程数的2倍
+        int queueNum = this.threadNum * 2;
         if (queueNum == 0) {
             queueNum = 1;
         }
