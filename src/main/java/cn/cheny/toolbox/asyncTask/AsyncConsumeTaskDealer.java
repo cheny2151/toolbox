@@ -327,7 +327,6 @@ public class AsyncConsumeTaskDealer {
      * @param queue               队列
      * @param blockTaskWithResult 线程池阻塞任务
      * @param <T>                 类型
-     * @throws InterruptedException 任务中断异常
      */
     private <T, R> List<Future<List<TaskPackage<List<R>>>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                                                                 BlockTaskWithResult<T, R> blockTaskWithResult) {
@@ -473,7 +472,6 @@ public class AsyncConsumeTaskDealer {
                 TaskPackage<List<T>> taskPackage = new TaskPackage<>(data, index++);
                 queue.put(taskPackage);
             }
-            finish = true;
         } finally {
             finish = true;
         }
