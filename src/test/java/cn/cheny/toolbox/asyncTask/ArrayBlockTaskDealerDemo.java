@@ -22,9 +22,8 @@ public class ArrayBlockTaskDealerDemo {
     public static void demo1() throws InterruptedException {
         long l = System.currentTimeMillis();
         AsyncConsumeTaskDealer taskDealer = new AsyncConsumeTaskDealer(8, true);
-        taskDealer.setThreadName("test");
-        taskDealer.setContinueWhereSliceTaskError(false);
-        AsyncConsumeTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.submit(() -> 2000, limit -> {
+        AsyncConsumeTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.threadName("test").continueWhereSliceTaskError(false)
+                .submit(() -> 2000, limit -> {
             System.out.println(Thread.currentThread().getName() + ":put data");
             int num = limit.getNum();
             ArrayList<HashMap<String, Object>> hashMaps = new ArrayList<>();
@@ -111,8 +110,8 @@ public class ArrayBlockTaskDealerDemo {
 
     public static void demo4() {
         AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, false);
-        asyncConsumeTaskDealer.setContinueWhereSliceTaskError(true);
-        AsyncConsumeTaskDealer.FutureResult<Integer> futureResult = asyncConsumeTaskDealer.submit((Producer<String>) publish -> {
+        AsyncConsumeTaskDealer.FutureResult<Integer> futureResult =  asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
+                .submit((Producer<String>) publish -> {
             for (int i = 0; i < 2000; i++) {
                 publish.push("test" + i);
             }

@@ -98,7 +98,7 @@ public class AsyncConsumeTaskDealer {
         this.mainHelpTask = mainHelpTask;
         this.continueWhereSliceTaskError = continueWhereSliceTaskError;
         this.threadName = DEFAULT_THREAD_NAME;
-        setThreadNum(threadNum);
+        threadNum(threadNum);
     }
 
     /**
@@ -574,28 +574,33 @@ public class AsyncConsumeTaskDealer {
         return threadName;
     }
 
-    public void setThreadName(String threadName) {
+    public AsyncConsumeTaskDealer threadName(String threadName) {
         this.threadName = threadName;
+        return this;
     }
 
-    public void setThreadNum(int threadNum) {
+    public AsyncConsumeTaskDealer threadNum(int threadNum) {
         this.threadNum = threadNum;
-        setQueueNum();
+        setDefaultQueueNum();
+        return this;
     }
 
-    public void setQueueNum(int queueNum) {
+    public AsyncConsumeTaskDealer queueNum(int queueNum) {
         this.queueNum = queueNum;
+        return this;
     }
 
-    public void setMainHelpTask(boolean mainHelpTask) {
+    public AsyncConsumeTaskDealer mainHelpTask(boolean mainHelpTask) {
         this.mainHelpTask = mainHelpTask;
+        return this;
     }
 
-    public void setContinueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
+    public AsyncConsumeTaskDealer continueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
         this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+        return this;
     }
 
-    private void setQueueNum() {
+    private void setDefaultQueueNum() {
         // 默认队列容量为线程数的2倍
         int queueNum = this.threadNum * 2;
         if (queueNum == 0) {
