@@ -1,4 +1,4 @@
-package cn.cheny.toolbox.pagingTask.function;
+package cn.cheny.toolbox.asyncTask.function;
 
 /**
  * 获取数量函数式接口

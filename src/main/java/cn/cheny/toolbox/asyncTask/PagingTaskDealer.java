@@ -1,9 +1,9 @@
-package cn.cheny.toolbox.pagingTask;
+package cn.cheny.toolbox.asyncTask;
 
 import cn.cheny.toolbox.other.page.Limit;
-import cn.cheny.toolbox.pagingTask.function.CountFunction;
-import cn.cheny.toolbox.pagingTask.function.PagingTask;
-import cn.cheny.toolbox.pagingTask.function.PagingTaskWithResult;
+import cn.cheny.toolbox.asyncTask.function.CountFunction;
+import cn.cheny.toolbox.asyncTask.function.PagingTask;
+import cn.cheny.toolbox.asyncTask.function.PagingTaskWithResult;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 

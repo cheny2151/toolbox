@@ -1,4 +1,4 @@
-package cn.cheny.toolbox.pagingTask;
+package cn.cheny.toolbox.asyncTask;
 
 /**
  * 极值字段值

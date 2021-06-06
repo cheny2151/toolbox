@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 /**
  * 简化map获取操作
  *
- * @Date 2021/2/8
+ * @date 2021/2/8
  * @author by chenyi
  */
 @SuppressWarnings("unchecked")

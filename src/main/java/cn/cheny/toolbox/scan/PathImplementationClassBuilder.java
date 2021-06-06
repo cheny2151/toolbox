@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * 扫描项目包并实例化接口实现类/子类
  *
- * @Date 2021/5/10
+ * @date 2021/5/10
  * @author by chenyi
  */
 @Slf4j

@@ -3,7 +3,7 @@ package cn.cheny.toolbox.exception;
 /**
  * toolbox统一root运行时异常
  *
- * @Date 2021/5/8
+ * @date 2021/5/8
  * @author by chenyi
  */
 public class ToolboxRuntimeException extends RuntimeException {

@@ -5,7 +5,7 @@ import cn.cheny.toolbox.other.filter.Filter;
 /**
  * 静态属性环境变量设置
  *
- * @Date 2021/4/21
+ * @date 2021/4/21
  * @author by chenyi
  */
 public class StatusPropertySpringUtils implements SpringUtilsAware {

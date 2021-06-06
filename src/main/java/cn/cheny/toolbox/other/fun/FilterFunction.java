@@ -3,7 +3,7 @@ package cn.cheny.toolbox.other.fun;
 /**
  * 过滤函数
  *
- * @Date 2021/3/8
+ * @date 2021/3/8
  * @author by chenyi
  */
 @FunctionalInterface

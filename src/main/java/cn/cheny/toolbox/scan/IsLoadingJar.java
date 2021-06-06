@@ -5,7 +5,7 @@ import java.net.URL;
 /**
  * 是否加载该jar包
  *
- * @Date 2021/5/10
+ * @date 2021/5/10
  * @author by chenyi
  */
 @FunctionalInterface

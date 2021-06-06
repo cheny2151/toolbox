@@ -1,32 +1,36 @@
-package cn.cheny.toolbox.pagingTask;
+package cn.cheny.toolbox.asyncTask;
 
+import cn.cheny.toolbox.asyncTask.exception.ConcurrentTaskException;
+import cn.cheny.toolbox.asyncTask.exception.TaskInterruptedException;
+import cn.cheny.toolbox.asyncTask.function.*;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.NamePrefixThreadFactory;
 import cn.cheny.toolbox.other.page.ExtremumLimit;
 import cn.cheny.toolbox.other.page.Limit;
-import cn.cheny.toolbox.pagingTask.exception.ConcurrentTaskException;
-import cn.cheny.toolbox.pagingTask.exception.TaskInterruptedException;
-import cn.cheny.toolbox.pagingTask.function.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
- * 使用{@link ArrayBlockingQueue}提供生产消费功能，主线程负责查询数据，线程池线程负责消费数据
+ * 异步多线程消费任务处理器
+ * 使用{@link ArrayBlockingQueue}提供生产消费功能，主线程负责同步查询数据，线程池线程负责异步消费数据
  * 适用于生产速度比消费速度快的任务
+ * 任务异常中断将抛出{@link TaskInterruptedException}
  * <p>
  * v1.1 新增任务包{@link TaskPackage}，用于对任务结果进行排序
  * v1.2 新增衍生方法foreach,map
+ * v1.3 新增生产消费任务方式
  *
  * @author cheney
  * @date 2020-01-14
  */
 @Slf4j
-public class ArrayBlockTaskDealer {
+public class AsyncConsumeTaskDealer {
 
     /**
      * 默认线程个数
@@ -77,19 +81,19 @@ public class ArrayBlockTaskDealer {
 
     private String threadName;
 
-    public ArrayBlockTaskDealer() {
+    public AsyncConsumeTaskDealer() {
         this(DEFAULT_THREAD_NUM, false, false);
     }
 
-    public ArrayBlockTaskDealer(int threadNum) {
+    public AsyncConsumeTaskDealer(int threadNum) {
         this(threadNum, false, false);
     }
 
-    public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask) {
+    public AsyncConsumeTaskDealer(int threadNum, boolean mainHelpTask) {
         this(threadNum, mainHelpTask, false);
     }
 
-    public ArrayBlockTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhereSliceTaskError) {
+    public AsyncConsumeTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhereSliceTaskError) {
         this.finish = true;
         this.mainHelpTask = mainHelpTask;
         this.continueWhereSliceTaskError = continueWhereSliceTaskError;
@@ -105,10 +109,9 @@ public class ArrayBlockTaskDealer {
      * @param blockTask        任务函数
      * @param step             步长
      * @param <T>              类型
-     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
     public <T> void execute(CountFunction countFunction, FindDataFunction<T> findDataFunction,
-                            BlockTask<T> blockTask, int step) throws InterruptedException {
+                            BlockTask<T> blockTask, int step) {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -130,11 +133,10 @@ public class ArrayBlockTaskDealer {
      * @param blockTask        任务函数
      * @param step             步长
      * @param <T>              类型
-     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
     public <T extends ExtremumField<V>, V extends Comparable<V>>
     void executeOrderByExtremum(CountFunction countFunction, FindDataExtremumLimitFunction<T> findDataFunction,
-                                BlockTask<T> blockTask, int step) throws InterruptedException {
+                                BlockTask<T> blockTask, int step) {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -149,15 +151,33 @@ public class ArrayBlockTaskDealer {
     }
 
     /**
+     * 执行生产消费任务
+     * v1.3
+     *
+     * @param producer  生产任务
+     * @param blockTask 异步消费任务
+     * @param <T>       数据类型
+     */
+    public <T> void execute(Producer<T> producer, BlockTask<T> blockTask) {
+        beforeTask();
+        // 新建阻塞队列
+        ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
+        // 主线程同步获取数据传递至方法内
+        TaskPublish<T> taskPublish = new TaskPublish<>(queue);
+        MainTask mainTask = () -> doProduce(producer, taskPublish);
+
+        startTask(mainTask, queue, blockTask);
+    }
+
+    /**
      * 衍生方法，切割集合任务进行执行
      *
      * @param data      集合数据
      * @param splitSize 任务包分片大小
      * @param blockTask 任务函数
      * @param <T>       数据泛型
-     * @throws InterruptedException 任务中断异常
      */
-    public <T> void foreach(List<T> data, int splitSize, BlockTask<T> blockTask) throws InterruptedException {
+    public <T> void foreach(List<T> data, int splitSize, BlockTask<T> blockTask) {
         if (data.size() <= splitSize) {
             blockTask.execute(data);
             return;
@@ -173,12 +193,11 @@ public class ArrayBlockTaskDealer {
      * @param blockTaskWithResult 任务函数（返回数据）
      * @param step                步长
      * @param <T>                 类型
-     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
     public <T, R> FutureResult<R> submit(CountFunction countFunction,
                                          FindDataFunction<T> findDataFunction,
                                          BlockTaskWithResult<T, R> blockTaskWithResult,
-                                         int step) throws InterruptedException {
+                                         int step) {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -202,13 +221,12 @@ public class ArrayBlockTaskDealer {
      * @param blockTaskWithResult 任务函数（返回数据）
      * @param step                步长
      * @param <T>                 类型
-     * @throws InterruptedException ArrayBlockingQueue导致的任务中断异常
      */
     public <T extends ExtremumField<V>, V extends Comparable<V>, R>
     FutureResult<R> submitOrderByExtremum(CountFunction countFunction,
                                           FindDataExtremumLimitFunction<T> findDataFunction,
                                           BlockTaskWithResult<T, R> blockTaskWithResult,
-                                          int step) throws InterruptedException {
+                                          int step) {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -224,6 +242,27 @@ public class ArrayBlockTaskDealer {
         return new FutureResult<>(futures);
     }
 
+    /**
+     * 执行生产消费任务
+     * v1.3
+     *
+     * @param producer            生产任务
+     * @param blockTaskWithResult 异步消费任务函数（返回数据）
+     * @param <T>                 数据类型
+     */
+    public <T, R> FutureResult<R> submit(Producer<T> producer, BlockTaskWithResult<T, R> blockTaskWithResult) {
+        beforeTask();
+        // 新建阻塞队列
+        ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
+        TaskPublish<T> taskPublish = new TaskPublish<>(queue);
+        // 主线程同步获取数据传递至方法内
+        MainTask mainTask = () -> doProduce(producer, taskPublish);
+
+        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
+
+        return new FutureResult<>(futures);
+    }
+
 
     /**
      * 衍生方法，切割集合任务进行执行
@@ -232,9 +271,8 @@ public class ArrayBlockTaskDealer {
      * @param splitSize           任务包分片大小
      * @param blockTaskWithResult 任务函数（返回数据）
      * @param <T>                 数据泛型
-     * @throws InterruptedException 任务中断异常
      */
-    public <T, R> FutureResult<R> map(List<T> data, int splitSize, BlockTaskWithResult<T, R> blockTaskWithResult) throws InterruptedException {
+    public <T, R> FutureResult<R> map(List<T> data, int splitSize, BlockTaskWithResult<T, R> blockTaskWithResult) {
         if (data.size() <= splitSize) {
             List<R> rs = blockTaskWithResult.execute(data);
             WrapFeature<List<TaskPackage<List<R>>>> wrapFeature = new WrapFeature<>(Collections.singletonList(new TaskPackage<>(rs, 0)));
@@ -250,10 +288,9 @@ public class ArrayBlockTaskDealer {
      * @param queue     队列
      * @param blockTask 线程池阻塞任务
      * @param <T>       类型
-     * @throws InterruptedException 任务中断异常
      */
     private <T> void startTask(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                               BlockTask<T> blockTask) throws InterruptedException {
+                               BlockTask<T> blockTask) {
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
         // 异步订阅任务
@@ -263,7 +300,11 @@ public class ArrayBlockTaskDealer {
         }
 
         // 主线程同步获取数据
-        mainTask.run();
+        try {
+            mainTask.run();
+        } catch (InterruptedException e) {
+            throw new TaskInterruptedException("主线程任务获取中断", e);
+        }
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
             try {
@@ -289,7 +330,7 @@ public class ArrayBlockTaskDealer {
      * @throws InterruptedException 任务中断异常
      */
     private <T, R> List<Future<List<TaskPackage<List<R>>>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                                                                                BlockTaskWithResult<T, R> blockTaskWithResult) throws InterruptedException {
+                                                                                BlockTaskWithResult<T, R> blockTaskWithResult) {
         List<Future<List<TaskPackage<List<R>>>>> futures = new ArrayList<>();
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
@@ -301,7 +342,11 @@ public class ArrayBlockTaskDealer {
         }
 
         // 主线程同步获取数据
-        mainTask.run();
+        try {
+            mainTask.run();
+        } catch (InterruptedException e) {
+            throw new TaskInterruptedException("主线程任务获取中断", e);
+        }
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
             try {
@@ -472,6 +517,23 @@ public class ArrayBlockTaskDealer {
         }
     }
 
+    /**
+     * 执行生产数据的任务
+     *
+     * @param producer    生产者
+     * @param taskPublish 任务数据推送
+     * @param <T>         数据类型
+     */
+    private <T> void doProduce(Producer<T> producer, TaskPublish<T> taskPublish) {
+        try {
+            producer.produce(taskPublish);
+        } catch (InterruptedException e) {
+            // do nothing
+        } finally {
+            finish = true;
+        }
+    }
+
     private <T> FindDataFunction<T> listFindDataFunction(List<T> data) {
         return limit -> {
             int num = limit.getNum();
@@ -618,6 +680,47 @@ public class ArrayBlockTaskDealer {
         public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
             return data;
         }
+    }
+
+    /**
+     * 任务数据发布接口
+     *
+     * @author cheney
+     * @date 2021-06-06
+     */
+    public class TaskPublish<T> implements Publish<T> {
+
+        private final ArrayBlockingQueue<TaskPackage<List<T>>> queue;
+
+        private int index;
+
+        public TaskPublish(ArrayBlockingQueue<TaskPackage<List<T>>> queue) {
+            this.queue = queue;
+            this.index = 0;
+        }
+
+        public void push(T t) throws InterruptedException {
+            if (interrupted) {
+                throw new InterruptedException();
+            }
+            if (t == null) {
+                return;
+            }
+            TaskPackage<List<T>> taskPackage = new TaskPackage<>(Collections.singletonList(t), index++);
+            queue.put(taskPackage);
+        }
+
+        public void pushMulti(List<T> list) throws InterruptedException {
+            if (interrupted) {
+                throw new InterruptedException();
+            }
+            if (CollectionUtils.isEmpty(list)) {
+                return;
+            }
+            TaskPackage<List<T>> taskPackage = new TaskPackage<>(list, index++);
+            queue.put(taskPackage);
+        }
+
     }
 
     @Data

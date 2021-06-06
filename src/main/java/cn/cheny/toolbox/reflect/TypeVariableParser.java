@@ -10,7 +10,7 @@ import java.util.Optional;
 /**
  * 用于提取泛型与其擦除后的实际类型的映射关系
  *
- * @Date 2021/3/8
+ * @date 2021/3/8
  * @author by chenyi
  */
 public class TypeVariableParser {

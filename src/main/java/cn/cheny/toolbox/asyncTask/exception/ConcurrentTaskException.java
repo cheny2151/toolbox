@@ -1,4 +1,4 @@
-package cn.cheny.toolbox.pagingTask.exception;
+package cn.cheny.toolbox.asyncTask.exception;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 
