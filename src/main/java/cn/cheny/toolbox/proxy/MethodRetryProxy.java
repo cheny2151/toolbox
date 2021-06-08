@@ -69,19 +69,19 @@ public class MethodRetryProxy implements InvocationHandler {
             try {
                 return method.invoke(actual, args);
             } catch (Throwable t) {
-                // 出现业务异常直接抛出，不做重试
+                // 出现指定异常直接抛出，不做重试
                 throwable = t;
                 if (isStopError(throwable)) {
                     break;
                 }
             }
         } while (!timeout(firstTime) && c++ < maximumTry);
+        if (throwable instanceof InvocationTargetException) {
+            throwable = ((InvocationTargetException) throwable).getTargetException();
+        }
         if (c > 0) {
             log.error("translation service:{} retry fail,try time：{},error msg:{}",
                     actual.getClass().getSimpleName(), c, throwable.getMessage());
-        }
-        if (throwable instanceof InvocationTargetException) {
-            throwable = ((InvocationTargetException) throwable).getTargetException();
         }
         throw throwable;
     }
@@ -105,23 +105,26 @@ public class MethodRetryProxy implements InvocationHandler {
         return timeout;
     }
 
-    public void setTimeout(int timeout) {
+    public MethodRetryProxy timeout(int timeout) {
         this.timeout = timeout;
+        return this;
     }
 
     public int getMaximumTry() {
         return maximumTry;
     }
 
-    public void setMaximumTry(int maximumTry) {
+    public MethodRetryProxy maximumTry(int maximumTry) {
         this.maximumTry = maximumTry;
+        return this;
     }
 
     public Class<Throwable>[] getStopErrors() {
         return stopErrors;
     }
 
-    public void setStopErrors(Class<Throwable>[] stopErrors) {
+    public MethodRetryProxy stopErrors(Class<Throwable>[] stopErrors) {
         this.stopErrors = stopErrors;
+        return this;
     }
 }
