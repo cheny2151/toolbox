@@ -56,7 +56,7 @@ public class Filters {
 
     private Integer limit;
 
-    private final List<FilterSegment> filters;
+    private List<FilterSegment> filters;
 
     /**
      * 存储以map为载体的其他过滤参数
@@ -121,6 +121,10 @@ public class Filters {
     public boolean isHasOtherParams() {
         Map<String, Object> otherParams = this.otherParams;
         return otherParams != null && otherParams.size() > 0;
+    }
+
+    public void setFilters(List<FilterSegment> filters) {
+        this.filters = filters;
     }
 
     public List<FilterSegment> getFilters() {
