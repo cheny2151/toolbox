@@ -111,7 +111,11 @@ public class Filters {
     }
 
     public void clearOtherParams() {
-        this.otherParams.clear();
+        this.otherParams = new HashMap<>();
+    }
+
+    public void setOtherParams(Map<String, Object> otherParams) {
+        this.otherParams = otherParams;
     }
 
     public Map<String, Object> getOtherParams() {
@@ -135,8 +139,12 @@ public class Filters {
         return skip;
     }
 
-    public Filters skip(Integer skip) {
+    public void setSkip(Integer skip) {
         this.skip = skip;
+    }
+
+    public Filters skip(Integer skip) {
+        this.setSkip(skip);
         return this;
     }
 
@@ -144,8 +152,12 @@ public class Filters {
         return limit;
     }
 
-    public Filters limit(Integer limit) {
+    public void setLimit(Integer limit) {
         this.limit = limit;
+    }
+
+    public Filters limit(Integer limit) {
+        this.setLimit(limit);
         return this;
     }
 
