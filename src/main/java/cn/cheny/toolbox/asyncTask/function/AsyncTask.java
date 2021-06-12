@@ -3,13 +3,14 @@ package cn.cheny.toolbox.asyncTask.function;
 import java.util.List;
 
 /**
- * 阻塞任务带返回值
+ * 阻塞任务
  *
  * @author cheney
  * @date 2020-01-14
  */
-public interface BlockTaskWithResult<T, R> {
+@FunctionalInterface
+public interface AsyncTask<T> {
 
-    List<R> execute(List<T> data);
+    void execute(List<T> data);
 
 }
