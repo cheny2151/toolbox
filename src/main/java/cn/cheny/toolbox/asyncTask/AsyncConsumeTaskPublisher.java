@@ -247,6 +247,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
 
         public void setInnerThreadNum(int innerThreadNum) {
             this.innerThreadNum = innerThreadNum;
+            this.innerQueueNum = 2 * innerThreadNum;
         }
 
         public int getInnerQueueNum() {
@@ -258,17 +259,17 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         }
 
         public TaskDealerPublisher<T> innerThreadName(String innerThreadName) {
-            this.innerThreadName = innerThreadName;
+            this.setInnerThreadName(innerThreadName);
             return this;
         }
 
         public TaskDealerPublisher<T> innerThreadNum(int innerThreadNum) {
-            this.innerThreadNum = innerThreadNum;
+            this.setInnerThreadNum(innerThreadNum);
             return this;
         }
 
         public TaskDealerPublisher<T> innerQueueNum(int innerQueueNum) {
-            this.innerQueueNum = innerQueueNum;
+            this.setInnerQueueNum(innerQueueNum);
             return this;
         }
     }

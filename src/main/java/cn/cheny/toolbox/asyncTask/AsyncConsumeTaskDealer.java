@@ -626,11 +626,7 @@ public class AsyncConsumeTaskDealer {
 
     private void setDefaultQueueNum() {
         // 默认队列容量为线程数的2倍
-        int queueNum = this.threadNum * 2;
-        if (queueNum == 0) {
-            queueNum = 1;
-        }
-        this.queueNum = queueNum;
+        this.queueNum = this.threadNum * 2;
     }
 
     /**
