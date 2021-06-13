@@ -100,9 +100,9 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
 
         private final MainTask mainTask;
 
-        private Runnable task;
+        private final ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue;
 
-        private ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue;
+        private Runnable task;
 
         private TaskDealerPublisher<?> from;
 
