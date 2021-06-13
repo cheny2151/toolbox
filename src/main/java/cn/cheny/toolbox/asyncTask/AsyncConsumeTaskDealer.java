@@ -55,19 +55,9 @@ public class AsyncConsumeTaskDealer {
     private int queueNum;
 
     /**
-     * 结束标识
+     * 任务线程名
      */
-    private volatile boolean finish;
-
-    /**
-     * 中断标识
-     */
-    private volatile boolean interrupted;
-
-    /**
-     * 中断原因
-     */
-    public Throwable interruptedCause;
+    private String threadName;
 
     /**
      * 主线程是否帮助执行
@@ -75,11 +65,24 @@ public class AsyncConsumeTaskDealer {
     private boolean mainHelpTask;
 
     /**
+     * 结束标识
+     */
+    protected volatile boolean finish;
+
+    /**
+     * 中断标识
+     */
+    protected volatile boolean interrupted;
+
+    /**
+     * 中断原因
+     */
+    protected Throwable interruptedCause;
+
+    /**
      * 分片异常是否继续执行
      */
-    private boolean continueWhereSliceTaskError;
-
-    private String threadName;
+    protected boolean continueWhereSliceTaskError;
 
     public AsyncConsumeTaskDealer() {
         this(DEFAULT_THREAD_NUM, false, false);
@@ -208,9 +211,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
-        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, asyncTaskWithResult);
-
-        return new FutureResult<>(futures);
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult);
     }
 
     /**
@@ -237,9 +238,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
-        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, asyncTaskWithResult);
-
-        return new FutureResult<>(futures);
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult);
     }
 
     /**
@@ -258,9 +257,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> doProduce(producer, taskPublish);
 
-        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, asyncTaskWithResult);
-
-        return new FutureResult<>(futures);
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult);
     }
 
 
@@ -293,6 +290,20 @@ public class AsyncConsumeTaskDealer {
                                AsyncTask<T> asyncTask) {
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
+        this.startTask(mainTask, queue, asyncTask, executorService);
+    }
+
+    /**
+     * 开始任务，新建线程池并由主线程生产数据，线程池多线程执行消费数据
+     *
+     * @param mainTask        主线程任务
+     * @param queue           队列
+     * @param asyncTask       线程池阻塞任务
+     * @param executorService 异步任务线程池
+     * @param <T>             类型
+     */
+    protected <T> void startTask(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                 AsyncTask<T> asyncTask, ExecutorService executorService) {
         // 异步订阅任务
         Runnable task = createTask(queue, asyncTask);
         for (int i = 0; i < this.threadNum; i++) {
@@ -328,15 +339,30 @@ public class AsyncConsumeTaskDealer {
      * @param asyncTaskWithResult 线程池阻塞任务
      * @param <T>                 类型
      */
-    private <T, R> List<Future<List<TaskPackage<List<R>>>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                                                                                AsyncTaskWithResult<T, R> asyncTaskWithResult) {
-        List<Future<List<TaskPackage<List<R>>>>> futures = new ArrayList<>();
+    private <T, R> FutureResult<R> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                                       AsyncTaskWithResult<T, R> asyncTaskWithResult) {
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult, executorService);
+    }
+
+    /**
+     * 开始任务，新建线程池并由主线程生产数据，线程池多线程执行消费数据
+     *
+     * @param mainTask            主线程任务
+     * @param queue               队列
+     * @param asyncTaskWithResult 线程池阻塞任务
+     * @param executorService     异步任务线程池
+     * @param <T>                 类型
+     */
+    protected <T, R> FutureResult<R> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                                         AsyncTaskWithResult<T, R> asyncTaskWithResult,
+                                                         ExecutorService executorService) {
+        List<Future<List<TaskPackage<List<R>>>>> futures = new ArrayList<>();
         // 启动线程池调用任务
+        Callable<List<TaskPackage<List<R>>>> task = createTaskWithResult(queue, asyncTaskWithResult);
         for (int i = 0; i < this.threadNum; i++) {
             // 异步订阅任务
-            Callable<List<TaskPackage<List<R>>>> task = createTaskWithResult(queue, asyncTaskWithResult);
             futures.add(executorService.submit(task));
         }
 
@@ -349,7 +375,7 @@ public class AsyncConsumeTaskDealer {
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
             try {
-                List<TaskPackage<List<R>>> call = createTaskWithResult(queue, asyncTaskWithResult).call();
+                List<TaskPackage<List<R>>> call = task.call();
                 futures.add(new WrapFeature<>(call));
             } catch (Exception e) {
                 log.error("主线程协助执行异常", e);
@@ -360,7 +386,24 @@ public class AsyncConsumeTaskDealer {
         if (interrupted) {
             throw new TaskInterruptedException("任务运行异常终止:" + interruptedCause.getMessage(), interruptedCause);
         }
-        return futures;
+        return new FutureResult<>(futures);
+    }
+
+    /**
+     * 执行生产数据的任务
+     *
+     * @param producer    生产者
+     * @param taskPublish 任务数据推送
+     * @param <T>         数据类型
+     */
+    protected <T> void doProduce(Producer<T> producer, TaskPublish<T> taskPublish) {
+        try {
+            producer.produce(taskPublish);
+        } catch (InterruptedException e) {
+            // do nothing
+        } finally {
+            finish = true;
+        }
     }
 
     /**
@@ -510,23 +553,6 @@ public class AsyncConsumeTaskDealer {
                 TaskPackage<List<T>> taskPackage = new TaskPackage<>(data, index++);
                 queue.put(taskPackage);
             }
-        } finally {
-            finish = true;
-        }
-    }
-
-    /**
-     * 执行生产数据的任务
-     *
-     * @param producer    生产者
-     * @param taskPublish 任务数据推送
-     * @param <T>         数据类型
-     */
-    private <T> void doProduce(Producer<T> producer, TaskPublish<T> taskPublish) {
-        try {
-            producer.produce(taskPublish);
-        } catch (InterruptedException e) {
-            // do nothing
         } finally {
             finish = true;
         }
@@ -728,7 +754,7 @@ public class AsyncConsumeTaskDealer {
 
     @Data
     @AllArgsConstructor
-    private static class TaskPackage<DT> {
+    protected static class TaskPackage<DT> {
         private DT data;
         private int index;
     }
