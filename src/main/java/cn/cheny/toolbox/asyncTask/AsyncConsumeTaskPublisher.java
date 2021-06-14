@@ -58,10 +58,11 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
     /**
      * 创建通过队列传递数据的任务
      *
-     * @param queue               队列
+     * @param queue               输入队列
      * @param asyncTaskWithResult 任务体
-     * @param <T>                 泛型：数据类型
-     * @param <R>                 泛型：返回类型
+     * @param resultQueue         输出队列
+     * @param <T>                 泛型：输入数据类型
+     * @param <R>                 泛型：输出数据类型
      * @return callback任务
      */
     private <T, R> Runnable createTaskPushToQueue(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
