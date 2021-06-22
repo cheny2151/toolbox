@@ -15,7 +15,7 @@ import java.util.stream.Stream;
 
 public class Filter {
 
-    // 转为下划线
+    // 是否下划线默认值
     private static boolean DEFAULT_USE_UNDERLINE = true;
 
     // 过滤符号
