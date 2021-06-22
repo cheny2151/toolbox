@@ -40,7 +40,7 @@ public class AsyncConsumeTaskDealer {
     /**
      * 默认任务线程名
      */
-    private final static String DEFAULT_THREAD_NAME = "ArrayBlockTaskDealer";
+    private final static String DEFAULT_THREAD_NAME = "AsyncConsumeTaskDealer";
 
     /**
      * 线程个数
@@ -55,19 +55,9 @@ public class AsyncConsumeTaskDealer {
     private int queueNum;
 
     /**
-     * 结束标识
+     * 任务线程名
      */
-    private volatile boolean finish;
-
-    /**
-     * 中断标识
-     */
-    private volatile boolean interrupted;
-
-    /**
-     * 中断原因
-     */
-    public Throwable interruptedCause;
+    private String threadName;
 
     /**
      * 主线程是否帮助执行
@@ -75,11 +65,24 @@ public class AsyncConsumeTaskDealer {
     private boolean mainHelpTask;
 
     /**
+     * 结束标识
+     */
+    protected volatile boolean finish;
+
+    /**
+     * 中断标识
+     */
+    protected volatile boolean interrupted;
+
+    /**
+     * 中断原因
+     */
+    protected Throwable interruptedCause;
+
+    /**
      * 分片异常是否继续执行
      */
-    private boolean continueWhereSliceTaskError;
-
-    private String threadName;
+    protected boolean continueWhereSliceTaskError;
 
     public AsyncConsumeTaskDealer() {
         this(DEFAULT_THREAD_NUM, false, false);
@@ -106,12 +109,12 @@ public class AsyncConsumeTaskDealer {
      *
      * @param countFunction    count函数
      * @param findDataFunction 数据查询函数
-     * @param blockTask        任务函数
+     * @param asyncTask        任务函数
      * @param step             步长
      * @param <T>              类型
      */
     public <T> void execute(CountFunction countFunction, FindDataFunction<T> findDataFunction,
-                            BlockTask<T> blockTask, int step) {
+                            AsyncTask<T> asyncTask, int step) {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -122,7 +125,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
-        startTask(mainTask, queue, blockTask);
+        startTask(mainTask, queue, asyncTask);
     }
 
     /**
@@ -130,13 +133,13 @@ public class AsyncConsumeTaskDealer {
      *
      * @param countFunction    count函数
      * @param findDataFunction 数据查询函数
-     * @param blockTask        任务函数
+     * @param asyncTask        任务函数
      * @param step             步长
      * @param <T>              类型
      */
     public <T extends ExtremumField<V>, V extends Comparable<V>>
     void executeOrderByExtremum(CountFunction countFunction, FindDataExtremumLimitFunction<T> findDataFunction,
-                                BlockTask<T> blockTask, int step) {
+                                AsyncTask<T> asyncTask, int step) {
         beforeTask();
         int count = countFunction.count();
         if (count < 1) {
@@ -147,7 +150,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
-        startTask(mainTask, queue, blockTask);
+        startTask(mainTask, queue, asyncTask);
     }
 
     /**
@@ -155,10 +158,10 @@ public class AsyncConsumeTaskDealer {
      * v1.3
      *
      * @param producer  生产任务
-     * @param blockTask 异步消费任务
+     * @param asyncTask 异步消费任务
      * @param <T>       数据类型
      */
-    public <T> void execute(Producer<T> producer, BlockTask<T> blockTask) {
+    public <T> void execute(Producer<T> producer, AsyncTask<T> asyncTask) {
         beforeTask();
         // 新建阻塞队列
         ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
@@ -166,7 +169,7 @@ public class AsyncConsumeTaskDealer {
         TaskPublish<T> taskPublish = new TaskPublish<>(queue);
         MainTask mainTask = () -> doProduce(producer, taskPublish);
 
-        startTask(mainTask, queue, blockTask);
+        startTask(mainTask, queue, asyncTask);
     }
 
     /**
@@ -174,15 +177,15 @@ public class AsyncConsumeTaskDealer {
      *
      * @param data      集合数据
      * @param splitSize 任务包分片大小
-     * @param blockTask 任务函数
+     * @param asyncTask 任务函数
      * @param <T>       数据泛型
      */
-    public <T> void foreach(List<T> data, int splitSize, BlockTask<T> blockTask) {
+    public <T> void foreach(List<T> data, int splitSize, AsyncTask<T> asyncTask) {
         if (data.size() <= splitSize) {
-            blockTask.execute(data);
+            asyncTask.execute(data);
             return;
         }
-        this.execute(data::size, this.listFindDataFunction(data), blockTask, splitSize);
+        this.execute(data::size, this.listFindDataFunction(data), asyncTask, splitSize);
     }
 
     /**
@@ -190,13 +193,13 @@ public class AsyncConsumeTaskDealer {
      *
      * @param countFunction       count函数
      * @param findDataFunction    数据查询函数
-     * @param blockTaskWithResult 任务函数（返回数据）
+     * @param asyncTaskWithResult 任务函数（返回数据）
      * @param step                步长
      * @param <T>                 类型
      */
     public <T, R> FutureResult<R> submit(CountFunction countFunction,
                                          FindDataFunction<T> findDataFunction,
-                                         BlockTaskWithResult<T, R> blockTaskWithResult,
+                                         AsyncTaskWithResult<T, R> asyncTaskWithResult,
                                          int step) {
         beforeTask();
         int count = countFunction.count();
@@ -208,9 +211,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueByLimit(findDataFunction, step, count, queue);
 
-        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
-
-        return new FutureResult<>(futures);
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult);
     }
 
     /**
@@ -218,14 +219,14 @@ public class AsyncConsumeTaskDealer {
      *
      * @param countFunction       count函数
      * @param findDataFunction    数据查询函数
-     * @param blockTaskWithResult 任务函数（返回数据）
+     * @param asyncTaskWithResult 任务函数（返回数据）
      * @param step                步长
      * @param <T>                 类型
      */
     public <T extends ExtremumField<V>, V extends Comparable<V>, R>
     FutureResult<R> submitOrderByExtremum(CountFunction countFunction,
                                           FindDataExtremumLimitFunction<T> findDataFunction,
-                                          BlockTaskWithResult<T, R> blockTaskWithResult,
+                                          AsyncTaskWithResult<T, R> asyncTaskWithResult,
                                           int step) {
         beforeTask();
         int count = countFunction.count();
@@ -237,9 +238,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> putDataToQueueOrderByExtremum(findDataFunction, step, count, queue);
 
-        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
-
-        return new FutureResult<>(futures);
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult);
     }
 
     /**
@@ -247,10 +246,10 @@ public class AsyncConsumeTaskDealer {
      * v1.3
      *
      * @param producer            生产任务
-     * @param blockTaskWithResult 异步消费任务函数（返回数据）
+     * @param asyncTaskWithResult 异步消费任务函数（返回数据）
      * @param <T>                 数据类型
      */
-    public <T, R> FutureResult<R> submit(Producer<T> producer, BlockTaskWithResult<T, R> blockTaskWithResult) {
+    public <T, R> FutureResult<R> submit(Producer<T> producer, AsyncTaskWithResult<T, R> asyncTaskWithResult) {
         beforeTask();
         // 新建阻塞队列
         ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(queueNum);
@@ -258,9 +257,7 @@ public class AsyncConsumeTaskDealer {
         // 主线程同步获取数据传递至方法内
         MainTask mainTask = () -> doProduce(producer, taskPublish);
 
-        List<Future<List<TaskPackage<List<R>>>>> futures = startTaskWithResult(mainTask, queue, blockTaskWithResult);
-
-        return new FutureResult<>(futures);
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult);
     }
 
 
@@ -269,16 +266,16 @@ public class AsyncConsumeTaskDealer {
      *
      * @param data                集合数据
      * @param splitSize           任务包分片大小
-     * @param blockTaskWithResult 任务函数（返回数据）
+     * @param asyncTaskWithResult 任务函数（返回数据）
      * @param <T>                 数据泛型
      */
-    public <T, R> FutureResult<R> map(List<T> data, int splitSize, BlockTaskWithResult<T, R> blockTaskWithResult) {
+    public <T, R> FutureResult<R> map(List<T> data, int splitSize, AsyncTaskWithResult<T, R> asyncTaskWithResult) {
         if (data.size() <= splitSize) {
-            List<R> rs = blockTaskWithResult.execute(data);
+            List<R> rs = asyncTaskWithResult.execute(data);
             WrapFeature<List<TaskPackage<List<R>>>> wrapFeature = new WrapFeature<>(Collections.singletonList(new TaskPackage<>(rs, 0)));
             return new FutureResult<>(Collections.singletonList(wrapFeature));
         }
-        return this.submit(data::size, this.listFindDataFunction(data), blockTaskWithResult, splitSize);
+        return this.submit(data::size, this.listFindDataFunction(data), asyncTaskWithResult, splitSize);
     }
 
     /**
@@ -286,15 +283,29 @@ public class AsyncConsumeTaskDealer {
      *
      * @param mainTask  主线程任务
      * @param queue     队列
-     * @param blockTask 线程池阻塞任务
+     * @param asyncTask 线程池阻塞任务
      * @param <T>       类型
      */
     private <T> void startTask(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                               BlockTask<T> blockTask) {
+                               AsyncTask<T> asyncTask) {
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
+        this.startTask(mainTask, queue, asyncTask, executorService);
+    }
+
+    /**
+     * 开始任务，新建线程池并由主线程生产数据，线程池多线程执行消费数据
+     *
+     * @param mainTask        主线程任务
+     * @param queue           队列
+     * @param asyncTask       线程池阻塞任务
+     * @param executorService 异步任务线程池
+     * @param <T>             类型
+     */
+    protected <T> void startTask(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                 AsyncTask<T> asyncTask, ExecutorService executorService) {
         // 异步订阅任务
-        Runnable task = createTask(queue, blockTask);
+        Runnable task = createTask(queue, asyncTask);
         for (int i = 0; i < this.threadNum; i++) {
             executorService.submit(task);
         }
@@ -325,18 +336,33 @@ public class AsyncConsumeTaskDealer {
      *
      * @param mainTask            主线程任务
      * @param queue               队列
-     * @param blockTaskWithResult 线程池阻塞任务
+     * @param asyncTaskWithResult 线程池阻塞任务
      * @param <T>                 类型
      */
-    private <T, R> List<Future<List<TaskPackage<List<R>>>>> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                                                                                BlockTaskWithResult<T, R> blockTaskWithResult) {
-        List<Future<List<TaskPackage<List<R>>>>> futures = new ArrayList<>();
+    private <T, R> FutureResult<R> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                                       AsyncTaskWithResult<T, R> asyncTaskWithResult) {
         // 初始化线程池，阻塞队列
         ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
+        return startTaskWithResult(mainTask, queue, asyncTaskWithResult, executorService);
+    }
+
+    /**
+     * 开始任务，新建线程池并由主线程生产数据，线程池多线程执行消费数据
+     *
+     * @param mainTask            主线程任务
+     * @param queue               队列
+     * @param asyncTaskWithResult 线程池阻塞任务
+     * @param executorService     异步任务线程池
+     * @param <T>                 类型
+     */
+    protected <T, R> FutureResult<R> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
+                                                         AsyncTaskWithResult<T, R> asyncTaskWithResult,
+                                                         ExecutorService executorService) {
+        List<Future<List<TaskPackage<List<R>>>>> futures = new ArrayList<>();
         // 启动线程池调用任务
+        Callable<List<TaskPackage<List<R>>>> task = createTaskWithResult(queue, asyncTaskWithResult);
         for (int i = 0; i < this.threadNum; i++) {
             // 异步订阅任务
-            Callable<List<TaskPackage<List<R>>>> task = createTaskWithResult(queue, blockTaskWithResult);
             futures.add(executorService.submit(task));
         }
 
@@ -349,7 +375,7 @@ public class AsyncConsumeTaskDealer {
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
             try {
-                List<TaskPackage<List<R>>> call = createTaskWithResult(queue, blockTaskWithResult).call();
+                List<TaskPackage<List<R>>> call = task.call();
                 futures.add(new WrapFeature<>(call));
             } catch (Exception e) {
                 log.error("主线程协助执行异常", e);
@@ -360,18 +386,35 @@ public class AsyncConsumeTaskDealer {
         if (interrupted) {
             throw new TaskInterruptedException("任务运行异常终止:" + interruptedCause.getMessage(), interruptedCause);
         }
-        return futures;
+        return new FutureResult<>(futures);
+    }
+
+    /**
+     * 执行生产数据的任务
+     *
+     * @param producer    生产者
+     * @param taskPublish 任务数据推送
+     * @param <T>         数据类型
+     */
+    protected <T> void doProduce(Producer<T> producer, TaskPublish<T> taskPublish) {
+        try {
+            producer.produce(taskPublish);
+        } catch (InterruptedException e) {
+            // do nothing
+        } finally {
+            finish = true;
+        }
     }
 
     /**
      * 创建带返回类型的callback任务
      *
      * @param queue     队列
-     * @param blockTask 任务体
+     * @param asyncTask 任务体
      * @param <T>       泛型：数据类型
      */
     private <T> Runnable createTask(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                                    BlockTask<T> blockTask) {
+                                    AsyncTask<T> asyncTask) {
         return () -> {
             try {
                 TaskPackage<List<T>> taskPackage;
@@ -381,7 +424,7 @@ public class AsyncConsumeTaskDealer {
                     }
                     try {
                         if (taskPackage != null) {
-                            blockTask.execute(taskPackage.getData());
+                            asyncTask.execute(taskPackage.getData());
                         }
                     } catch (Throwable e) {
                         if (continueWhereSliceTaskError) {
@@ -402,13 +445,13 @@ public class AsyncConsumeTaskDealer {
      * 创建带返回类型的callback任务
      *
      * @param queue               队列
-     * @param blockTaskWithResult 任务体
+     * @param asyncTaskWithResult 任务体
      * @param <T>                 泛型：数据类型
      * @param <R>                 泛型：返回类型
      * @return callback任务
      */
     private <T, R> Callable<List<TaskPackage<List<R>>>> createTaskWithResult(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
-                                                                             BlockTaskWithResult<T, R> blockTaskWithResult) {
+                                                                             AsyncTaskWithResult<T, R> asyncTaskWithResult) {
         return () -> {
             List<TaskPackage<List<R>>> rs = new ArrayList<>();
             TaskPackage<List<T>> taskPackage;
@@ -419,7 +462,7 @@ public class AsyncConsumeTaskDealer {
                     }
                     try {
                         if (taskPackage != null) {
-                            List<R> taskResult = blockTaskWithResult.execute(taskPackage.getData());
+                            List<R> taskResult = asyncTaskWithResult.execute(taskPackage.getData());
                             if (taskResult != null) {
                                 rs.add(new TaskPackage<>(taskResult, taskPackage.getIndex()));
                             }
@@ -515,23 +558,6 @@ public class AsyncConsumeTaskDealer {
         }
     }
 
-    /**
-     * 执行生产数据的任务
-     *
-     * @param producer    生产者
-     * @param taskPublish 任务数据推送
-     * @param <T>         数据类型
-     */
-    private <T> void doProduce(Producer<T> producer, TaskPublish<T> taskPublish) {
-        try {
-            producer.produce(taskPublish);
-        } catch (InterruptedException e) {
-            // do nothing
-        } finally {
-            finish = true;
-        }
-    }
-
     private <T> FindDataFunction<T> listFindDataFunction(List<T> data) {
         return limit -> {
             int num = limit.getNum();
@@ -600,11 +626,7 @@ public class AsyncConsumeTaskDealer {
 
     private void setDefaultQueueNum() {
         // 默认队列容量为线程数的2倍
-        int queueNum = this.threadNum * 2;
-        if (queueNum == 0) {
-            queueNum = 1;
-        }
-        this.queueNum = queueNum;
+        this.queueNum = this.threadNum * 2;
     }
 
     /**
@@ -728,7 +750,7 @@ public class AsyncConsumeTaskDealer {
 
     @Data
     @AllArgsConstructor
-    private static class TaskPackage<DT> {
+    protected static class TaskPackage<DT> {
         private DT data;
         private int index;
     }
