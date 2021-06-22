@@ -33,6 +33,7 @@ public class Filter {
     // next
     private Filter next;
 
+    // 是否下划线
     private Boolean useUnderLine;
 
     public Filter() {
@@ -62,7 +63,7 @@ public class Filter {
     }
 
     public String getProperty() {
-        if (useUnderLine && StringUtils.isNotEmpty(property)) {
+        if (getUseUnderLine() && StringUtils.isNotEmpty(property)) {
             property = PropertyNameUtils.underline(property);
         }
         return property;
