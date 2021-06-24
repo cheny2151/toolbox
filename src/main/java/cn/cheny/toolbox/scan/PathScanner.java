@@ -340,7 +340,7 @@ public class PathScanner {
             }
         }
         if (classLoader == ClassLoader.getSystemClassLoader()) {
-            getClassPathForJar(results);
+            getJarURLInClassPath(results);
         }
         if (classLoader.getParent() != null) {
             getJarUrls(classLoader.getParent(), results);
@@ -358,22 +358,20 @@ public class PathScanner {
     /**
      * 获取class path声明的jar
      *
-     * @return 根目录URL
+     * @param results 扫描结果存放集合
      * @throws MalformedURLException
      */
-    private List<URL> getClassPathForJar(Set<URL> results) throws MalformedURLException {
+    private void getJarURLInClassPath(Set<URL> results) throws MalformedURLException {
         String classPath = System.getProperty("java.class.path");
         if (StringUtils.isEmpty(classPath)) {
-            return Collections.emptyList();
+            return;
         }
-        List<URL> list = new ArrayList<>();
         for (String path : classPath.split(":")) {
             if (path.endsWith("jar")) {
                 URL url = new URL("jar:file:" + path + "!/");
-                list.add(url);
+                results.add(url);
             }
         }
-        return list;
     }
 
     /**

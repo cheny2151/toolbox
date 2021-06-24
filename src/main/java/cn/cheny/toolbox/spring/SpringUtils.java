@@ -1,12 +1,13 @@
 package cn.cheny.toolbox.spring;
 
+import cn.cheny.toolbox.scan.PathImplementationClassBuilder;
+import cn.cheny.toolbox.scan.ScanException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.Environment;
 
-import javax.annotation.PostConstruct;
 import java.util.Collection;
 
 /**
@@ -31,14 +32,11 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
-    }
-
-    @PostConstruct
-    private void post() {
         try {
-            SpringUtils.getBeansOfType(SpringUtilsAware.class)
+            PathImplementationClassBuilder
+                    .createInstances(true, url -> url.getFile().contains("io/github/cheny2151/toolbox"), SpringUtilsAware.class)
                     .forEach(SpringUtilsAware::after);
-        } catch (Exception e) {
+        } catch (ScanException e) {
             log.error("扫描SpringUtilsAware实现类失败", e);
         }
     }
