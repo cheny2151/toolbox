@@ -15,8 +15,8 @@ import java.util.stream.Stream;
 
 public class Filter {
 
-    // 转为下划线
-    private static boolean USE_UNDERLINE = true;
+    // 是否下划线默认值
+    private static boolean DEFAULT_USE_UNDERLINE = true;
 
     // 过滤符号
     private String symbol;
@@ -32,6 +32,9 @@ public class Filter {
 
     // next
     private Filter next;
+
+    // 是否下划线
+    private Boolean useUnderLine;
 
     public Filter() {
     }
@@ -60,7 +63,7 @@ public class Filter {
     }
 
     public String getProperty() {
-        if (USE_UNDERLINE && StringUtils.isNotEmpty(property)) {
+        if (getUseUnderLine() && StringUtils.isNotEmpty(property)) {
             property = PropertyNameUtils.underline(property);
         }
         return property;
@@ -76,6 +79,22 @@ public class Filter {
 
     public void setConnectionSymbol(String connectionSymbol) {
         this.connectionSymbol = connectionSymbol;
+    }
+
+    public boolean getUseUnderLine() {
+        if (this.useUnderLine != null) {
+            return this.useUnderLine;
+        }
+        return DEFAULT_USE_UNDERLINE;
+    }
+
+    public void setUseUnderline(boolean underline) {
+        this.useUnderLine = underline;
+    }
+
+    public Filter useUnderline(boolean underline) {
+        this.setUseUnderline(underline);
+        return this;
     }
 
     public Filter getNext() {
@@ -343,8 +362,8 @@ public class Filter {
         return new NotNullFilter(property, "");
     }
 
-    public static void setUseUnderline(boolean underline) {
-        Filter.USE_UNDERLINE = underline;
+    public static void setDefaultUseUnderline(boolean underline) {
+        Filter.DEFAULT_USE_UNDERLINE = underline;
     }
 
 }

@@ -8,7 +8,9 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.Environment;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 /**
  * 创建ApplicationContext时的钩子
@@ -32,13 +34,16 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
+        List<SpringUtilsAware> awares = new ArrayList<>(SpringUtilsAware.defaultAware());
         try {
-            PathImplementationClassBuilder
-                    .createInstances(true, url -> url.getFile().contains("io/github/cheny2151/toolbox"), SpringUtilsAware.class)
-                    .forEach(SpringUtilsAware::after);
+            Collection<SpringUtilsAware> customized = PathImplementationClassBuilder.createInstances(SpringUtilsAware.class);
+            if (customized.size() > 0) {
+                awares.addAll(customized);
+            }
         } catch (ScanException e) {
             log.error("扫描SpringUtilsAware实现类失败", e);
         }
+        awares.forEach(SpringUtilsAware::after);
     }
 
     public static <T> T getBean(String name, Class<T> tClass) {
