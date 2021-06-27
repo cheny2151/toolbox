@@ -44,6 +44,9 @@ public class PathScanner {
     // jar extension
     public static final String JAR_FILE_EXTENSION = ".jar";
 
+    // JAR ENTRY PRE
+    public static final String JAR_URL_ENTRY_PRE = "!/";
+
     // .class长度
     public static final int CLASS_END_LEN = 6;
 
@@ -247,13 +250,13 @@ public class PathScanner {
         if (nextJarIdx > 0) {
             int nextJarEnd = nextJarIdx + JAR_FILE_EXTENSION.length();
             String nextJar = nextUrl.substring(0, nextJarEnd);
-            if (nextJar.startsWith("!/")) {
+            if (nextJar.startsWith(JAR_URL_ENTRY_PRE)) {
                 nextJar = nextJar.substring(2);
             }
             jarUrl.setNextJar(nextJar);
             nextUrl = nextUrl.substring(nextJarEnd);
         }
-        if (nextUrl.startsWith("!/")) {
+        if (nextUrl.startsWith(JAR_URL_ENTRY_PRE)) {
             nextUrl = nextUrl.substring(2);
         }
         jarUrl.setPath(nextUrl);
@@ -397,7 +400,7 @@ public class PathScanner {
                 if (url.getProtocol().equals(URL_PROTOCOL_JAR)) {
                     results.add(url);
                 } else if (url.getPath().endsWith(URL_PROTOCOL_JAR)) {
-                    results.add(new URL(JAR_URL_PREFIX + url + "!/"));
+                    results.add(new URL(JAR_URL_PREFIX + url + JAR_URL_ENTRY_PRE));
                 } else {
                     addIfUsefulRoot(url, results);
                 }
@@ -434,7 +437,7 @@ public class PathScanner {
         }
         for (String path : classPath.split(":")) {
             if (path.endsWith(URL_PROTOCOL_JAR)) {
-                URL url = new URL(JAR_URL_PREFIX + FILE_URL_PREFIX + path + "!/");
+                URL url = new URL(JAR_URL_PREFIX + FILE_URL_PREFIX + path + JAR_URL_ENTRY_PRE);
                 results.add(url);
             }
         }
