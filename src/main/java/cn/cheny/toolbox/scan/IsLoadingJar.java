@@ -1,7 +1,5 @@
 package cn.cheny.toolbox.scan;
 
-import java.net.URL;
-
 /**
  * 是否加载该jar包
  *
@@ -11,6 +9,6 @@ import java.net.URL;
 @FunctionalInterface
 public interface IsLoadingJar {
 
-    boolean isLoading(URL url);
+    boolean isLoading(PathScanner.JarUrl url);
 
 }

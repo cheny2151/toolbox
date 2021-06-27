@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.scan;
 
 import cn.cheny.toolbox.scan.filter.ScanFilter;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -13,6 +14,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
 import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
 
 /**
@@ -171,25 +173,24 @@ public class PathScanner {
      */
     private void scanClassInJar(String parentPath, URL url, List<Class<?>> result)
             throws ScanException {
-        url = extractRealJarUrl(url);
-        if (url == null || !loadingJar(url)) {
+        JarUrl jarUrl = extractRealJarUrl(url);
+        if (jarUrl.getFirstJar() == null || !loadingJar(jarUrl)) {
             return;
-        } else if (!isJar(url)) {
+        } else if (!isJar(jarUrl.getFirstJar())) {
             if (log.isDebugEnabled()) {
                 log.debug("url:{} not a jar", url);
             }
             return;
         }
         try {
-            JarInputStream jarInputStream = new JarInputStream(url.openStream());
-            loadResourcesInJar(parentPath, jarInputStream, result);
+            loadResourcesInJar(parentPath, jarUrl, result);
         } catch (IOException e) {
             throw new ScanException("加载资源异常", e);
         }
     }
 
-    private boolean loadingJar(URL url) {
-        return this.isLoadingJar == null || this.isLoadingJar.isLoading(url);
+    private boolean loadingJar(JarUrl jarUrl) {
+        return this.isLoadingJar == null || this.isLoadingJar.isLoading(jarUrl);
     }
 
     /**
@@ -230,34 +231,80 @@ public class PathScanner {
      * @param url 原url
      * @return jar url
      */
-    private URL extractRealJarUrl(URL url) {
-        String jarUrl = url.toExternalForm();
-        int startIndex = jarUrl.startsWith(JAR_URL_PREFIX) ? 4 : 0;
-        jarUrl = jarUrl.substring(startIndex, jarUrl.indexOf(JAR_FILE_EXTENSION) + 4);
+    private JarUrl extractRealJarUrl(URL url) {
+        String fullUrl = url.toExternalForm();
+        int startIndex = fullUrl.startsWith(JAR_URL_PREFIX) ? 4 : 0;
+        int firstJarIdx = fullUrl.indexOf(JAR_FILE_EXTENSION) + JAR_FILE_EXTENSION.length();
+        JarUrl jarUrl = new JarUrl(url);
         try {
-            return new URL(jarUrl);
+            String firstUrl = fullUrl.substring(startIndex, firstJarIdx);
+            jarUrl.setFirstJar(new URL(firstUrl));
         } catch (MalformedURLException e) {
-            return null;
+            return jarUrl;
         }
+        String nextUrl = fullUrl.substring(firstJarIdx);
+        int nextJarIdx = nextUrl.indexOf(JAR_FILE_EXTENSION);
+        if (nextJarIdx > 0) {
+            int nextJarEnd = nextJarIdx + JAR_FILE_EXTENSION.length();
+            String nextJar = nextUrl.substring(0, nextJarEnd);
+            if (nextJar.startsWith("!/")) {
+                nextJar = nextJar.substring(2);
+            }
+            jarUrl.setNextJar(nextJar);
+            nextUrl = nextUrl.substring(nextJarEnd);
+        }
+        if (nextUrl.startsWith("!/")) {
+            nextUrl = nextUrl.substring(2);
+        }
+        jarUrl.setPath(nextUrl);
+        return jarUrl;
     }
 
     /**
      * 从jarInputStream流中提取有效的类并添加到result中
      *
-     * @param parentPath     上级目录,以'.'为分隔符
-     * @param jarInputStream jar文件流
-     * @param result         结果合集
+     * @param parentPath 上级目录,以'.'为分隔符
+     * @param jarUrl     JAR包url信息
+     * @param result     结果合集
      * @throws IOException IO异常
      */
-    private void loadResourcesInJar(String parentPath, JarInputStream jarInputStream, List<Class<?>> result)
+    private void loadResourcesInJar(String parentPath, JarUrl jarUrl, List<Class<?>> result)
             throws IOException {
-        JarEntry nextJarEntry;
-        while ((nextJarEntry = jarInputStream.getNextJarEntry()) != null) {
-            if (!nextJarEntry.isDirectory()) {
-                String ClassFileName = nextJarEntry.getName().replaceAll("/", ".");
-                if (ClassFileName.startsWith(parentPath) && ClassFileName.endsWith(CLASS_EXTENSION)) {
-                    filterClass(ClassFileName, result);
-                }
+        URL firstJar = jarUrl.getFirstJar();
+        JarFile jarFile = new JarFile(new File(firstJar.getFile()));
+        String jarUrlPath = jarUrl.getPath();
+        if (jarUrl.getNextJar() != null) {
+            JarEntry targetEntry = jarFile.getJarEntry(jarUrl.getNextJar());
+            InputStream inputStream = jarFile.getInputStream(targetEntry);
+            JarInputStream innerJarInputStream = new JarInputStream(inputStream);
+            JarEntry nextJarEntry;
+            while ((nextJarEntry = innerJarInputStream.getNextJarEntry()) != null) {
+                addIfTargetCLass(nextJarEntry, jarUrlPath, parentPath, result);
+            }
+        } else {
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry nextJarEntry = entries.nextElement();
+                addIfTargetCLass(nextJarEntry, jarUrlPath, parentPath, result);
+            }
+        }
+    }
+
+    /**
+     * 检查jarEntry是否有效，是否为目标包，若是则添加到结果集合
+     *
+     * @param jarEntry   jar entry
+     * @param jarUrlPath 目标jar url的结尾包path
+     * @param parentPath 上级目录
+     * @param result     结果集合
+     */
+    private void addIfTargetCLass(JarEntry jarEntry, String jarUrlPath, String parentPath, List<Class<?>> result) {
+        String name = jarEntry.getName();
+        if (!jarEntry.isDirectory() && (StringUtils.isEmpty(jarUrlPath) || name.startsWith(jarUrlPath))) {
+            String classFileName = name.replaceAll("/", ".");
+            System.out.println(classFileName);
+            if (classFileName.startsWith(parentPath) && classFileName.endsWith(CLASS_EXTENSION)) {
+                filterClass(classFileName, result);
             }
         }
     }
@@ -365,11 +412,13 @@ public class PathScanner {
     }
 
     private void addIfUsefulRoot(URL url, Set<URL> results) {
-        String path = url.getPath();
+        /*String path = url.getPath();
+        System.out.println(url.getFile());
+        System.out.println(System.getProperty("file.separator"));
         String[] split = path.split(File.separator);
         if (split[split.length - 1].equals("classes")) {
-            results.add(url);
-        }
+        }*/
+        results.add(url);
     }
 
     /**
@@ -443,4 +492,15 @@ public class PathScanner {
         return this;
     }
 
+    @Data
+    public static class JarUrl {
+        private URL origin;
+        private URL firstJar;
+        private String nextJar;
+        private String path;
+
+        public JarUrl(URL origin) {
+            this.origin = origin;
+        }
+    }
 }
