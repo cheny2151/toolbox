@@ -159,7 +159,7 @@ public class PathScanner {
         if (BOOT_INF_PRE.equals(parentPath) || META_INF_PRE.equals(parentPath)) {
             return;
         }
-        if (file.getName().endsWith(JAR_FILE_EXTENSION)) {
+        if (file.getName().endsWith(JAR_FILE_EXTENSION) && isScanAllJar()) {
             try {
                 scanClassInJar(targetPackage, new URL(FILE_URL_PREFIX + file.getPath()), result);
             } catch (MalformedURLException e) {
