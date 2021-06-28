@@ -98,8 +98,11 @@ public class PathScanner {
         }
 
         Collection<URL> resources = getResources(resourcePath);
-        List<Class<?>> results = new ArrayList<>();
+        if (log.isDebugEnabled()) {
+            log.debug("resource path:{},result urls:{}", resourcePath, resources);
+        }
 
+        List<Class<?>> results = new ArrayList<>();
         for (URL resource : resources) {
             String protocol = resource.getProtocol();
             if (log.isDebugEnabled()) {
@@ -182,7 +185,7 @@ public class PathScanner {
      */
     private void scanClassInJar(String targetPackage, URL url, List<Class<?>> result)
             throws ScanException {
-        JarUrl jarUrl = extractRealJarUrl(url);
+        JarUrl jarUrl = extractRealJarUrl(targetPackage, url);
         if (jarUrl.getFirstJar() == null || !loadingJar(jarUrl)
                 || shouldNotScan(targetPackage, jarUrl)) {
             return;
@@ -193,7 +196,7 @@ public class PathScanner {
             return;
         }
         try {
-            loadResourcesInJar(targetPackage, jarUrl, result);
+            loadResourcesInJar(jarUrl, result);
         } catch (IOException e) {
             throw new ScanException("加载资源异常", e);
         }
@@ -253,10 +256,11 @@ public class PathScanner {
     /**
      * 提取有效jar包URL
      *
-     * @param url 原url
+     * @param targetPackage 目标目录
+     * @param url           原url
      * @return jar url
      */
-    private JarUrl extractRealJarUrl(URL url) {
+    private JarUrl extractRealJarUrl(String targetPackage, URL url) {
         String fullUrl = url.toExternalForm();
         int startIndex = fullUrl.startsWith(JAR_URL_PREFIX) ? 4 : 0;
         int firstJarIdx = fullUrl.indexOf(JAR_FILE_EXTENSION) + JAR_FILE_EXTENSION.length();
@@ -276,41 +280,36 @@ public class PathScanner {
                 nextJar = nextJar.substring(2);
             }
             jarUrl.setNextJar(nextJar);
-            nextUrl = nextUrl.substring(nextJarEnd);
         }
-        if (nextUrl.startsWith(JAR_URL_ENTRY_PRE)) {
-            nextUrl = nextUrl.substring(2);
-        }
-        jarUrl.setPath(nextUrl);
+        jarUrl.setTargetPackage(targetPackage);
         return jarUrl;
     }
 
     /**
      * 从jarInputStream流中提取有效的类并添加到result中
      *
-     * @param targetPackage 目标目录,以'.'为分隔符
-     * @param jarUrl        JAR包url信息
-     * @param result        结果合集
+     * @param jarUrl JAR包url信息
+     * @param result 结果合集
      * @throws IOException IO异常
      */
-    private void loadResourcesInJar(String targetPackage, JarUrl jarUrl, List<Class<?>> result)
+    private void loadResourcesInJar(JarUrl jarUrl, List<Class<?>> result)
             throws IOException {
         URL firstJar = jarUrl.getFirstJar();
         JarFile jarFile = new JarFile(new File(firstJar.getFile()));
-        String jarUrlPath = jarUrl.getPath();
+        String targetPackage = jarUrl.getTargetPackage();
         if (jarUrl.getNextJar() != null) {
             JarEntry targetEntry = jarFile.getJarEntry(jarUrl.getNextJar());
             InputStream inputStream = jarFile.getInputStream(targetEntry);
             JarInputStream innerJarInputStream = new JarInputStream(inputStream);
             JarEntry nextJarEntry;
             while ((nextJarEntry = innerJarInputStream.getNextJarEntry()) != null) {
-                addIfTargetCLass(nextJarEntry, jarUrlPath, targetPackage, result);
+                addIfTargetCLass(nextJarEntry, targetPackage, result);
             }
         } else {
             Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
                 JarEntry nextJarEntry = entries.nextElement();
-                addIfTargetCLass(nextJarEntry, jarUrlPath, targetPackage, result);
+                addIfTargetCLass(nextJarEntry, targetPackage, result);
             }
         }
     }
@@ -319,11 +318,13 @@ public class PathScanner {
      * 检查jarEntry是否有效，是否为目标包，若是则添加到结果集合
      *
      * @param jarEntry      jar entry
-     * @param jarUrlPath    目标jar url的结尾包path
      * @param targetPackage 目标目录
      * @param result        结果集合
      */
-    private void addIfTargetCLass(JarEntry jarEntry, String jarUrlPath, String targetPackage, List<Class<?>> result) {
+    private void addIfTargetCLass(JarEntry jarEntry, String targetPackage, List<Class<?>> result) {
+        if (jarEntry.isDirectory()) {
+            return;
+        }
         String name = jarEntry.getName();
         if (name.startsWith("/")) {
             name = name.substring(1);
@@ -334,11 +335,10 @@ public class PathScanner {
         if (name.startsWith(META_INF_ENTRY_PRE)) {
             name = name.substring(META_INF_ENTRY_PRE.length());
         }
-        if (!jarEntry.isDirectory() && (StringUtils.isEmpty(jarUrlPath) || name.startsWith(jarUrlPath))) {
-            String classFileName = name.replaceAll("/", ".");
-            if (classFileName.startsWith(targetPackage) && classFileName.endsWith(CLASS_EXTENSION)) {
-                filterClass(classFileName, result);
-            }
+        String classFileName = replaceUrlToPackage(name);
+        if (classFileName.endsWith(CLASS_EXTENSION) &&
+                (StringUtils.isEmpty(targetPackage) || classFileName.startsWith(targetPackage))) {
+            filterClass(classFileName, result);
         }
     }
 
@@ -404,7 +404,8 @@ public class PathScanner {
      * @return 合法的扫描路径
      */
     private String extractEffectiveClassPackage(String scanPath) {
-        StringBuilder pathBuilder = new StringBuilder(scanPath.replaceAll("/", "."));
+        String scanPackage = replaceUrlToPackage(scanPath);
+        StringBuilder pathBuilder = new StringBuilder(scanPackage);
         // 剔除最后一个有效'.'之后的path
         int length = pathBuilder.length();
         if (length > 0 && SEPARATE_CHARACTER.getBytes()[0] == pathBuilder.charAt(length - 1)) {
@@ -509,6 +510,10 @@ public class PathScanner {
         return false;
     }
 
+    private String replaceUrlToPackage(String url) {
+        return url.replaceAll("/", ".");
+    }
+
     public boolean isScanAllJar() {
         return scanAllJar;
     }
@@ -528,7 +533,7 @@ public class PathScanner {
         private URL origin;
         private URL firstJar;
         private String nextJar;
-        private String path;
+        private String targetPackage;
 
         public JarUrl(URL origin) {
             this.origin = origin;
