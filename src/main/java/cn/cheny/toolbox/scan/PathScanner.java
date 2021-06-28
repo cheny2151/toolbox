@@ -50,8 +50,12 @@ public class PathScanner {
     // maven build jar: BOOT-INF pre
     private static final String BOOT_INF_ENTRY_PRE = "BOOT-INF/classes/";
 
+    private static final String BOOT_INF_PRE = "BOOT-INF.classes.";
+
     // maven build jar: META-INF pre
     private static final String META_INF_ENTRY_PRE = "META-INF/classes/";
+
+    private static final String META_INF_PRE = "META-INF.classes.";
 
     // .class长度
     private static final int CLASS_END_LEN = 6;
@@ -127,10 +131,11 @@ public class PathScanner {
      * @param file          文件
      * @param result        扫描结果集
      */
-    private void scanClassInFile(String targetPackage, File file, List<Class<?>> result) {
+    private void scanClassInFile(String targetPackage, File file, List<Class<?>> result) throws ScanException {
         // 结尾补'.'
-        if (!StringUtils.isEmpty(targetPackage)) {
-            targetPackage = targetPackage + SEPARATE_CHARACTER;
+        String parentPackage = targetPackage;
+        if (!StringUtils.isEmpty(parentPackage)) {
+            parentPackage = parentPackage + SEPARATE_CHARACTER;
         }
         List<File> effectiveFiles = new ArrayList<>();
         if (file.isFile() && file.getName().endsWith(CLASS_EXTENSION)) {
@@ -138,19 +143,29 @@ public class PathScanner {
         }
         effectiveFiles.addAll(getEffectiveChildFiles(file));
         for (File child : effectiveFiles) {
-            loadResourcesInFile(targetPackage, child, result);
+            loadResourcesInFile(targetPackage, parentPackage, child, result);
         }
     }
 
     /**
      * 从本地File中扫描所有类
      *
-     * @param parentPath 上级目录,以'.'为分隔符
-     * @param file       文件
-     * @param result     扫描结果集
+     * @param targetPackage 目标目录,以'.'为分隔符
+     * @param parentPath    上级目录,以'.'为分隔符
+     * @param file          文件
+     * @param result        扫描结果集
      */
-    private void loadResourcesInFile(String parentPath, File file, List<Class<?>> result) {
-        if (file.isFile()) {
+    private void loadResourcesInFile(String targetPackage, String parentPath, File file, List<Class<?>> result) throws ScanException {
+        if (BOOT_INF_PRE.equals(parentPath) || META_INF_PRE.equals(parentPath)) {
+            return;
+        }
+        if (file.getName().endsWith(JAR_FILE_EXTENSION)) {
+            try {
+                scanClassInJar(targetPackage, new URL(FILE_URL_PREFIX + file.getPath()), result);
+            } catch (MalformedURLException e) {
+                // do nothing
+            }
+        } else if (file.isFile()) {
             String ClassFileName = parentPath + file.getName();
             filterClass(ClassFileName, result);
         } else if (file.isDirectory()) {
@@ -160,7 +175,7 @@ public class PathScanner {
             }
             String nextScanPath = getNextScanPath(parentPath, file);
             for (File child : childFiles) {
-                loadResourcesInFile(nextScanPath, child, result);
+                loadResourcesInFile(targetPackage, nextScanPath, child, result);
             }
         }
     }
@@ -385,7 +400,7 @@ public class PathScanner {
     }
 
     /**
-     * 返回有效的子目录或文件
+     * 返回有效的子目录或文件或jar包
      *
      * @param cur 当前目录
      * @return 有效的文件实体集合
@@ -393,6 +408,7 @@ public class PathScanner {
     private List<File> getEffectiveChildFiles(File cur) {
         File[] files = cur.listFiles((childFile) ->
                 childFile.isDirectory() || childFile.getName().endsWith(CLASS_EXTENSION)
+                        || childFile.getName().endsWith(JAR_FILE_EXTENSION)
         );
         return files == null ? Collections.emptyList() : Arrays.asList(files);
     }
@@ -538,5 +554,29 @@ public class PathScanner {
         public JarUrl(URL origin) {
             this.origin = origin;
         }
+    }
+
+    public List<Class<?>> scanClass(URL resource) throws ScanException {
+        ArrayList<Class<?>> results = new ArrayList<>();
+        String targetPackage = "";
+        String protocol = resource.getProtocol();
+        if (log.isDebugEnabled()) {
+            log.debug("file protocol:{}", protocol);
+        }
+
+        if (URL_PROTOCOL_FILE.equals(protocol)) {
+            String file = resource.getFile();
+            scanClassInFile(targetPackage, new File(file), results);
+        } else if (URL_PROTOCOL_JAR.equals(protocol)) {
+            scanClassInJar(targetPackage, resource, results);
+        }
+
+        return results;
+    }
+
+    public static void main(String[] args) throws MalformedURLException, ScanException {
+        URL url = new URL("file:/Users/chenyi/Downloads/ROOT");
+        List<Class<?>> classes = new PathScanner().scanClass(url);
+        System.out.println(classes);
     }
 }
