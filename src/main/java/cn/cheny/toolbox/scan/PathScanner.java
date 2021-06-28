@@ -62,8 +62,8 @@ public class PathScanner {
     // 分隔符
     private final static String SEPARATE_CHARACTER = ".";
 
-    // 是否扫描class path声明的jar
-    private boolean findInClassPathJar = false;
+    // 是否扫描第三方jar包
+    private boolean scanAllJar = false;
 
     // 判断是否加载某个jar包
     private IsLoadingJar isLoadingJar;
@@ -92,9 +92,9 @@ public class PathScanner {
         if (resourcePath.startsWith("/")) {
             resourcePath = resourcePath.substring(1);
         }
-        String parentPath = extractEffectivePath(scanPath0);
-        if (parentPath.startsWith(".")) {
-            parentPath = parentPath.substring(1);
+        String targetPackage = extractEffectiveClassPackage(scanPath0);
+        if (targetPackage.startsWith(".")) {
+            targetPackage = targetPackage.substring(1);
         }
 
         Collection<URL> resources = getResources(resourcePath);
@@ -108,9 +108,9 @@ public class PathScanner {
 
             if (URL_PROTOCOL_FILE.equals(protocol)) {
                 String file = resource.getFile();
-                scanClassInFile(parentPath, new File(file), results);
+                scanClassInFile(targetPackage, new File(file), results);
             } else if (URL_PROTOCOL_JAR.equals(protocol)) {
-                scanClassInJar(parentPath, resource, results);
+                scanClassInJar(targetPackage, resource, results);
             }
         }
 
@@ -120,14 +120,14 @@ public class PathScanner {
     /**
      * 从本地File中扫描所有类
      *
-     * @param parentPath 上级目录,以'.'为分隔符
-     * @param file       文件
-     * @param result     扫描结果集
+     * @param targetPackage 目标目录,以'.'为分隔符
+     * @param file          文件
+     * @param result        扫描结果集
      */
-    private void scanClassInFile(String parentPath, File file, List<Class<?>> result) {
+    private void scanClassInFile(String targetPackage, File file, List<Class<?>> result) {
         // 结尾补'.'
-        if (!StringUtils.isEmpty(parentPath)) {
-            parentPath = parentPath + SEPARATE_CHARACTER;
+        if (!StringUtils.isEmpty(targetPackage)) {
+            targetPackage = targetPackage + SEPARATE_CHARACTER;
         }
         List<File> effectiveFiles = new ArrayList<>();
         if (file.isFile() && file.getName().endsWith(CLASS_EXTENSION)) {
@@ -135,7 +135,7 @@ public class PathScanner {
         }
         effectiveFiles.addAll(getEffectiveChildFiles(file));
         for (File child : effectiveFiles) {
-            loadResourcesInFile(parentPath, child, result);
+            loadResourcesInFile(targetPackage, child, result);
         }
     }
 
@@ -176,14 +176,15 @@ public class PathScanner {
     /**
      * 从本地jar包中扫描所有类
      *
-     * @param parentPath 上级目录,以'.'为分隔符
-     * @param url        jar包的url资源
-     * @param result     扫描结果集
+     * @param targetPackage 目标目录,以'.'为分隔符
+     * @param url           jar包的url资源
+     * @param result        扫描结果集
      */
-    private void scanClassInJar(String parentPath, URL url, List<Class<?>> result)
+    private void scanClassInJar(String targetPackage, URL url, List<Class<?>> result)
             throws ScanException {
         JarUrl jarUrl = extractRealJarUrl(url);
-        if (jarUrl.getFirstJar() == null || !loadingJar(jarUrl)) {
+        if (jarUrl.getFirstJar() == null || !loadingJar(jarUrl)
+                || shouldNotScan(targetPackage, jarUrl)) {
             return;
         } else if (!isJar(jarUrl.getFirstJar())) {
             if (log.isDebugEnabled()) {
@@ -192,10 +193,25 @@ public class PathScanner {
             return;
         }
         try {
-            loadResourcesInJar(parentPath, jarUrl, result);
+            loadResourcesInJar(targetPackage, jarUrl, result);
         } catch (IOException e) {
             throw new ScanException("加载资源异常", e);
         }
+    }
+
+    /**
+     * 判断是否不应该扫描
+     *
+     * @param targetPackage 目标目录
+     * @param jarUrl        jar url
+     * @return 不需要扫描返回false
+     */
+    private boolean shouldNotScan(String targetPackage, JarUrl jarUrl) {
+        if (StringUtils.isNotEmpty(targetPackage)) {
+            return false;
+        }
+        // 存在二级jar并且不扫描所有jar包
+        return jarUrl.getNextJar() != null && !isScanAllJar();
     }
 
     private boolean loadingJar(JarUrl jarUrl) {
@@ -225,7 +241,7 @@ public class PathScanner {
                     urls.add(url);
                 }
             }
-            if (EMPTY_PATH.equals(resourcePath) && findInClassPathJar) {
+            if (EMPTY_PATH.equals(resourcePath) && scanAllJar) {
                 getJarUrls(classLoader, urls);
             }
         } catch (Exception e) {
@@ -272,12 +288,12 @@ public class PathScanner {
     /**
      * 从jarInputStream流中提取有效的类并添加到result中
      *
-     * @param parentPath 上级目录,以'.'为分隔符
-     * @param jarUrl     JAR包url信息
-     * @param result     结果合集
+     * @param targetPackage 目标目录,以'.'为分隔符
+     * @param jarUrl        JAR包url信息
+     * @param result        结果合集
      * @throws IOException IO异常
      */
-    private void loadResourcesInJar(String parentPath, JarUrl jarUrl, List<Class<?>> result)
+    private void loadResourcesInJar(String targetPackage, JarUrl jarUrl, List<Class<?>> result)
             throws IOException {
         URL firstJar = jarUrl.getFirstJar();
         JarFile jarFile = new JarFile(new File(firstJar.getFile()));
@@ -288,13 +304,13 @@ public class PathScanner {
             JarInputStream innerJarInputStream = new JarInputStream(inputStream);
             JarEntry nextJarEntry;
             while ((nextJarEntry = innerJarInputStream.getNextJarEntry()) != null) {
-                addIfTargetCLass(nextJarEntry, jarUrlPath, parentPath, result);
+                addIfTargetCLass(nextJarEntry, jarUrlPath, targetPackage, result);
             }
         } else {
             Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
                 JarEntry nextJarEntry = entries.nextElement();
-                addIfTargetCLass(nextJarEntry, jarUrlPath, parentPath, result);
+                addIfTargetCLass(nextJarEntry, jarUrlPath, targetPackage, result);
             }
         }
     }
@@ -302,12 +318,12 @@ public class PathScanner {
     /**
      * 检查jarEntry是否有效，是否为目标包，若是则添加到结果集合
      *
-     * @param jarEntry   jar entry
-     * @param jarUrlPath 目标jar url的结尾包path
-     * @param parentPath 上级目录
-     * @param result     结果集合
+     * @param jarEntry      jar entry
+     * @param jarUrlPath    目标jar url的结尾包path
+     * @param targetPackage 目标目录
+     * @param result        结果集合
      */
-    private void addIfTargetCLass(JarEntry jarEntry, String jarUrlPath, String parentPath, List<Class<?>> result) {
+    private void addIfTargetCLass(JarEntry jarEntry, String jarUrlPath, String targetPackage, List<Class<?>> result) {
         String name = jarEntry.getName();
         if (name.startsWith("/")) {
             name = name.substring(1);
@@ -320,7 +336,7 @@ public class PathScanner {
         }
         if (!jarEntry.isDirectory() && (StringUtils.isEmpty(jarUrlPath) || name.startsWith(jarUrlPath))) {
             String classFileName = name.replaceAll("/", ".");
-            if (classFileName.startsWith(parentPath) && classFileName.endsWith(CLASS_EXTENSION)) {
+            if (classFileName.startsWith(targetPackage) && classFileName.endsWith(CLASS_EXTENSION)) {
                 filterClass(classFileName, result);
             }
         }
@@ -387,7 +403,7 @@ public class PathScanner {
      * @param scanPath 扫描的路径
      * @return 合法的扫描路径
      */
-    private String extractEffectivePath(String scanPath) {
+    private String extractEffectiveClassPackage(String scanPath) {
         StringBuilder pathBuilder = new StringBuilder(scanPath.replaceAll("/", "."));
         // 剔除最后一个有效'.'之后的path
         int length = pathBuilder.length();
@@ -493,12 +509,12 @@ public class PathScanner {
         return false;
     }
 
-    public boolean isFindInClassPathJar() {
-        return findInClassPathJar;
+    public boolean isScanAllJar() {
+        return scanAllJar;
     }
 
-    public PathScanner findInClassPathJar(boolean findInClassPathJar) {
-        this.findInClassPathJar = findInClassPathJar;
+    public PathScanner scanAllJar(boolean scanAllJar) {
+        this.scanAllJar = scanAllJar;
         return this;
     }
 

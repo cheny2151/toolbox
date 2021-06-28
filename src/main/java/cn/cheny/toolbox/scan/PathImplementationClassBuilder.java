@@ -23,7 +23,7 @@ public class PathImplementationClassBuilder {
     /**
      * 扫描接口实现类并实例化
      *
-     * @return ClusterTaskSubscriber实现类集合
+     * @return super class实现类集合
      */
     public static <T> Collection<T> createInstances(Class<T> superClass, Class<?>... annotations) throws ScanException {
         return createInstances("", false, null, superClass, annotations);
@@ -32,19 +32,38 @@ public class PathImplementationClassBuilder {
     /**
      * 扫描接口实现类并实例化
      *
-     * @return ClusterTaskSubscriber实现类集合
+     * @return super class实现类集合
      */
     public static <T> Collection<T> createInstances(String path, Class<T> superClass, Class<?>... annotations) throws ScanException {
         return createInstances(path, false, null, superClass, annotations);
     }
 
+
+    /**
+     * 扫描接口实现类并实例化(扫描所有jar包)
+     *
+     * @return super class实现类集合
+     */
+    public static <T> Collection<T> createInstancesInAllJar(Class<T> superClass, Class<?>... annotations) throws ScanException {
+        return createInstances("", true, null, superClass, annotations);
+    }
+
+    /**
+     * 扫描接口实现类并实例化(扫描所有jar包)
+     *
+     * @return super class实现类集合
+     */
+    public static <T> Collection<T> createInstancesInAllJar(String path, Class<T> superClass, Class<?>... annotations) throws ScanException {
+        return createInstances(path, true, null, superClass, annotations);
+    }
+
     /**
      * 扫描接口实现类并实例化
      *
-     * @return ClusterTaskSubscriber实现类集合
+     * @return super class实现类集合
      */
     @SuppressWarnings("unchecked")
-    public static <T> Collection<T> createInstances(String path, boolean allClassPath, IsLoadingJar isLoadingJar,
+    public static <T> Collection<T> createInstances(String path, boolean scanAllJar, IsLoadingJar isLoadingJar,
                                                     Class<T> superClass, Class<?>... annotations) throws ScanException {
         ScanFilter scanFilter = new ScanFilter();
         scanFilter.setSuperClass(superClass);
@@ -57,7 +76,7 @@ public class PathImplementationClassBuilder {
         }
         PathScanner pathScanner = new PathScanner(scanFilter);
         List<T> instances = new ArrayList<>();
-        List<Class<?>> targetClass = pathScanner.findInClassPathJar(allClassPath)
+        List<Class<?>> targetClass = pathScanner.scanAllJar(scanAllJar)
                 .isLoadingJar(isLoadingJar)
                 .scanClass(path);
         targetClass.forEach(c -> {
