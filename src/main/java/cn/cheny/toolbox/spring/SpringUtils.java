@@ -2,6 +2,7 @@ package cn.cheny.toolbox.spring;
 
 import cn.cheny.toolbox.scan.PathImplementationClassBuilder;
 import cn.cheny.toolbox.scan.ScanException;
+import cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
@@ -29,6 +30,12 @@ public class SpringUtils implements ApplicationContextAware {
 
     private static boolean inSpring = false;
 
+    private final ToolboxDefaultProperties toolboxDefaultProperties;
+
+    public SpringUtils(ToolboxDefaultProperties toolboxDefaultProperties) {
+        this.toolboxDefaultProperties = toolboxDefaultProperties;
+    }
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
         SpringUtils.applicationContext = applicationContext;
@@ -36,14 +43,15 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.inSpring = true;
         List<SpringUtilsAware> awares = new ArrayList<>(SpringUtilsAware.defaultAware());
         try {
-            Collection<SpringUtilsAware> customized = PathImplementationClassBuilder.createInstances(SpringUtilsAware.class);
+            Collection<SpringUtilsAware> customized =
+                    PathImplementationClassBuilder.createInstances(toolboxDefaultProperties.getScannerPath(), SpringUtilsAware.class);
             if (customized.size() > 0) {
                 awares.addAll(customized);
             }
         } catch (ScanException e) {
             log.error("扫描SpringUtilsAware实现类失败", e);
         }
-        awares.forEach(SpringUtilsAware::after);
+        awares.forEach(aware -> aware.after(toolboxDefaultProperties));
     }
 
     public static <T> T getBean(String name, Class<T> tClass) {

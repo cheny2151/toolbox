@@ -14,8 +14,8 @@ import java.util.List;
 /**
  * 扫描项目包并实例化接口实现类/子类
  *
- * @date 2021/5/10
  * @author by chenyi
+ * @date 2021/5/10
  */
 @Slf4j
 public class PathImplementationClassBuilder {
@@ -26,7 +26,16 @@ public class PathImplementationClassBuilder {
      * @return ClusterTaskSubscriber实现类集合
      */
     public static <T> Collection<T> createInstances(Class<T> superClass, Class<?>... annotations) throws ScanException {
-        return createInstances(false, null, superClass, annotations);
+        return createInstances("", false, null, superClass, annotations);
+    }
+
+    /**
+     * 扫描接口实现类并实例化
+     *
+     * @return ClusterTaskSubscriber实现类集合
+     */
+    public static <T> Collection<T> createInstances(String path, Class<T> superClass, Class<?>... annotations) throws ScanException {
+        return createInstances(path, false, null, superClass, annotations);
     }
 
     /**
@@ -35,7 +44,7 @@ public class PathImplementationClassBuilder {
      * @return ClusterTaskSubscriber实现类集合
      */
     @SuppressWarnings("unchecked")
-    public static <T> Collection<T> createInstances(boolean allClassPath, IsLoadingJar isLoadingJar,
+    public static <T> Collection<T> createInstances(String path, boolean allClassPath, IsLoadingJar isLoadingJar,
                                                     Class<T> superClass, Class<?>... annotations) throws ScanException {
         ScanFilter scanFilter = new ScanFilter();
         scanFilter.setSuperClass(superClass);
@@ -50,7 +59,7 @@ public class PathImplementationClassBuilder {
         List<T> instances = new ArrayList<>();
         List<Class<?>> targetClass = pathScanner.findInClassPathJar(allClassPath)
                 .isLoadingJar(isLoadingJar)
-                .scanClass(".");
+                .scanClass(path);
         targetClass.forEach(c -> {
             int modifiers = c.getModifiers();
             if (c.isInterface() || (modifiers & Modifier.ABSTRACT) > 0

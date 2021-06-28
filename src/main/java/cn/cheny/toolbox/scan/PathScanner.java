@@ -30,25 +30,25 @@ public class PathScanner {
     private final static String CLASS_EXTENSION = ".class";
 
     // file
-    public static final String URL_PROTOCOL_FILE = "file";
+    private static final String URL_PROTOCOL_FILE = "file";
 
     // jar
-    public static final String URL_PROTOCOL_JAR = "jar";
+    private static final String URL_PROTOCOL_JAR = "jar";
 
     // file url pre
-    public static final String FILE_URL_PREFIX = "file:";
+    private static final String FILE_URL_PREFIX = "file:";
 
     // jar url pre
-    public static final String JAR_URL_PREFIX = "jar:";
+    private static final String JAR_URL_PREFIX = "jar:";
 
     // jar extension
-    public static final String JAR_FILE_EXTENSION = ".jar";
+    private static final String JAR_FILE_EXTENSION = ".jar";
 
     // JAR ENTRY PRE
-    public static final String JAR_URL_ENTRY_PRE = "!/";
+    private static final String JAR_URL_ENTRY_PRE = "!/";
 
     // .class长度
-    public static final int CLASS_END_LEN = 6;
+    private static final int CLASS_END_LEN = 6;
 
     // 空路径
     private final static String EMPTY_PATH = "";

@@ -4,6 +4,11 @@
       "name": "toolbox.entity-cache",
       "type": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
       "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties"
+    },
+    {
+      "name": "toolbox.default",
+      "type": "cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties",
+      "sourceType": "cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties"
     }
   ],
   "properties": [
@@ -46,6 +51,19 @@
       "type": "java.lang.Long",
       "defaultValue": 60,
       "description": "A period to execute auto refresh."
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties",
+      "name": "toolbox.default.filterUnderline",
+      "type": "java.lang.Boolean",
+      "defaultValue": true,
+      "description": "Whether the sql field is automatically underlined."
+    },{
+      "sourceType": "cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties",
+      "name": "toolbox.default.scannerPath",
+      "type": "java.lang.String",
+      "defaultValue": "",
+      "description": "A default scanner path for PathScanner."
     }
   ],
   "hints": []

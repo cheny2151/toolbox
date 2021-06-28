@@ -1,5 +1,7 @@
 package cn.cheny.toolbox.spring;
 
+import cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -11,7 +13,7 @@ import java.util.List;
  */
 public interface SpringUtilsAware {
 
-    void after();
+    void after(ToolboxDefaultProperties toolboxDefaultProperties);
 
     static List<SpringUtilsAware> defaultAware() {
         return Arrays.asList(new StaticPropertySpringUtils());
