@@ -574,9 +574,4 @@ public class PathScanner {
         return results;
     }
 
-    public static void main(String[] args) throws MalformedURLException, ScanException {
-        URL url = new URL("file:/Users/chenyi/Downloads/ROOT");
-        List<Class<?>> classes = new PathScanner().scanClass(url);
-        System.out.println(classes);
-    }
 }
