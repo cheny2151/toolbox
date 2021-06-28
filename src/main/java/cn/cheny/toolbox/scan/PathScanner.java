@@ -47,6 +47,12 @@ public class PathScanner {
     // JAR ENTRY PRE
     private static final String JAR_URL_ENTRY_PRE = "!/";
 
+    // maven build jar: BOOT-INF pre
+    private static final String BOOT_INF_ENTRY_PRE = "BOOT-INF/classes/";
+
+    // maven build jar: META-INF pre
+    private static final String META_INF_ENTRY_PRE = "META-INF/classes/";
+
     // .class长度
     private static final int CLASS_END_LEN = 6;
 
@@ -303,6 +309,15 @@ public class PathScanner {
      */
     private void addIfTargetCLass(JarEntry jarEntry, String jarUrlPath, String parentPath, List<Class<?>> result) {
         String name = jarEntry.getName();
+        if (name.startsWith("/")) {
+            name = name.substring(1);
+        }
+        if (name.startsWith(BOOT_INF_ENTRY_PRE)) {
+            name = name.substring(BOOT_INF_ENTRY_PRE.length());
+        }
+        if (name.startsWith(META_INF_ENTRY_PRE)) {
+            name = name.substring(META_INF_ENTRY_PRE.length());
+        }
         if (!jarEntry.isDirectory() && (StringUtils.isEmpty(jarUrlPath) || name.startsWith(jarUrlPath))) {
             String classFileName = name.replaceAll("/", ".");
             if (classFileName.startsWith(parentPath) && classFileName.endsWith(CLASS_EXTENSION)) {
