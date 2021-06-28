@@ -305,7 +305,6 @@ public class PathScanner {
         String name = jarEntry.getName();
         if (!jarEntry.isDirectory() && (StringUtils.isEmpty(jarUrlPath) || name.startsWith(jarUrlPath))) {
             String classFileName = name.replaceAll("/", ".");
-            System.out.println(classFileName);
             if (classFileName.startsWith(parentPath) && classFileName.endsWith(CLASS_EXTENSION)) {
                 filterClass(classFileName, result);
             }
@@ -416,8 +415,6 @@ public class PathScanner {
 
     private void addIfUsefulRoot(URL url, Set<URL> results) {
         /*String path = url.getPath();
-        System.out.println(url.getFile());
-        System.out.println(System.getProperty("file.separator"));
         String[] split = path.split(File.separator);
         if (split[split.length - 1].equals("classes")) {
         }*/
