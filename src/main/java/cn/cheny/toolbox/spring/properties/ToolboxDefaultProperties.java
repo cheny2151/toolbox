@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.spring.properties;
 
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -9,6 +10,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @date 2021/6/28
  */
 @ConfigurationProperties(prefix = ToolboxDefaultProperties.PRE)
+@Data
 public class ToolboxDefaultProperties {
 
     public static final String PRE = "toolbox.default";
@@ -19,19 +21,4 @@ public class ToolboxDefaultProperties {
 
     private Boolean filterUnderline;
 
-    public String getScannerPath() {
-        return scannerPath;
-    }
-
-    public void setScannerPath(String scannerPath) {
-        this.scannerPath = scannerPath;
-    }
-
-    public Boolean getFilterUnderline() {
-        return filterUnderline;
-    }
-
-    public void setFilterUnderline(Boolean filterUnderline) {
-        this.filterUnderline = filterUnderline;
-    }
 }

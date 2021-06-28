@@ -41,17 +41,20 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
-        List<SpringUtilsAware> awares = new ArrayList<>(SpringUtilsAware.defaultAware());
-        try {
-            Collection<SpringUtilsAware> customized =
-                    PathImplementationClassBuilder.createInstances(toolboxDefaultProperties.getScannerPath(), SpringUtilsAware.class);
-            if (customized.size() > 0) {
-                awares.addAll(customized);
+        new Thread(() -> {
+            SpringUtilsAware.defaultAware().forEach(aware -> aware.after(toolboxDefaultProperties));
+            List<SpringUtilsAware> awares = new ArrayList<>();
+            try {
+                Collection<SpringUtilsAware> customized =
+                        PathImplementationClassBuilder.createInstances(toolboxDefaultProperties.getScannerPath(), SpringUtilsAware.class);
+                if (customized.size() > 0) {
+                    awares.addAll(customized);
+                }
+            } catch (ScanException e) {
+                log.error("扫描SpringUtilsAware实现类失败", e);
             }
-        } catch (ScanException e) {
-            log.error("扫描SpringUtilsAware实现类失败", e);
-        }
-        awares.forEach(aware -> aware.after(toolboxDefaultProperties));
+            awares.forEach(aware -> aware.after(toolboxDefaultProperties));
+        }, "springUtils-init").start();
     }
 
     public static <T> T getBean(String name, Class<T> tClass) {
