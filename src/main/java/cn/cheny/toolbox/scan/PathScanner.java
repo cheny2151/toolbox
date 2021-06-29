@@ -79,6 +79,9 @@ public class PathScanner {
     /** 分隔符 */
     private final static String SEPARATE_CHARACTER = ".";
 
+    /** 系统文件分隔符 */
+    private final static String PATH_SEPARATE = System.getProperty("path.separator");
+
     /** 是否扫描第三方jar包 */
     private boolean scanAllJar = false;
 
@@ -527,7 +530,8 @@ public class PathScanner {
         if (StringUtils.isEmpty(classPath)) {
             return;
         }
-        for (String path : classPath.split(":")) {
+        String[] classPaths = classPath.split(PATH_SEPARATE);
+        for (String path : classPaths) {
             if (path.endsWith(URL_PROTOCOL_JAR)) {
                 URL url = new URL(JAR_URL_PREFIX + FILE_URL_PREFIX + path + JAR_URL_ENTRY_PRE);
                 results.add(url);
