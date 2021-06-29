@@ -386,7 +386,8 @@ public class PathScanner {
         if (MODULE_INFO.equals(ClassFileName)) {
             return;
         }
-        if (!filterByAsm(ClassFileName)) {
+        ScanFilter scanFilter = this.scanFilter;
+        if (scanFilter != null && !filterByAsm(ClassFileName)) {
             return;
         }
         Class<?> target;
@@ -611,6 +612,12 @@ public class PathScanner {
      */
     public static class ClassFilterVisitor extends ClassVisitor {
 
+        /** 字节码类签名前缀: 'L' */
+        private final static String CLASS_SIGNATURE_PRE = "L";
+
+        /** 字节码类签名后缀: ';' */
+        private final static String CLASS_SIGNATURE_TAIL = ";";
+
         private boolean passVisit;
 
         private int passVisitAnnotation;
@@ -625,7 +632,9 @@ public class PathScanner {
             this.passVisitAnnotation = 0;
             List<Class<? extends Annotation>> hasAnnotations = filter.getHasAnnotations();
             if (CollectionUtils.isNotEmpty(hasAnnotations)) {
-                this.annotations = hasAnnotations.stream().map(Class::getName).collect(Collectors.toList());
+                this.annotations = hasAnnotations.stream()
+                        .map(annotation -> CLASS_SIGNATURE_PRE + replacePackageToUrl(annotation.getName()) + CLASS_SIGNATURE_TAIL)
+                        .collect(Collectors.toList());
             } else {
                 this.annotations = Collections.emptyList();
             }
@@ -638,8 +647,8 @@ public class PathScanner {
         @Override
         public void visit(int i, int access, String className, String signature, String superClass, String[] interfaces) {
             boolean accessPass = Modifier.isPublic(access);
-            boolean superClassFilter = false;
-            if (this.superClass != null) {
+            boolean superClassFilter = this.superClass == null;
+            if (!superClassFilter) {
                 String superClassUrl = replacePackageToUrl(this.superClass);
                 if (superClass != null &&
                         superClass.equals(superClassUrl)) {
@@ -653,7 +662,7 @@ public class PathScanner {
 
         @Override
         public AnnotationVisitor visitAnnotation(String annotationName, boolean b) {
-            if (annotations.stream().anyMatch(e -> e.equals(annotationName))) {
+            if (annotations.contains(annotationName)) {
                 this.passVisitAnnotation++;
             }
             return null;
