@@ -1,14 +1,21 @@
 package cn.cheny.toolbox.scan;
 
 import cn.cheny.toolbox.scan.filter.ScanFilter;
+import jdk.internal.org.objectweb.asm.AnnotationVisitor;
+import jdk.internal.org.objectweb.asm.ClassReader;
+import jdk.internal.org.objectweb.asm.ClassVisitor;
+import jdk.internal.org.objectweb.asm.Opcodes;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -16,6 +23,7 @@ import java.util.*;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarInputStream;
+import java.util.stream.Collectors;
 
 /**
  * 扫描包下指定的class
@@ -26,53 +34,58 @@ import java.util.jar.JarInputStream;
 @Slf4j
 public class PathScanner {
 
-    // class文件拓展名
+    /** class文件拓展名 */
     private final static String CLASS_EXTENSION = ".class";
 
-    // file
+    /** file */
     private static final String URL_PROTOCOL_FILE = "file";
 
-    // jar
+    /** jar */
     private static final String URL_PROTOCOL_JAR = "jar";
 
-    // file url pre
+    /** file url pre */
     private static final String FILE_URL_PREFIX = "file:";
 
-    // jar url pre
+    /** jar url pre */
     private static final String JAR_URL_PREFIX = "jar:";
 
-    // jar extension
+    /** jar extension */
     private static final String JAR_FILE_EXTENSION = ".jar";
 
-    // JAR ENTRY PRE
+    /** JAR ENTRY PRE */
     private static final String JAR_URL_ENTRY_PRE = "!/";
 
-    // maven build jar: BOOT-INF pre
+    /** maven build jar: BOOT-INF url pre */
     private static final String BOOT_INF_ENTRY_PRE = "BOOT-INF/classes/";
 
+    /** maven build jar: BOOT-INF package pre */
     private static final String BOOT_INF_PRE = "BOOT-INF.classes.";
 
-    // maven build jar: META-INF pre
+    /** maven build jar: META-INF pre */
     private static final String META_INF_ENTRY_PRE = "META-INF/classes/";
 
+    /** maven build jar: META-INF package pre */
     private static final String META_INF_PRE = "META-INF.classes.";
 
-    // .class长度
+    /** module-info.class */
+    private static final String MODULE_INFO = "module-info.class";
+
+    /** .class长度 */
     private static final int CLASS_END_LEN = 6;
 
-    // 空路径
+    /** 空路径 */
     private final static String EMPTY_PATH = "";
 
-    // 分隔符
+    /** 分隔符 */
     private final static String SEPARATE_CHARACTER = ".";
 
-    // 是否扫描第三方jar包
+    /** 是否扫描第三方jar包 */
     private boolean scanAllJar = false;
 
-    // 判断是否加载某个jar包
+    /** 判断是否加载某个jar包 */
     private IsLoadingJar isLoadingJar;
 
-    // 过滤器
+    /** 过滤器 */
     private ScanFilter scanFilter;
 
     public PathScanner() {
@@ -310,7 +323,13 @@ public class PathScanner {
     private void loadResourcesInJar(JarUrl jarUrl, List<Class<?>> result)
             throws IOException {
         URL firstJar = jarUrl.getFirstJar();
-        JarFile jarFile = new JarFile(new File(firstJar.getFile()));
+        JarFile jarFile;
+        try {
+            jarFile = new JarFile(new File(firstJar.getFile()));
+        } catch (Exception e) {
+            log.error("加载jar包异常:{}", e.getMessage());
+            return;
+        }
         String targetPackage = jarUrl.getTargetPackage();
         if (jarUrl.getNextJar() != null) {
             JarEntry targetEntry = jarFile.getJarEntry(jarUrl.getNextJar());
@@ -364,6 +383,12 @@ public class PathScanner {
      * @param result        扫描结果集合
      */
     private void filterClass(String ClassFileName, List<Class<?>> result) {
+        if (MODULE_INFO.equals(ClassFileName)) {
+            return;
+        }
+        if (!filterByAsm(ClassFileName)) {
+            return;
+        }
         Class<?> target;
         try {
             String fullClassName = ClassFileName.substring(0, ClassFileName.length() - CLASS_END_LEN);
@@ -397,6 +422,27 @@ public class PathScanner {
             }
         }
         result.add(target);
+    }
+
+    /**
+     * 通过asm检测Filter，若不匹配返回false
+     * 注意：无法校验是否是通过ClassLoader加载
+     *
+     * @param classFileName class name
+     * @return 是否匹配
+     */
+    private boolean filterByAsm(String classFileName) {
+        try {
+            ClassFilterVisitor classVisitor = new ClassFilterVisitor(this.scanFilter);
+            String className = classFileName.substring(0, classFileName.length() - CLASS_END_LEN);
+            new ClassReader(className).accept(classVisitor, ClassReader.SKIP_CODE);
+            return classVisitor.isPass();
+        } catch (Throwable t) {
+            if (log.isDebugEnabled()) {
+                log.debug("can not filter By Asm,name:{},cause:{}", classFileName, t.getClass().getName());
+            }
+            return false;
+        }
     }
 
     /**
@@ -437,7 +483,7 @@ public class PathScanner {
     /**
      * 获取jar urls
      *
-     * @throws MalformedURLException
+     * @throws MalformedURLException the exception while new a URL
      */
     private void getJarUrls(ClassLoader classLoader, Set<URL> results) throws MalformedURLException {
         if (classLoader instanceof URLClassLoader) {
@@ -473,7 +519,7 @@ public class PathScanner {
      * 获取class path声明的jar
      *
      * @param results 扫描结果存放集合
-     * @throws MalformedURLException
+     * @throws MalformedURLException the exception while new a URL
      */
     private void getJarURLInClassPath(Set<URL> results) throws MalformedURLException {
         String classPath = System.getProperty("java.class.path");
@@ -526,8 +572,12 @@ public class PathScanner {
         return false;
     }
 
-    private String replaceUrlToPackage(String url) {
+    private static String replaceUrlToPackage(String url) {
         return url.replaceAll("/", ".");
+    }
+
+    private static String replacePackageToUrl(String url) {
+        return url.replaceAll("\\.", "/");
     }
 
     public boolean isScanAllJar() {
@@ -556,22 +606,62 @@ public class PathScanner {
         }
     }
 
-    public List<Class<?>> scanClass(URL resource) throws ScanException {
-        ArrayList<Class<?>> results = new ArrayList<>();
-        String targetPackage = "";
-        String protocol = resource.getProtocol();
-        if (log.isDebugEnabled()) {
-            log.debug("file protocol:{}", protocol);
+    /**
+     * asm ClassVisitor实现类，根据字节码文件过滤类，避免直接Load Class
+     */
+    public static class ClassFilterVisitor extends ClassVisitor {
+
+        private boolean passVisit;
+
+        private int passVisitAnnotation;
+
+        private String superClass;
+
+        private List<String> annotations;
+
+        public ClassFilterVisitor(ScanFilter filter) {
+            super(Opcodes.ASM5);
+            this.passVisit = false;
+            this.passVisitAnnotation = 0;
+            List<Class<? extends Annotation>> hasAnnotations = filter.getHasAnnotations();
+            if (CollectionUtils.isNotEmpty(hasAnnotations)) {
+                this.annotations = hasAnnotations.stream().map(Class::getName).collect(Collectors.toList());
+            } else {
+                this.annotations = Collections.emptyList();
+            }
+            Class<?> superClass = filter.getSuperClass();
+            if (superClass != null) {
+                this.superClass = superClass.getName();
+            }
         }
 
-        if (URL_PROTOCOL_FILE.equals(protocol)) {
-            String file = resource.getFile();
-            scanClassInFile(targetPackage, new File(file), results);
-        } else if (URL_PROTOCOL_JAR.equals(protocol)) {
-            scanClassInJar(targetPackage, resource, results);
+        @Override
+        public void visit(int i, int access, String className, String signature, String superClass, String[] interfaces) {
+            boolean accessPass = Modifier.isPublic(access);
+            boolean superClassFilter = false;
+            if (this.superClass != null) {
+                String superClassUrl = replacePackageToUrl(this.superClass);
+                if (superClass != null &&
+                        superClass.equals(superClassUrl)) {
+                    superClassFilter = true;
+                } else if (interfaces.length > 0 && ArrayUtils.contains(interfaces, superClassUrl)) {
+                    superClassFilter = true;
+                }
+            }
+            this.passVisit = accessPass && superClassFilter;
         }
 
-        return results;
+        @Override
+        public AnnotationVisitor visitAnnotation(String annotationName, boolean b) {
+            if (annotations.stream().anyMatch(e -> e.equals(annotationName))) {
+                this.passVisitAnnotation++;
+            }
+            return null;
+        }
+
+        public boolean isPass() {
+            return passVisit && passVisitAnnotation == annotations.size();
+        }
     }
 
 }

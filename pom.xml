@@ -57,6 +57,7 @@
         <spring-boot.version>2.4.5</spring-boot.version>
         <jedis.version>3.5.2</jedis.version>
         <mybatis.version>2.1.4</mybatis.version>
+        <asm.version>9.1</asm.version>
         <commons-text>1.9</commons-text>
         <jsoup>1.13.1</jsoup>
     </properties>
@@ -136,6 +137,12 @@
             <groupId>org.javassist</groupId>
             <artifactId>javassist</artifactId>
             <version>${javassist.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>${sdm.version}</version>
         </dependency>
 
         <dependency>
