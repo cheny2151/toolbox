@@ -142,7 +142,7 @@
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
-            <version>${sdm.version}</version>
+            <version>${asm.version}</version>
         </dependency>
 
         <dependency>
