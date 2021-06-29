@@ -612,10 +612,10 @@ public class PathScanner {
      */
     public static class ClassFilterVisitor extends ClassVisitor {
 
-        /** 字节码类签名前缀: 'L' */
+        /** 字节码类描述符前缀: 'L' */
         private final static String CLASS_SIGNATURE_PRE = "L";
 
-        /** 字节码类签名后缀: ';' */
+        /** 字节码类描述符后缀: ';' */
         private final static String CLASS_SIGNATURE_TAIL = ";";
 
         private boolean passVisit;
