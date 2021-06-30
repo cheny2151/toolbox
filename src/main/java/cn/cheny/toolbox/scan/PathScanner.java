@@ -91,6 +91,9 @@ public class PathScanner {
     /** 过滤器 */
     private ScanFilter scanFilter;
 
+    /** classLoader */
+    private ClassLoader classLoader;
+
     public PathScanner() {
     }
 
@@ -261,7 +264,7 @@ public class PathScanner {
      */
     private Collection<URL> getResources(String resourcePath) throws ScanException {
         Set<URL> urls = new LinkedHashSet<>();
-        ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
+        ClassLoader classLoader = getClassLoader();
         try {
             if (EMPTY_PATH.equals(resourcePath)) {
                 Enumeration<URL> resources = classLoader.getResources(resourcePath);
@@ -438,15 +441,17 @@ public class PathScanner {
     private boolean filterByAsm(String classFileName) {
         try {
             ClassFilterVisitor classVisitor = new ClassFilterVisitor(this.scanFilter);
-            String className = classFileName.substring(0, classFileName.length() - CLASS_END_LEN);
-            new ClassReader(className).accept(classVisitor, ClassReader.SKIP_CODE);
-            return classVisitor.isPass();
+            URL resource = getClassLoader().getResource(classFileName);
+            if (resource != null) {
+                new ClassReader(resource.openStream()).accept(classVisitor, ClassReader.SKIP_CODE);
+                return classVisitor.isPass();
+            }
         } catch (Throwable t) {
             if (log.isDebugEnabled()) {
                 log.debug("can not filter By Asm,name:{},cause:{}", classFileName, t.getClass().getName());
             }
-            return false;
         }
+        return false;
     }
 
     /**
@@ -596,6 +601,17 @@ public class PathScanner {
 
     public PathScanner isLoadingJar(IsLoadingJar isLoadingJar) {
         this.isLoadingJar = isLoadingJar;
+        return this;
+    }
+
+    private ClassLoader getClassLoader() {
+        return this.classLoader == null ?
+                Thread.currentThread().getContextClassLoader() :
+                this.classLoader;
+    }
+
+    public PathScanner classloader(ClassLoader classLoader) {
+        this.classLoader = classLoader;
         return this;
     }
 
