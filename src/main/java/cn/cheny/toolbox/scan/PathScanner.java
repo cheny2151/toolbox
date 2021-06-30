@@ -260,17 +260,10 @@ public class PathScanner {
         Set<URL> urls = new LinkedHashSet<>();
         ClassLoader classLoader = getClassLoader();
         try {
-            if (EMPTY_PATH.equals(resourcePath)) {
-                Enumeration<URL> resources = classLoader.getResources(resourcePath);
-                while (resources.hasMoreElements()) {
-                    URL url = resources.nextElement();
-                    addIfUsefulRoot(url, urls);
-                }
-            } else {
-                URL url = classLoader.getResource(resourcePath);
-                if (url != null) {
-                    urls.add(url);
-                }
+            Enumeration<URL> resources = classLoader.getResources(resourcePath);
+            while (resources.hasMoreElements()) {
+                URL url = resources.nextElement();
+                addIfUseful(url, urls);
             }
             if (EMPTY_PATH.equals(resourcePath) && scanAllJar) {
                 getJarUrls(classLoader, urls);
@@ -496,7 +489,7 @@ public class PathScanner {
                 } else if (url.getPath().endsWith(URL_PROTOCOL_JAR)) {
                     results.add(new URL(JAR_URL_PREFIX + url + JAR_URL_ENTRY_PRE));
                 } else {
-                    addIfUsefulRoot(url, results);
+                    addIfUseful(url, results);
                 }
             }
         }
@@ -508,7 +501,7 @@ public class PathScanner {
         }
     }
 
-    private void addIfUsefulRoot(URL url, Set<URL> results) {
+    private void addIfUseful(URL url, Set<URL> results) {
         /*String path = url.getPath();
         String[] split = path.split(File.separator);
         if (split[split.length - 1].equals("classes")) {
