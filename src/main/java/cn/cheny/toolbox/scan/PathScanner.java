@@ -172,11 +172,13 @@ public class PathScanner {
         if (BOOT_INF_URL_PRE.equals(parentUrl) || META_INF_URL_PRE.equals(parentUrl)) {
             return;
         }
-        if (file.getName().endsWith(JAR_FILE_EXTENSION) && isScanAllJar()) {
-            try {
-                scanClassInJar(targetUrl, new URL(FILE_URL_PREFIX + file.getPath()), result);
-            } catch (MalformedURLException e) {
-                // do nothing
+        if (file.getName().endsWith(JAR_FILE_EXTENSION)) {
+            if (isScanAllJar()) {
+                try {
+                    scanClassInJar(targetUrl, new URL(FILE_URL_PREFIX + file.getPath()), result);
+                } catch (MalformedURLException e) {
+                    // do nothing
+                }
             }
         } else if (file.isFile()) {
             String ClassFileUrl = parentUrl + file.getName();
