@@ -47,4 +47,9 @@ public interface RedisLock extends AutoCloseable {
         return "LOCK";
     }
 
+    /**
+     * 重写close，去除throw
+     */
+    @Override
+    void close();
 }
