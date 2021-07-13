@@ -5,9 +5,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -22,6 +27,26 @@ public class ReflectUtils {
     private final static String SET_PRE = "set";
 
     private final static String IS_PRE = "is";
+
+    private final static Method LOOKUP_DEFINE_CLASS_METHOD;
+
+    static {
+        Method lookupDefineClass0 = null;
+        try {
+            lookupDefineClass0 = (Method) AccessController.doPrivileged(new PrivilegedExceptionAction() {
+                public Object run() throws Exception {
+                    try {
+                        return MethodHandles.Lookup.class.getMethod("defineClass", byte[].class);
+                    } catch (NoSuchMethodException var2) {
+                        return null;
+                    }
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            e.printStackTrace();
+        }
+        LOOKUP_DEFINE_CLASS_METHOD = lookupDefineClass0;
+    }
 
     private ReflectUtils() {
     }
@@ -502,6 +527,10 @@ public class ReflectUtils {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    public static Class<?> defineClass(byte[] c) throws InvocationTargetException, IllegalAccessException {
+        return (Class<?>) LOOKUP_DEFINE_CLASS_METHOD.invoke(MethodHandles.lookup(), c);
     }
 
     private static String toUpperFirstLetter(String fieldName) {
