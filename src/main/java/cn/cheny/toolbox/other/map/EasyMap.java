@@ -477,6 +477,9 @@ public class EasyMap extends HashMap<String, Object> {
         if (obj == null) {
             return null;
         }
+        if (targetClass.equals(obj.getClass())){
+            return (T) obj;
+        }
         try {
             if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
                 return (T) Integer.valueOf(obj.toString());
