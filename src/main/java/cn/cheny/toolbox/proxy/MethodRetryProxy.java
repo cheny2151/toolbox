@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.List;
 
 /**
  * 翻译重试代理
@@ -23,7 +24,7 @@ public class MethodRetryProxy implements InvocationHandler {
 
     private final String[] proxyMethods;
 
-    private Class<Throwable>[] stopErrors;
+    private List<Class<? extends Throwable>> stopErrors;
 
     private Integer timeout;
 
@@ -33,7 +34,7 @@ public class MethodRetryProxy implements InvocationHandler {
         this(actual, maximumTry, null, null, retryMethods);
     }
 
-    public MethodRetryProxy(Object actual, int maximumTry, Integer timeout, Class<Throwable>[] stopErrors, String... retryMethods) {
+    public MethodRetryProxy(Object actual, int maximumTry, Integer timeout, List<Class<? extends Throwable>> stopErrors, String... retryMethods) {
         this.actual = actual;
         this.maximumTry = maximumTry;
         this.timeout = timeout;
@@ -92,10 +93,10 @@ public class MethodRetryProxy implements InvocationHandler {
     }
 
     private boolean isStopError(Throwable error) {
-        if (error instanceof InvocationTargetException) {
-            error = ((InvocationTargetException) error).getTargetException();
-        }
-        return stopErrors != null && ArrayUtils.contains(stopErrors, error.getClass());
+        Throwable error0 = error instanceof InvocationTargetException ?
+                ((InvocationTargetException) error).getTargetException() : error;
+        return error0 != null && stopErrors != null &&
+                stopErrors.stream().anyMatch(ero -> ero.isAssignableFrom(error0.getClass()));
     }
 
     private boolean timeout(long firstTime) {
@@ -123,11 +124,11 @@ public class MethodRetryProxy implements InvocationHandler {
         return this;
     }
 
-    public Class<Throwable>[] getStopErrors() {
+    public List<Class<? extends Throwable>> getStopErrors() {
         return stopErrors;
     }
 
-    public MethodRetryProxy stopErrors(Class<Throwable>[] stopErrors) {
+    public MethodRetryProxy stopErrors(List<Class<? extends Throwable>> stopErrors) {
         this.stopErrors = stopErrors;
         return this;
     }
