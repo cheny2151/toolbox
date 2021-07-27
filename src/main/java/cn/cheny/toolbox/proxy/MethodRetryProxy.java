@@ -25,15 +25,15 @@ public class MethodRetryProxy implements InvocationHandler {
 
     private Class<Throwable>[] stopErrors;
 
-    private int timeout;
+    private Integer timeout;
 
     private int maximumTry;
 
     public MethodRetryProxy(Object actual, int maximumTry, String... retryMethods) {
-        this(actual, maximumTry, Integer.MAX_VALUE, null, retryMethods);
+        this(actual, maximumTry, null, null, retryMethods);
     }
 
-    public MethodRetryProxy(Object actual, int maximumTry, int timeout, Class<Throwable>[] stopErrors, String... retryMethods) {
+    public MethodRetryProxy(Object actual, int maximumTry, Integer timeout, Class<Throwable>[] stopErrors, String... retryMethods) {
         this.actual = actual;
         this.maximumTry = maximumTry;
         this.timeout = timeout;
@@ -41,6 +41,7 @@ public class MethodRetryProxy implements InvocationHandler {
         this.proxyMethods = retryMethods == null || retryMethods.length == 0 ? ALL_METHODS : retryMethods;
     }
 
+    @SuppressWarnings("unchecked")
     public <I> I newProxy(Class<I> interfaceClass) {
         if (!interfaceClass.isInterface()) {
             throw new IllegalArgumentException("Target of jdk proxy must be a interface");
@@ -98,11 +99,14 @@ public class MethodRetryProxy implements InvocationHandler {
     }
 
     private boolean timeout(long firstTime) {
+        if (timeout == null) {
+            return false;
+        }
         return (System.currentTimeMillis() - firstTime) / 1000 >= timeout;
     }
 
     public int getTimeout() {
-        return timeout;
+        return this.timeout;
     }
 
     public MethodRetryProxy timeout(int timeout) {
