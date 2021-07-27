@@ -65,7 +65,7 @@ public class TwoParallel<ONE, TWO, RESULT> implements Parallel<RESULT> {
 
     public RESULT consume(TwoTaskConsume<ONE, TWO, RESULT> consume) {
         if (this.oneResult == null || this.twoResult == null) {
-            throw new ToolboxRuntimeException("undone one task");
+            throw new ToolboxRuntimeException("undone one/two task");
         }
         this.consume = consume;
         return consume.consume(oneResult, twoResult);
