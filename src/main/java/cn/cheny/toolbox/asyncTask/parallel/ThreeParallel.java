@@ -77,4 +77,5 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
             this.subThreeTask(three);
         }
     }
+
 }
