@@ -78,4 +78,8 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
         }
     }
 
+    public FutureResultHolder<THREE> getThreeResult() {
+        return threeResult;
+    }
+
 }
