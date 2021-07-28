@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.asyncTask.parallel;
 
+import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -8,7 +9,7 @@ import java.util.concurrent.ExecutorService;
  * @author by chenyi
  * @date 2021/7/26
  */
-public interface Parallel<R> {
+public interface Parallel<R> extends Closeable {
 
     R start();
 

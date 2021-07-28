@@ -57,7 +57,8 @@ public class TwoParallel<ONE, TWO, RESULT> extends OneParallel<ONE, RESULT> {
      */
     public RESULT consume2(TwoTaskConsume<ONE, TWO, RESULT> consume) {
         FutureResultHolder<ONE> oneResult = getOneResult();
-        if (oneResult == null || this.twoResult == null) {
+        FutureResultHolder<TWO> twoResult = getTwoResult();
+        if (oneResult == null || twoResult == null) {
             throw new ToolboxRuntimeException("undone one/two task");
         }
         this.consume = consume;
@@ -73,7 +74,7 @@ public class TwoParallel<ONE, TWO, RESULT> extends OneParallel<ONE, RESULT> {
     @Override
     protected void doAsyncTask() {
         super.doAsyncTask();
-        FutureResultHolder<TWO> twoResult = this.twoResult;
+        FutureResultHolder<TWO> twoResult = getTwoResult();
         if (twoResult == null && two != null) {
             this.subTwoTask(two);
         }

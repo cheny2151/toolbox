@@ -56,7 +56,8 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
      * @return 消费执行结果
      */
     public RESULT consume1(OneTaskConsume<ONE, RESULT> consume) {
-        if (this.oneResult == null) {
+        FutureResultHolder<ONE> oneResult = getOneResult();
+        if (oneResult == null) {
             throw new ToolboxRuntimeException("undone one task");
         }
         this.consume = consume;
@@ -70,10 +71,10 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
     }
 
     protected void doAsyncTask() {
-        if (executor == null || consume == null) {
+        if (getExecutor() == null || consume == null) {
             throw new IllegalArgumentException();
         }
-        FutureResultHolder<ONE> oneResult = this.oneResult;
+        FutureResultHolder<ONE> oneResult = getOneResult();
         if (oneResult == null && one != null) {
             this.subOneTask(one);
         }
@@ -85,6 +86,13 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
 
     public FutureResultHolder<ONE> getOneResult() {
         return oneResult;
+    }
+
+    @Override
+    public void close() {
+        if (this.executor != null) {
+            this.executor.shutdownNow();
+        }
     }
 
 }
