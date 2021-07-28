@@ -16,6 +16,8 @@ import java.util.concurrent.Future;
  */
 public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO, RESULT> {
 
+    public final static int THREE_PARALLEL_NUM = 3;
+
     private Task<THREE> three;
 
     private ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume;
@@ -23,11 +25,11 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
     private FutureResultHolder<THREE> threeResult;
 
     public ThreeParallel(ExecutorService executor) {
-        super(executor == null ? Executors.newFixedThreadPool(TWO_PARALLEL_NUM) : executor);
+        super(executor == null ? Executors.newFixedThreadPool(THREE_PARALLEL_NUM) : executor);
     }
 
     public ThreeParallel(Task<ONE> task1, Task<TWO> task2, Task<THREE> task3, ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume) {
-        this(task1, task2, task3, consume, Executors.newFixedThreadPool(3));
+        this(task1, task2, task3, consume, Executors.newFixedThreadPool(THREE_PARALLEL_NUM));
     }
 
     public ThreeParallel(Task<ONE> task1, Task<TWO> task2, Task<THREE> task3, ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume, ExecutorService executor) {
@@ -53,7 +55,7 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
      * @param consume 三任务消费者
      * @return 消费执行结果
      */
-    public RESULT consume(ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume) {
+    public RESULT consumeThree(ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume) {
         FutureResultHolder<ONE> oneResult = getOneResult();
         FutureResultHolder<TWO> twoResult = getTwoResult();
         if (oneResult == null || twoResult == null || this.threeResult == null) {
@@ -66,7 +68,7 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
     @Override
     public RESULT start() {
         this.doAsyncTask();
-        return consume(consume);
+        return consumeThree(consume);
     }
 
     @Override
