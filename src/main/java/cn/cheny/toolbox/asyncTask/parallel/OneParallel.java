@@ -24,7 +24,7 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
 
     private FutureResultHolder<ONE> oneResult;
 
-    private OneParallel(ExecutorService executor) {
+    protected OneParallel(ExecutorService executor) {
         this.executor = executor == null ? Executors.newSingleThreadExecutor() : executor;
     }
 
@@ -38,20 +38,23 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
         this.executor = executor;
     }
 
-    public static <ONE, RESULT> OneParallel<ONE, RESULT> build() {
-        return build(null);
-    }
-
-    public static <ONE, RESULT> OneParallel<ONE, RESULT> build(ExecutorService executor) {
-        return new OneParallel<>(executor);
-    }
-
+    /**
+     * 提交第一个异步任务
+     *
+     * @param task 任务
+     */
     public void subOneTask(Task<ONE> task) {
         this.one = task;
-        Future<ONE> submit = executor.submit(task::doTask);
+        Future<ONE> submit = getExecutor().submit(task::doTask);
         this.oneResult = new FutureResultHolder<>(submit);
     }
 
+    /**
+     * 消费异步任务结果
+     *
+     * @param consume 一任务消费者
+     * @return 消费执行结果
+     */
     public RESULT consume(OneTaskConsume<ONE, RESULT> consume) {
         if (this.oneResult == null) {
             throw new ToolboxRuntimeException("undone one task");
@@ -62,6 +65,11 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
 
     @Override
     public RESULT start() {
+        this.doAsyncTask();
+        return consume(consume);
+    }
+
+    protected void doAsyncTask() {
         if (executor == null || consume == null) {
             throw new IllegalArgumentException();
         }
@@ -69,6 +77,14 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
         if (oneResult == null && one != null) {
             this.subOneTask(one);
         }
-        return consume(consume);
     }
+
+    public ExecutorService getExecutor() {
+        return executor;
+    }
+
+    public FutureResultHolder<ONE> getOneResult() {
+        return oneResult;
+    }
+
 }

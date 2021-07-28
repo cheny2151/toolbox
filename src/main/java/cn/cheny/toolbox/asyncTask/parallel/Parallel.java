@@ -1,5 +1,7 @@
 package cn.cheny.toolbox.asyncTask.parallel;
 
+import java.util.concurrent.ExecutorService;
+
 /**
  * 并行任务接口
  *
@@ -9,5 +11,29 @@ package cn.cheny.toolbox.asyncTask.parallel;
 public interface Parallel<R> {
 
     R start();
+
+    static <ONE, RESULT> OneParallel<ONE, RESULT> buildOne() {
+        return buildOne(null);
+    }
+
+    static <ONE, RESULT> OneParallel<ONE, RESULT> buildOne(ExecutorService executor) {
+        return new OneParallel<>(executor);
+    }
+
+    static <ONE, TWO, THREE, RESULT> ThreeParallel<ONE, TWO, THREE, RESULT> buildThree() {
+        return buildThree(null);
+    }
+
+    static <ONE, TWO, THREE, RESULT> ThreeParallel<ONE, TWO, THREE, RESULT> buildThree(ExecutorService executor) {
+        return new ThreeParallel<>(executor);
+    }
+
+    static <ONE, TWO, RESULT> TwoParallel<ONE, TWO, RESULT> buildTwo() {
+        return buildTwo(null);
+    }
+
+    static <ONE, TWO, RESULT> TwoParallel<ONE, TWO, RESULT> buildTwo(ExecutorService executor) {
+        return new TwoParallel<>(executor);
+    }
 
 }
