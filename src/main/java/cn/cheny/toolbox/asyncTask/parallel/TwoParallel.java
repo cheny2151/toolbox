@@ -55,7 +55,7 @@ public class TwoParallel<ONE, TWO, RESULT> extends OneParallel<ONE, RESULT> {
      * @param consume 两任务消费者
      * @return 消费执行结果
      */
-    public RESULT consume(TwoTaskConsume<ONE, TWO, RESULT> consume) {
+    public RESULT consume2(TwoTaskConsume<ONE, TWO, RESULT> consume) {
         FutureResultHolder<ONE> oneResult = getOneResult();
         if (oneResult == null || this.twoResult == null) {
             throw new ToolboxRuntimeException("undone one/two task");
@@ -67,7 +67,7 @@ public class TwoParallel<ONE, TWO, RESULT> extends OneParallel<ONE, RESULT> {
     @Override
     public RESULT start() {
         this.doAsyncTask();
-        return consume(consume);
+        return consume2(consume);
     }
 
     @Override

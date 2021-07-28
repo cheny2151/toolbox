@@ -55,7 +55,7 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
      * @param consume 三任务消费者
      * @return 消费执行结果
      */
-    public RESULT consumeThree(ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume) {
+    public RESULT consume3(ThreeTaskConsume<ONE, TWO, THREE, RESULT> consume) {
         FutureResultHolder<ONE> oneResult = getOneResult();
         FutureResultHolder<TWO> twoResult = getTwoResult();
         if (oneResult == null || twoResult == null || this.threeResult == null) {
@@ -68,7 +68,7 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
     @Override
     public RESULT start() {
         this.doAsyncTask();
-        return consumeThree(consume);
+        return consume3(consume);
     }
 
     @Override

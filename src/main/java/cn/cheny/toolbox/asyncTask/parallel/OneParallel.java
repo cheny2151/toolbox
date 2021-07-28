@@ -55,7 +55,7 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
      * @param consume 一任务消费者
      * @return 消费执行结果
      */
-    public RESULT consume(OneTaskConsume<ONE, RESULT> consume) {
+    public RESULT consume1(OneTaskConsume<ONE, RESULT> consume) {
         if (this.oneResult == null) {
             throw new ToolboxRuntimeException("undone one task");
         }
@@ -66,7 +66,7 @@ public class OneParallel<ONE, RESULT> implements Parallel<RESULT> {
     @Override
     public RESULT start() {
         this.doAsyncTask();
-        return consume(consume);
+        return consume1(consume);
     }
 
     protected void doAsyncTask() {
