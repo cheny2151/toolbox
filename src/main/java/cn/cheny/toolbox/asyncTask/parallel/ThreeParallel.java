@@ -74,8 +74,8 @@ public class ThreeParallel<ONE, TWO, THREE, RESULT> extends TwoParallel<ONE, TWO
     @Override
     protected void doAsyncTask() {
         super.doAsyncTask();
-        FutureResultHolder<THREE> twoResult = this.threeResult;
-        if (twoResult == null && three != null) {
+        FutureResultHolder<THREE> threeResult = this.threeResult;
+        if (threeResult == null && three != null) {
             this.subThreeTask(three);
         }
     }
