@@ -34,61 +34,99 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PathScanner {
 
-    /** class文件拓展名 */
+    /**
+     * class文件拓展名
+     */
     private final static String CLASS_EXTENSION = ".class";
 
-    /** file */
+    /**
+     * file
+     */
     private static final String URL_PROTOCOL_FILE = "file";
 
-    /** jar */
+    /**
+     * jar
+     */
     private static final String URL_PROTOCOL_JAR = "jar";
 
-    /** file url pre */
+    /**
+     * file url pre
+     */
     private static final String FILE_URL_PREFIX = "file:";
 
-    /** jar url pre */
+    /**
+     * jar url pre
+     */
     private static final String JAR_URL_PREFIX = "jar:";
 
-    /** jar extension */
+    /**
+     * jar extension
+     */
     private static final String JAR_FILE_EXTENSION = ".jar";
 
-    /** JAR ENTRY PRE */
+    /**
+     * JAR ENTRY PRE
+     */
     private static final String JAR_URL_ENTRY_PRE = "!/";
 
-    /** maven build jar: BOOT-INF url pre */
+    /**
+     * maven build jar: BOOT-INF url pre
+     */
     private static final String BOOT_INF_URL_PRE = "BOOT-INF/classes/";
 
-    /** maven build jar: META-INF pre */
+    /**
+     * maven build jar: META-INF pre
+     */
     private static final String META_INF_URL_PRE = "META-INF/classes/";
 
-    /** module-info.class */
+    /**
+     * module-info.class
+     */
     private static final String MODULE_INFO = "module-info.class";
 
-    /** .class长度 */
+    /**
+     * .class长度
+     */
     private static final int CLASS_END_LEN = 6;
 
-    /** 空路径 */
+    /**
+     * 空路径
+     */
     private final static String EMPTY_PATH = "";
 
-    /** package分隔符 */
+    /**
+     * package分隔符
+     */
     private final static String PACKAGE_SEPARATE_CHARACTER = ".";
 
-    /** url分隔符 */
+    /**
+     * url分隔符
+     */
     private final static String URL_SEPARATE_CHARACTER = "/";
 
-    /** 系统文件分隔符 */
+    /**
+     * 系统文件分隔符
+     */
     private final static String PATH_SEPARATE = System.getProperty("path.separator");
 
-    /** 是否扫描第三方jar包 */
+    /**
+     * 是否扫描第三方jar包
+     */
     private boolean scanAllJar = false;
 
-    /** 判断是否加载某个jar包 */
+    /**
+     * 判断是否加载某个jar包
+     */
     private IsLoadingJar isLoadingJar;
 
-    /** 过滤器 */
+    /**
+     * 过滤器
+     */
     private ScanFilter scanFilter;
 
-    /** classLoader */
+    /**
+     * classLoader
+     */
     private ClassLoader classLoader;
 
     public PathScanner() {
@@ -318,28 +356,26 @@ public class PathScanner {
     private void loadResourcesInJar(JarUrl jarUrl, List<Class<?>> result)
             throws IOException {
         URL firstJar = jarUrl.getFirstJar();
-        JarFile jarFile;
-        try {
-            jarFile = new JarFile(new File(firstJar.getFile()));
+        try (JarFile jarFile = new JarFile(new File(firstJar.getFile()))) {
+            String targetUrl = jarUrl.getTargetUrl();
+            if (jarUrl.getNextJar() != null) {
+                JarEntry targetEntry = jarFile.getJarEntry(jarUrl.getNextJar());
+                try (InputStream inputStream = jarFile.getInputStream(targetEntry);
+                     JarInputStream innerJarInputStream = new JarInputStream(inputStream)) {
+                    JarEntry nextJarEntry;
+                    while ((nextJarEntry = innerJarInputStream.getNextJarEntry()) != null) {
+                        addIfTargetCLass(nextJarEntry, targetUrl, result);
+                    }
+                }
+            } else {
+                Enumeration<JarEntry> entries = jarFile.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry nextJarEntry = entries.nextElement();
+                    addIfTargetCLass(nextJarEntry, targetUrl, result);
+                }
+            }
         } catch (Exception e) {
             log.error("加载jar包异常:{}", e.getMessage());
-            return;
-        }
-        String targetUrl = jarUrl.getTargetUrl();
-        if (jarUrl.getNextJar() != null) {
-            JarEntry targetEntry = jarFile.getJarEntry(jarUrl.getNextJar());
-            InputStream inputStream = jarFile.getInputStream(targetEntry);
-            JarInputStream innerJarInputStream = new JarInputStream(inputStream);
-            JarEntry nextJarEntry;
-            while ((nextJarEntry = innerJarInputStream.getNextJarEntry()) != null) {
-                addIfTargetCLass(nextJarEntry, targetUrl, result);
-            }
-        } else {
-            Enumeration<JarEntry> entries = jarFile.entries();
-            while (entries.hasMoreElements()) {
-                JarEntry nextJarEntry = entries.nextElement();
-                addIfTargetCLass(nextJarEntry, targetUrl, result);
-            }
         }
     }
 
@@ -619,10 +655,14 @@ public class PathScanner {
      */
     public static class ClassFilterVisitor extends ClassVisitor {
 
-        /** 字节码类描述符前缀: 'L' */
+        /**
+         * 字节码类描述符前缀: 'L'
+         */
         private final static String CLASS_SIGNATURE_PRE = "L";
 
-        /** 字节码类描述符后缀: ';' */
+        /**
+         * 字节码类描述符后缀: ';'
+         */
         private final static String CLASS_SIGNATURE_TAIL = ";";
 
         private boolean passVisit;
