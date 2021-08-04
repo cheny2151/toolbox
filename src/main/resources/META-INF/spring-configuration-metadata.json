@@ -69,7 +69,7 @@
       "name": "toolbox.default.scannerInAllJar",
       "type": "java.lang.Boolean",
       "defaultValue": false,
-      "description": "A default scanner in all path for PathScanner."
+      "description": "A default is scanner in all path for PathScanner."
     }
   ],
   "hints": []
