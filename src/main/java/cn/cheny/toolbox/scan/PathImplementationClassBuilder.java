@@ -44,8 +44,18 @@ public class PathImplementationClassBuilder {
      * @param path 指定目录（'.'或'/'作为分隔符）
      * @return super class实现类集合
      */
+    public static <T> Collection<T> createInstances(String path, boolean scanAllJar, Class<T> superClass, Class<?>... annotations) throws ScanException {
+        return createInstances(path, scanAllJar, null, superClass, annotations);
+    }
+
+    /**
+     * 指定path，扫描接口实现类并实例化
+     *
+     * @param path 指定目录（'.'或'/'作为分隔符）
+     * @return super class实现类集合
+     */
     public static <T> Collection<T> createInstances(String path, Class<T> superClass, Class<?>... annotations) throws ScanException {
-        return createInstances(path, true, null, superClass, annotations);
+        return createInstances(path, false, null, superClass, annotations);
     }
 
     /**

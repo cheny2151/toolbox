@@ -64,6 +64,12 @@
       "type": "java.lang.String",
       "defaultValue": "",
       "description": "A default scanner path for PathScanner."
+    },{
+      "sourceType": "cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties",
+      "name": "toolbox.default.scannerInAllJar",
+      "type": "java.lang.Boolean",
+      "defaultValue": false,
+      "description": "A default scanner in all path for PathScanner."
     }
   ],
   "hints": []

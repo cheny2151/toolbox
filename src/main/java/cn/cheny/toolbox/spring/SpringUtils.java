@@ -46,7 +46,8 @@ public class SpringUtils implements ApplicationContextAware {
             List<SpringUtilsAware> awares = new ArrayList<>();
             try {
                 Collection<SpringUtilsAware> customized =
-                        PathImplementationClassBuilder.createInstances(toolboxDefaultProperties.getScannerPath(), SpringUtilsAware.class);
+                        PathImplementationClassBuilder.createInstances(toolboxDefaultProperties.getScannerPath(),
+                                toolboxDefaultProperties.isScannerInAllJar(), SpringUtilsAware.class);
                 if (customized.size() > 0) {
                     awares.addAll(customized);
                 }

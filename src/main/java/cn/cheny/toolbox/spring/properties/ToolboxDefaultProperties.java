@@ -17,7 +17,11 @@ public class ToolboxDefaultProperties {
 
     private final static String DEFAULT_SCANNER_PATH = "";
 
+    private final static boolean DEFAULT_SCANNER_IN_ALL_JAR = false;
+
     private String scannerPath = DEFAULT_SCANNER_PATH;
+
+    private boolean scannerInAllJar = DEFAULT_SCANNER_IN_ALL_JAR;
 
     private Boolean filterUnderline;
 
