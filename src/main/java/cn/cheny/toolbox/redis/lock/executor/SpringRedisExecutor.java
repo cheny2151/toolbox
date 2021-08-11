@@ -91,13 +91,20 @@ public class SpringRedisExecutor implements RedisExecutor {
 
                 Object nativeConnection = redisConnection.getNativeConnection();
                 Object result;
-                if (connectionModel == CONNECTION_JEDIS || tryJedis(nativeConnection)) {
+                if (connectionModel == CONNECTION_UNCHECK &&
+                        !tryJedis(nativeConnection) &&
+                        !tryJedisCluster(nativeConnection) &&
+                        !tryLettuce(nativeConnection)) {
+                    throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
+                            + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
+                }
+                if (connectionModel == CONNECTION_JEDIS) {
                     // jedis单机模式
                     result = ((Jedis) nativeConnection).eval(script, finalKeys, finalArgs);
-                } else if (connectionModel == CONNECTION_JEDISCLUSTER || tryJedisCluster(nativeConnection)) {
+                } else if (connectionModel == CONNECTION_JEDISCLUSTER) {
                     // jedis集群模式
                     result = ((JedisCluster) nativeConnection).eval(script, finalKeys, finalArgs);
-                } else if (connectionModel == CONNECTION_LETTUCE || tryLettuce(nativeConnection)) {
+                } else {
                     // lettuce
                     try {
                         @SuppressWarnings("unchecked")
@@ -113,15 +120,14 @@ public class SpringRedisExecutor implements RedisExecutor {
                         }
                         throw new RedisScriptException("Error running redis lua script", e);
                     }
-                } else {
-                    throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
-                            + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
                 }
                 return result;
             });
-        } catch (RedisRuntimeException rre) {
+        } catch (
+                RedisRuntimeException rre) {
             throw rre;
-        } catch (Throwable e) {
+        } catch (
+                Throwable e) {
             throw new RedisScriptException("Error running redis lua script", e);
         }
 
