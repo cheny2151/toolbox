@@ -18,11 +18,11 @@ public abstract class BaseResourceManager<R> implements ResourceManager<R> {
     protected ScheduledExecutorService checkWorker = Executors.newSingleThreadScheduledExecutor();
 
     public BaseResourceManager() {
-        this(DEFAULT_DELAY_SECONDS);
+        this(DEFAULT_DELAY_SECONDS, TimeUnit.SECONDS);
     }
 
-    public BaseResourceManager(long checkPeriod) {
-        checkWorker.scheduleAtFixedRate(this.checkTask(), DEFAULT_DELAY_SECONDS, checkPeriod, TimeUnit.SECONDS);
+    public BaseResourceManager(long checkPeriod, TimeUnit timeUnit) {
+        checkWorker.scheduleAtFixedRate(this.checkTask(), checkPeriod, checkPeriod, timeUnit);
     }
 
     private Runnable checkTask() {

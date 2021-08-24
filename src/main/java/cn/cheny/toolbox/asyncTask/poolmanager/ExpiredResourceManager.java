@@ -2,10 +2,10 @@ package cn.cheny.toolbox.asyncTask.poolmanager;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author cheney
@@ -27,10 +27,6 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
 
     private volatile SimpleLinkList<ResourceWithExpired<R>> readList;
 
-    private final Lock writeLock = new ReentrantLock();
-
-    private final Lock readLock = new ReentrantLock();
-
     private final AtomicInteger status = new AtomicInteger(0);
 
     public ExpiredResourceManager(long defaultExpiredTime, TimeUnit timeUnit) {
@@ -38,7 +34,7 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
     }
 
     public ExpiredResourceManager(long checkPeriod, long defaultExpiredTime, TimeUnit timeUnit) {
-        super(checkPeriod);
+        super(checkPeriod, timeUnit);
         this.defaultExpiredMillis = timeUnit.toMillis(defaultExpiredTime);
         this.writeList = new SimpleLinkList<>();
         this.readList = new SimpleLinkList<>();
@@ -51,20 +47,11 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
             throw new IllegalArgumentException();
         }
         ResourceWithExpired<R> rwe = new ResourceWithExpired<>(resource, getExpiredTime());
-        boolean locked = false;
-        try {
-            if (locked = writeLock.tryLock(10, TimeUnit.MILLISECONDS)) {
-                writeList.push(rwe);
-                return true;
-            }
-        } catch (InterruptedException interruptedException) {
-            // do nothing
-        } finally {
-            if (locked) {
-                writeLock.unlock();
-            }
+        if (status.get() == REVERSING_STATUS) {
+            return false;
         }
-        return false;
+        writeList.push(rwe);
+        return true;
     }
 
     @Override
@@ -77,7 +64,11 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
                 poll = tryPoll(this.readList);
             }
             if (poll != null) {
-                return poll.getResource();
+                R resource = poll.getResource();
+                if (poll.getUseTime() > 1) {
+                    System.out.println("poll time:" + poll.getUseTime());
+                }
+                return resource;
             }
         } catch (ToolboxRuntimeException e) {
             // do nothing
@@ -86,29 +77,20 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
     }
 
     private ResourceWithExpired<R> tryPoll(SimpleLinkList<ResourceWithExpired<R>> linkList) {
-        boolean locked = false;
-        try {
-            if (locked = readLock.tryLock(10, TimeUnit.MILLISECONDS)) {
-                ResourceWithExpired<R> poll;
-                while ((poll = linkList.poll()) != null) {
-                    if (poll.isExpired()) {
-                        // 补偿过期逻辑
-                        linkList.clear();
-                    }
-                    if (!poll.isPolled()) {
-                        break;
-                    }
-                }
-                return poll;
+        if (status.get() == REVERSING_STATUS) {
+            return null;
+        }
+        ResourceWithExpired<R> poll;
+        while ((poll = linkList.poll()) != null) {
+            if (poll.isExpired()) {
+                // 补偿过期逻辑
+                linkList.clear();
             }
-        } catch (InterruptedException interruptedException) {
-            // do nothing
-        } finally {
-            if (locked) {
-                readLock.unlock();
+            if (!poll.isPolled()) {
+                break;
             }
         }
-        throw new ToolboxRuntimeException();
+        return poll;
     }
 
     private boolean tryReverse(SimpleLinkList<ResourceWithExpired<R>> readList) {
@@ -148,26 +130,17 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
                     SimpleLinkList<ResourceWithExpired<R>> writeList = this.writeList;
                     SimpleLinkList.Node<ResourceWithExpired<R>> startExpiredInWrite = labelExpiredNode(writeList, currentTimeMillis);
                     if (startExpiredInWrite != null) {
-                        try {
-                            writeLock.lock();
-                            writeList.clearAfterNode(startExpiredInWrite);
-                        } finally {
-                            writeLock.unlock();
-                        }
+                        writeList.clearAfterNode(startExpiredInWrite);
                     }
                     SimpleLinkList<ResourceWithExpired<R>> readList = this.readList;
                     SimpleLinkList.Node<ResourceWithExpired<R>> startExpiredInRead = labelExpiredNode(readList, currentTimeMillis);
                     if (startExpiredInRead != null) {
-                        try {
-                            readLock.lock();
-                            readList.clearAfterNode(startExpiredInRead);
-                        } finally {
-                            readLock.unlock();
-                        }
+                        readList.clearAfterNode(startExpiredInRead);
                     }
                 } finally {
                     status.compareAndSet(CLEARING_STATUS, NORMAL_STATUS);
                 }
+                break;
             }
         }
     }
@@ -205,6 +178,22 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
 
         private Node<E> head;
         private Node<E> tail;
+        private static VarHandle NODE_NEXT;
+        private static VarHandle NODE_PRE;
+        private static VarHandle HEAD;
+        private static VarHandle TAIL;
+
+        static {
+            MethodHandles.Lookup lookup = MethodHandles.lookup();
+            try {
+                NODE_NEXT = lookup.findVarHandle(Node.class, "next", Node.class);
+                NODE_PRE = lookup.findVarHandle(Node.class, "prev", Node.class);
+                HEAD = lookup.findVarHandle(SimpleLinkList.class, "head", Node.class);
+                TAIL = lookup.findVarHandle(SimpleLinkList.class, "tail", Node.class);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         private static class Node<E> {
             E item;
@@ -219,18 +208,38 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
         }
 
         public void push(E e) {
-            final Node<E> f = head;
-            final Node<E> newNode = new Node<>(null, e, f);
-            head = newNode;
-            if (f == null)
-                tail = newNode;
-            else
-                f.prev = newNode;
+            VarHandle.acquireFence();
+            Node<E> newNode;
+            for (; ; ) {
+                final Node<E> f = head;
+                if (HEAD.compareAndSet(this, f, newNode = new Node<>(null, e, f))) {
+                    if (f == null) {
+                        TAIL.compareAndSet(this, null, newNode);
+                    } else {
+                        f.prev = newNode;
+                    }
+                    return;
+                }
+            }
         }
 
         public E poll() {
-            final Node<E> f = head;
-            return (f == null) ? null : unlinkFirst(f);
+            Node<E> f;
+            VarHandle.acquireFence();
+            while ((f = head) != null) {
+                final Node<E> next = f.next;
+                if (HEAD.compareAndSet(this, f, next)) {
+                    E element = f.item;
+                    f.item = null;
+                    f.next = null;
+                    if (next == null)
+                        TAIL.compareAndSet(this, f, null);
+                    else
+                        NODE_NEXT.compareAndSet(next, f, null);
+                    return element;
+                }
+            }
+            return null;
         }
 
         public void clear() {
@@ -246,23 +255,10 @@ public class ExpiredResourceManager<R> extends BaseResourceManager<R> {
         public void clearAfterNode(Node<E> node) {
             Node<E> prev = node.prev;
             if (prev == null) {
-                head = null;
+                head = tail = null;
             } else {
                 prev.next = null;
             }
-        }
-
-        private E unlinkFirst(Node<E> f) {
-            final E element = f.item;
-            final Node<E> next = f.next;
-            f.item = null;
-            f.next = null;
-            head = next;
-            if (next == null)
-                tail = null;
-            else
-                next.prev = null;
-            return element;
         }
 
     }

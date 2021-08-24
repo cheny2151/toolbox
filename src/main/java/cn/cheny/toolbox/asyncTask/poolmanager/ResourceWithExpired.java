@@ -2,6 +2,8 @@ package cn.cheny.toolbox.asyncTask.poolmanager;
 
 import lombok.Data;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * @author cheney
  * @date 2021-08-14
@@ -19,6 +21,8 @@ public class ResourceWithExpired<R> {
 
     private volatile int status;
 
+    private volatile AtomicInteger useTime = new AtomicInteger();
+
     public ResourceWithExpired(R resource, long expiredTime) {
         this.resource = resource;
         this.expiredTime = expiredTime;
@@ -26,6 +30,7 @@ public class ResourceWithExpired<R> {
     }
 
     public R getResource() {
+        this.useTime.incrementAndGet();
         this.status = POLLED;
         return resource;
     }
@@ -36,5 +41,9 @@ public class ResourceWithExpired<R> {
 
     public boolean isExpired(){
         return this.status == EXPIRED;
+    }
+
+    public int getUseTime() {
+        return useTime.get();
     }
 }

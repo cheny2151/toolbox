@@ -33,7 +33,7 @@
     <version>2.2.8-jdk8</version>
 
     <properties>
-        <java.version>1.8</java.version>
+        <java.version>11</java.version>
         <test.skip>true</test.skip>
 
         <compiler-plugin.version>3.7.0</compiler-plugin.version>
