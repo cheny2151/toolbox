@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.asyncTask;
 
-import cn.cheny.toolbox.asyncTask.poolmanager.ExpiredResourceManager;
+import cn.cheny.toolbox.asyncTask.poolmanager.ExpiredResourceLinkManager;
 import org.junit.Test;
 
 import java.util.concurrent.ExecutorService;
@@ -16,16 +16,16 @@ public class ResourceManagerTest {
 
     @Test
     public void test() throws InterruptedException {
-        ExpiredResourceManager<Integer> manager = new ExpiredResourceManager<>(20000, 20000, TimeUnit.MILLISECONDS);
+        ExpiredResourceLinkManager<Integer> manager = new ExpiredResourceLinkManager<>(20, 2000, TimeUnit.MILLISECONDS);
         ExecutorService executorService = Executors.newFixedThreadPool(1000);
         AtomicInteger fail = new AtomicInteger(0);
         AtomicInteger success = new AtomicInteger(0);
         for (int i = 0; i < 200; i++) {
             int finalI = i;
             executorService.execute(() -> {
-                for (int j = 0; j < 100; j++) {
+                for (int j = 0; j < 300; j++) {
 //                    try {
-//                        Thread.sleep(3);
+//                        Thread.sleep(1);
 //                    } catch (InterruptedException e) {
 //                        e.printStackTrace();
 //                    }
@@ -59,6 +59,7 @@ public class ResourceManagerTest {
                     System.out.println(integer2.get());
                     System.out.println(success.get());
                     System.out.println(fail.get());
+                    System.out.println(manager.poll());
                 }
             });
         }
