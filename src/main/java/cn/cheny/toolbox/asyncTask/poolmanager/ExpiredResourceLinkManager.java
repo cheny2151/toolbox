@@ -144,7 +144,6 @@ public class ExpiredResourceLinkManager<R> extends BaseResourceManager<R> {
             if ((item = f.item) != null) {
                 if (item.getExpiredTime() <= expiredTime) {
                     if (SimpleLinkList.HEAD.compareAndSet(linkList, f, null)) {
-                        System.out.println("clear 1");
                         SimpleLinkList.clearNodeLink(f);
                         break;
                     }
@@ -155,7 +154,6 @@ public class ExpiredResourceLinkManager<R> extends BaseResourceManager<R> {
                         }
                         if (item.getExpiredTime() <= expiredTime) {
                             if (SimpleLinkList.NEXT_NODE.compareAndSet(f, n, null)) {
-                                System.out.println("clear 2");
                                 SimpleLinkList.clearNodeLink(n);
                                 break out;
                             }
