@@ -132,6 +132,8 @@ public class ExpiredResourceLinkManager<R> extends BaseResourceManager<R> {
     public void close() {
         status.set(CLOSE_STATUS);
         checkWorker.shutdownNow();
+        writeList.clear();
+        readList.clear();
     }
 
     private void clearExpiredNode(SimpleLinkList<ResourceWithExpired<R>> linkList, long expiredTime) {
