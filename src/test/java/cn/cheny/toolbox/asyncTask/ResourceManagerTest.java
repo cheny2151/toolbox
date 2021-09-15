@@ -16,14 +16,14 @@ public class ResourceManagerTest {
 
     @Test
     public void test() throws InterruptedException {
-        ExpiredResourceLinkManager<Integer> manager = new ExpiredResourceLinkManager<>(20, 2000, TimeUnit.MILLISECONDS);
+        ExpiredResourceLinkManager<Integer> manager = new ExpiredResourceLinkManager<>(200, 200000, TimeUnit.MILLISECONDS);
         ExecutorService executorService = Executors.newFixedThreadPool(1000);
         AtomicInteger fail = new AtomicInteger(0);
         AtomicInteger success = new AtomicInteger(0);
         for (int i = 0; i < 200; i++) {
             int finalI = i;
             executorService.execute(() -> {
-                for (int j = 0; j < 300; j++) {
+                for (int j = 0; j < 30000; j++) {
 //                    try {
 //                        Thread.sleep(1);
 //                    } catch (InterruptedException e) {
@@ -42,7 +42,7 @@ public class ResourceManagerTest {
         AtomicInteger integer2 = new AtomicInteger(0);
         for (int i = 0; i < 200; i++) {
             executorService.execute(() -> {
-                for (int j = 0; j < 100000; j++) {
+                for (int j = 0; j < 100000000; j++) {
 //                    try {
 //                        Thread.sleep(1);
 //                    } catch (InterruptedException e) {
