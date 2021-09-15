@@ -418,7 +418,7 @@ public class AsyncConsumeTaskDealer {
         return () -> {
             try {
                 TaskPackage<List<T>> taskPackage;
-                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(5, TimeUnit.MILLISECONDS)) != null || !finish) {
                     if (interrupted) {
                         continue;
                     }
@@ -456,7 +456,7 @@ public class AsyncConsumeTaskDealer {
             List<TaskPackage<List<R>>> rs = new ArrayList<>();
             TaskPackage<List<T>> taskPackage;
             try {
-                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(5, TimeUnit.MILLISECONDS)) != null || !finish) {
                     if (interrupted) {
                         continue;
                     }
@@ -750,7 +750,7 @@ public class AsyncConsumeTaskDealer {
 
     @Data
     @AllArgsConstructor
-    protected static class TaskPackage<DT> {
+    public static class TaskPackage<DT> {
         private DT data;
         private int index;
     }
