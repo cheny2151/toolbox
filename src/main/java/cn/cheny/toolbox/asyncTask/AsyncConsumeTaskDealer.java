@@ -402,6 +402,12 @@ public class AsyncConsumeTaskDealer {
         } catch (InterruptedException e) {
             // do nothing
         } finally {
+            try {
+                // 保证消费者获取到数据后才退出
+                Thread.sleep(2);
+            } catch (InterruptedException e) {
+                // do thing
+            }
             finish = true;
         }
     }
@@ -418,7 +424,7 @@ public class AsyncConsumeTaskDealer {
         return () -> {
             try {
                 TaskPackage<List<T>> taskPackage;
-                while ((taskPackage = queue.poll(5, TimeUnit.MILLISECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !finish) {
                     if (interrupted) {
                         continue;
                     }
@@ -456,7 +462,7 @@ public class AsyncConsumeTaskDealer {
             List<TaskPackage<List<R>>> rs = new ArrayList<>();
             TaskPackage<List<T>> taskPackage;
             try {
-                while ((taskPackage = queue.poll(5, TimeUnit.MILLISECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !finish) {
                     if (interrupted) {
                         continue;
                     }
@@ -516,6 +522,8 @@ public class AsyncConsumeTaskDealer {
                 queue.put(taskPackage);
             }
         } finally {
+            // 保证消费者获取到数据后才退出
+            Thread.sleep(2);
             finish = true;
         }
     }
@@ -554,6 +562,8 @@ public class AsyncConsumeTaskDealer {
                 queue.put(taskPackage);
             }
         } finally {
+            // 保证消费者获取到数据后才退出
+            Thread.sleep(2);
             finish = true;
         }
     }
