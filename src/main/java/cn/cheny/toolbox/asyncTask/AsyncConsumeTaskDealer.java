@@ -5,6 +5,7 @@ import cn.cheny.toolbox.asyncTask.exception.TaskInterruptedException;
 import cn.cheny.toolbox.asyncTask.function.*;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.NamePrefixThreadFactory;
+import cn.cheny.toolbox.other.order.Orders;
 import cn.cheny.toolbox.other.page.ExtremumLimit;
 import cn.cheny.toolbox.other.page.Limit;
 import lombok.AllArgsConstructor;
@@ -31,6 +32,11 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 public class AsyncConsumeTaskDealer {
+
+    /**
+     * 默认数据排序类型
+     */
+    private final static Orders.OrderType DEFAULT_SORT_TYPE = Orders.OrderType.asc;
 
     /**
      * 默认线程个数
@@ -84,6 +90,11 @@ public class AsyncConsumeTaskDealer {
      */
     protected boolean continueWhereSliceTaskError;
 
+    /**
+     * 数据读取顺序
+     */
+    private Orders.OrderType orderType;
+
     public AsyncConsumeTaskDealer() {
         this(DEFAULT_THREAD_NUM, false, false);
     }
@@ -101,6 +112,7 @@ public class AsyncConsumeTaskDealer {
         this.mainHelpTask = mainHelpTask;
         this.continueWhereSliceTaskError = continueWhereSliceTaskError;
         this.threadName = DEFAULT_THREAD_NAME;
+        this.orderType = DEFAULT_SORT_TYPE;
         threadNum(threadNum);
     }
 
@@ -506,17 +518,22 @@ public class AsyncConsumeTaskDealer {
         int index = 0;
         try {
             Limit limit = Limit.create(0, step);
-            while (count > 0) {
-                if (interrupted) {
-                    break;
+            boolean asc = orderType.equals(Orders.OrderType.asc);
+            int size = step;
+            int amount = count;
+            int curNum = asc ? -1 * step : count;
+            int add = asc ? step : step * -1;
+            while (amount > 0 && !interrupted) {
+                if (amount < step) {
+                    size = amount;
+                    limit.setSize(size);
                 }
-                if (count >= step) {
-                    limit.setNum(count -= step);
-                } else {
-                    limit.setNum(0);
-                    limit.setSize(count);
-                    count -= step;
+                curNum += add;
+                if (curNum < 0) {
+                    curNum = 0;
                 }
+                amount -= size;
+                limit.setNum(curNum);
                 List<T> data = findDataFunction.findData(limit);
                 TaskPackage<List<T>> taskPackage = new TaskPackage<>(data, index++);
                 queue.put(taskPackage);
@@ -631,6 +648,11 @@ public class AsyncConsumeTaskDealer {
 
     public AsyncConsumeTaskDealer continueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
         this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+        return this;
+    }
+
+    public AsyncConsumeTaskDealer type(Orders.OrderType type) {
+        this.orderType = type;
         return this;
     }
 

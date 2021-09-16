@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.asyncTask;
 
 import cn.cheny.toolbox.asyncTask.function.Producer;
+import cn.cheny.toolbox.other.order.Orders;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -16,7 +17,7 @@ import java.util.stream.Collectors;
 public class ArrayBlockTaskDealerDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        demo4();
+        orderType();
     }
 
     public static void demo1() throws InterruptedException {
@@ -24,30 +25,30 @@ public class ArrayBlockTaskDealerDemo {
         AsyncConsumeTaskDealer taskDealer = new AsyncConsumeTaskDealer(8, true);
         AsyncConsumeTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.threadName("test").continueWhereSliceTaskError(false)
                 .submit(() -> 2000, limit -> {
-            System.out.println(Thread.currentThread().getName() + ":put data");
-            int num = limit.getNum();
-            ArrayList<HashMap<String, Object>> hashMaps = new ArrayList<>();
-            for (int i = 0; i < limit.getSize(); i++) {
-                HashMap<String, Object> hashMap = new HashMap<>();
-                hashMap.put("num", num + i);
-                hashMaps.add(hashMap);
-            }
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            return hashMaps;
-        }, data -> {
-            int i = 1/0;
-            try {
-                System.out.println(Thread.currentThread().getName() + ":" + data.size());
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            return data;
-        }, 100);
+                    System.out.println(Thread.currentThread().getName() + ":put data");
+                    int num = limit.getNum();
+                    ArrayList<HashMap<String, Object>> hashMaps = new ArrayList<>();
+                    for (int i = 0; i < limit.getSize(); i++) {
+                        HashMap<String, Object> hashMap = new HashMap<>();
+                        hashMap.put("num", num + i);
+                        hashMaps.add(hashMap);
+                    }
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    return hashMaps;
+                }, data -> {
+                    int i = 1 / 0;
+                    try {
+                        System.out.println(Thread.currentThread().getName() + ":" + data.size());
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    return data;
+                }, 100);
         List<HashMap<String, Object>> results = futureResult.getResults();
         System.out.println(results.size());
         System.out.println(System.currentTimeMillis() - l);
@@ -110,16 +111,30 @@ public class ArrayBlockTaskDealerDemo {
 
     public static void demo4() {
         AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, false);
-        AsyncConsumeTaskDealer.FutureResult<Integer> futureResult =  asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
+        AsyncConsumeTaskDealer.FutureResult<Integer> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
                 .submit((Producer<String>) publish -> {
-            for (int i = 0; i < 2000; i++) {
-                publish.push("test" + i);
-            }
-        }, text -> {
-            System.out.println(text.get(0));
-            return Collections.singletonList(text.size());
-        });
+                    for (int i = 0; i < 2000; i++) {
+                        publish.push("test" + i);
+                    }
+                }, text -> {
+                    System.out.println(text.get(0));
+                    return Collections.singletonList(text.size());
+                });
         System.out.println(futureResult.getResults());
+    }
+
+    public static void orderType() {
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < 2000; i++) {
+            list.add("test" + i);
+        }
+        AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, true);
+        AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
+                .type(Orders.OrderType.desc)
+                .map(list, 100, e -> e);
+        List<String> results = futureResult.getResults();
+        results.forEach(System.out::println);
+        System.out.println(results.size());
     }
 
     private static class TestEntity implements ExtremumField<Integer> {
