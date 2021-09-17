@@ -415,7 +415,7 @@ public class ReflectUtils {
         try {
             return field.get(obj);
         } catch (IllegalAccessException e) {
-            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass());
+            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass(), e);
         }
     }
 
@@ -429,7 +429,7 @@ public class ReflectUtils {
         try {
             field.set(obj, val);
         } catch (IllegalAccessException e) {
-            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass());
+            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass(), e);
         }
     }
 
@@ -448,7 +448,7 @@ public class ReflectUtils {
                     clazz.getConstructor().newInstance() :
                     clazz.getConstructor(parameterClass).newInstance(args);
         } catch (Exception e) {
-            throw new ReflectException("reflect:can no new object");
+            throw new ReflectException("reflect:can no new object", e);
         }
     }
 
