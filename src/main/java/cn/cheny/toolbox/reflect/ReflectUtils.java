@@ -460,7 +460,9 @@ public class ReflectUtils {
      */
     public static boolean isReadMethod(Method method) {
         String methodName = method.getName();
-        if (methodName.startsWith(GET_PRE) || methodName.startsWith(IS_PRE)) {
+        int len = methodName.length();
+        if ((methodName.startsWith(GET_PRE) && len > 3) ||
+                (methodName.startsWith(IS_PRE) && len > 2)) {
             return method.getParameterCount() == 0 && !void.class.equals(method.getReturnType());
         }
         return false;
@@ -495,10 +497,9 @@ public class ReflectUtils {
      */
     public static boolean isWriteMethod(Method method) {
         String methodName = method.getName();
-        if (methodName.startsWith(SET_PRE)) {
-            return method.getParameterCount() == 1 && void.class.equals(method.getReturnType());
-        }
-        return false;
+        return methodName.startsWith(SET_PRE) &&
+                methodName.length() > 3 &&
+                method.getParameterCount() == 1;
     }
 
     public static boolean isWrapForm(Class<?> warp, Class<?> base) {
