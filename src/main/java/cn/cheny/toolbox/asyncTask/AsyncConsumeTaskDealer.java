@@ -651,7 +651,7 @@ public class AsyncConsumeTaskDealer {
         return this;
     }
 
-    public AsyncConsumeTaskDealer type(Orders.OrderType type) {
+    public AsyncConsumeTaskDealer orderType(Orders.OrderType type) {
         this.orderType = type;
         return this;
     }

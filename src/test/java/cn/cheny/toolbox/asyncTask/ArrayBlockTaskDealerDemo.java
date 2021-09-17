@@ -125,13 +125,13 @@ public class ArrayBlockTaskDealerDemo {
 
     public static void orderType() {
         ArrayList<String> list = new ArrayList<>();
-        for (int i = 0; i < 2000; i++) {
+        for (int i = 0; i < 2001; i++) {
             list.add("test" + i);
         }
         AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, true);
         AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
-                .type(Orders.OrderType.desc)
-                .map(list, 100, e -> e);
+                .orderType(Orders.OrderType.desc)
+                .map(list, 1, e -> e);
         List<String> results = futureResult.getResults();
         results.forEach(System.out::println);
         System.out.println(results.size());
