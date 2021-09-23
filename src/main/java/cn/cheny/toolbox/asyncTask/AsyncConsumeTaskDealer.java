@@ -607,6 +607,11 @@ public class AsyncConsumeTaskDealer {
         }
         finish = false;
         interrupted = false;
+        interruptedCause = null;
+    }
+
+    public Throwable getInterruptedCause() {
+        return interruptedCause;
     }
 
     public int getThreadNum() {
