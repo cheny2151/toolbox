@@ -441,7 +441,7 @@ public class AsyncConsumeTaskDealer {
                         continue;
                     }
                     try {
-                        if (taskPackage != null) {
+                        if (taskPackage != null && taskPackage.getData() != null) {
                             asyncTask.execute(taskPackage.getData());
                         }
                     } catch (Throwable e) {
@@ -479,7 +479,7 @@ public class AsyncConsumeTaskDealer {
                         continue;
                     }
                     try {
-                        if (taskPackage != null) {
+                        if (taskPackage != null && taskPackage.getData() != null) {
                             List<R> taskResult = asyncTaskWithResult.execute(taskPackage.getData());
                             if (taskResult != null) {
                                 rs.add(new TaskPackage<>(taskResult, taskPackage.getIndex()));

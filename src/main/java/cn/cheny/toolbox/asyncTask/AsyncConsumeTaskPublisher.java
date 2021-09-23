@@ -76,7 +76,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                         continue;
                     }
                     try {
-                        if (taskPackage != null) {
+                        if (taskPackage != null && taskPackage.getData() != null) {
                             List<R> taskResult = asyncTaskWithResult.execute(taskPackage.getData());
                             if (taskResult != null) {
                                 resultQueue.put(new TaskPackage<>(taskResult, taskPackage.getIndex()));
