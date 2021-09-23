@@ -8,7 +8,6 @@ import cn.cheny.toolbox.other.NamePrefixThreadFactory;
 import cn.cheny.toolbox.other.order.Orders;
 import cn.cheny.toolbox.other.page.ExtremumLimit;
 import cn.cheny.toolbox.other.page.Limit;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections.CollectionUtils;
@@ -16,6 +15,7 @@ import org.apache.commons.collections.CollectionUtils;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 异步多线程消费任务处理器
@@ -446,7 +446,7 @@ public class AsyncConsumeTaskDealer {
                         }
                     } catch (Throwable e) {
                         if (continueWhereSliceTaskError) {
-                            log.error("执行任务分片异常", e);
+                            log.error("执行任务分片异常,任务继续", e);
                         } else {
                             this.interrupted = true;
                             this.interruptedCause = e;
@@ -487,11 +487,12 @@ public class AsyncConsumeTaskDealer {
                         }
                     } catch (Throwable e) {
                         if (continueWhereSliceTaskError) {
-                            log.error("执行任务分片异常", e);
+                            log.error("执行任务分片异常,任务继续", e);
                         } else {
                             this.interrupted = true;
                             this.interruptedCause = e;
                         }
+                        rs.add(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhereSliceTaskError, e));
                     }
                 }
             } catch (InterruptedException e) {
@@ -701,8 +702,14 @@ public class AsyncConsumeTaskDealer {
                     throw new ToolboxRuntimeException("Fail to do Future#get()", ex);
                 }
             }).sorted(Comparator.comparingInt(TaskPackage::getIndex))
-                    .flatMap(taskPackage -> taskPackage.getData().stream())
-                    .collect(Collectors.toList());
+                    .flatMap(taskPackage -> {
+                        if (taskPackage.isInterrupted()) {
+                            Throwable error = taskPackage.getError();
+                            throw new TaskInterruptedException("任务运行异常终止:" + error.getMessage(), error);
+                        }
+                        List<R> data = taskPackage.getData();
+                        return data == null ? Stream.empty() : data.stream();
+                    }).collect(Collectors.toList());
         }
     }
 
@@ -786,10 +793,25 @@ public class AsyncConsumeTaskDealer {
     }
 
     @Data
-    @AllArgsConstructor
     public static class TaskPackage<DT> {
         private DT data;
         private int index;
+        private boolean interrupted;
+        private Throwable error;
+
+        public TaskPackage(DT data, int index) {
+            this.data = data;
+            this.index = index;
+            this.interrupted = false;
+            this.error = null;
+        }
+
+        public TaskPackage(DT data, int index, boolean interrupted, Throwable error) {
+            this.data = data;
+            this.index = index;
+            this.interrupted = interrupted;
+            this.error = error;
+        }
     }
 
 }

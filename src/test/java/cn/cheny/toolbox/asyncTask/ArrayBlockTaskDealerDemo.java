@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 public class ArrayBlockTaskDealerDemo {
 
     public static void main(String[] args) throws InterruptedException {
-        orderType();
+        interrupted();
     }
 
     public static void demo1() throws InterruptedException {
@@ -132,6 +132,30 @@ public class ArrayBlockTaskDealerDemo {
         AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
                 .orderType(Orders.OrderType.desc)
                 .map(list, 1, e -> e);
+        List<String> results = futureResult.getResults();
+        results.forEach(System.out::println);
+        System.out.println(results.size());
+    }
+
+    public static void interrupted() {
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < 2001; i++) {
+            list.add("test" + i);
+        }
+        AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, false);
+        AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(false)
+                .orderType(Orders.OrderType.asc)
+                .map(list, 100, e -> {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException interruptedException) {
+                        interruptedException.printStackTrace();
+                    }
+                    if (e.size() == 1) {
+                        throw new IllegalArgumentException("test");
+                    }
+                    return e;
+                });
         List<String> results = futureResult.getResults();
         results.forEach(System.out::println);
         System.out.println(results.size());

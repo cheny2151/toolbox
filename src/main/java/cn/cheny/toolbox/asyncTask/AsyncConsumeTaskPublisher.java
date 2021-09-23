@@ -89,6 +89,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                             this.interrupted = true;
                             this.interruptedCause = e;
                         }
+                        resultQueue.put(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhereSliceTaskError, e));
                     }
                 }
             } catch (InterruptedException e) {
