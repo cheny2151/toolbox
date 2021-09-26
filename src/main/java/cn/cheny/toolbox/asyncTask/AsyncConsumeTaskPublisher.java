@@ -83,13 +83,13 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                             }
                         }
                     } catch (Throwable e) {
-                        if (continueWhereSliceTaskError) {
+                        if (continueWhenSliceTaskError) {
                             log.error("执行任务分片异常", e);
                         } else {
                             this.interrupted = true;
                             this.interruptedCause = e;
                         }
-                        resultQueue.put(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhereSliceTaskError, e));
+                        resultQueue.put(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhenSliceTaskError, e));
                     }
                 }
             } catch (InterruptedException e) {

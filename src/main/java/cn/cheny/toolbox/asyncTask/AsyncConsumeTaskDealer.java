@@ -88,7 +88,7 @@ public class AsyncConsumeTaskDealer {
     /**
      * 分片异常是否继续执行
      */
-    protected boolean continueWhereSliceTaskError;
+    protected boolean continueWhenSliceTaskError;
 
     /**
      * 数据读取顺序
@@ -107,10 +107,10 @@ public class AsyncConsumeTaskDealer {
         this(threadNum, mainHelpTask, false);
     }
 
-    public AsyncConsumeTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhereSliceTaskError) {
+    public AsyncConsumeTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhenSliceTaskError) {
         this.finish = true;
         this.mainHelpTask = mainHelpTask;
-        this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+        this.continueWhenSliceTaskError = continueWhenSliceTaskError;
         this.threadName = DEFAULT_THREAD_NAME;
         this.orderType = DEFAULT_SORT_TYPE;
         threadNum(threadNum);
@@ -445,7 +445,7 @@ public class AsyncConsumeTaskDealer {
                             asyncTask.execute(taskPackage.getData());
                         }
                     } catch (Throwable e) {
-                        if (continueWhereSliceTaskError) {
+                        if (continueWhenSliceTaskError) {
                             log.error("执行任务分片异常,任务继续", e);
                         } else {
                             this.interrupted = true;
@@ -486,13 +486,13 @@ public class AsyncConsumeTaskDealer {
                             }
                         }
                     } catch (Throwable e) {
-                        if (continueWhereSliceTaskError) {
+                        if (continueWhenSliceTaskError) {
                             log.error("执行任务分片异常,任务继续", e);
                         } else {
                             this.interrupted = true;
                             this.interruptedCause = e;
                         }
-                        rs.add(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhereSliceTaskError, e));
+                        rs.add(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhenSliceTaskError, e));
                     }
                 }
             } catch (InterruptedException e) {
@@ -652,8 +652,8 @@ public class AsyncConsumeTaskDealer {
         return this;
     }
 
-    public AsyncConsumeTaskDealer continueWhereSliceTaskError(boolean continueWhereSliceTaskError) {
-        this.continueWhereSliceTaskError = continueWhereSliceTaskError;
+    public AsyncConsumeTaskDealer continueWhenSliceTaskError(boolean continueWhenSliceTaskError) {
+        this.continueWhenSliceTaskError = continueWhenSliceTaskError;
         return this;
     }
 

@@ -23,7 +23,7 @@ public class ArrayBlockTaskDealerDemo {
     public static void demo1() throws InterruptedException {
         long l = System.currentTimeMillis();
         AsyncConsumeTaskDealer taskDealer = new AsyncConsumeTaskDealer(8, true);
-        AsyncConsumeTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.threadName("test").continueWhereSliceTaskError(false)
+        AsyncConsumeTaskDealer.FutureResult<HashMap<String, Object>> futureResult = taskDealer.threadName("test").continueWhenSliceTaskError(false)
                 .submit(() -> 2000, limit -> {
                     System.out.println(Thread.currentThread().getName() + ":put data");
                     int num = limit.getNum();
@@ -111,7 +111,7 @@ public class ArrayBlockTaskDealerDemo {
 
     public static void demo4() {
         AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, false);
-        AsyncConsumeTaskDealer.FutureResult<Integer> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
+        AsyncConsumeTaskDealer.FutureResult<Integer> futureResult = asyncConsumeTaskDealer.continueWhenSliceTaskError(true)
                 .submit((Producer<String>) publish -> {
                     for (int i = 0; i < 2000; i++) {
                         publish.push("test" + i);
@@ -129,7 +129,7 @@ public class ArrayBlockTaskDealerDemo {
             list.add("test" + i);
         }
         AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, true);
-        AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(true)
+        AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhenSliceTaskError(true)
                 .orderType(Orders.OrderType.desc)
                 .map(list, 1, e -> e);
         List<String> results = futureResult.getResults();
@@ -143,7 +143,7 @@ public class ArrayBlockTaskDealerDemo {
             list.add("test" + i);
         }
         AsyncConsumeTaskDealer asyncConsumeTaskDealer = new AsyncConsumeTaskDealer(8, false);
-        AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhereSliceTaskError(false)
+        AsyncConsumeTaskDealer.FutureResult<String> futureResult = asyncConsumeTaskDealer.continueWhenSliceTaskError(false)
                 .orderType(Orders.OrderType.asc)
                 .map(list, 100, e -> {
                     try {
