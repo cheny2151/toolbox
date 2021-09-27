@@ -5,13 +5,12 @@ import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * 用于提取泛型与其擦除后的实际类型的映射关系
  *
- * @date 2021/3/8
  * @author by chenyi
+ * @date 2021/3/8
  */
 public class TypeVariableParser {
 
@@ -41,29 +40,7 @@ public class TypeVariableParser {
     }
 
     private static void parse(ParameterizedType parameterizedType, Map<TypeVariable<?>, Type> typeMap) {
-        Class<?> rawClass = (Class<?>) parameterizedType.getRawType();
-        TypeVariable<? extends Class<?>>[] typeParameters = rawClass.getTypeParameters();
-        Type[] actualTypeArguments = parameterizedType.getActualTypeArguments();
-        for (int i = 0; i < typeParameters.length; i++) {
-            Type actualTypeArgument = actualTypeArguments[i];
-            if (actualTypeArgument instanceof TypeVariable) {
-                // 若真实类型actualTypeArgument为TypeVariable，则尝试在typeMap中查找Key为该TypeVariable的value替换actualTypeArgument
-                // 这种情景为：父类ParameterizedType的真实泛型(ActualTypeArgument)是子类ParameterizedType的泛型参数(TypeParameter),
-                // 通过这个泛型参数(TypeParameter)传递子类真实参数给父类
-                Optional<Type> typeChange = Optional.empty();
-                for (Map.Entry<TypeVariable<?>, Type> entry : typeMap.entrySet()) {
-                    if (entry.getKey().equals(actualTypeArgument)) {
-                        typeChange = Optional.of(entry.getValue());
-                        break;
-                    }
-                }
-                if (typeChange.isPresent()) {
-                    actualTypeArgument = typeChange.get();
-                }
-            }
-            typeMap.put(typeParameters[i], actualTypeArgument);
-        }
-        parse(rawClass, typeMap);
+        TypeUtils.extractTypeMap(parameterizedType, typeMap);
     }
 
 }

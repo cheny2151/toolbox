@@ -2,11 +2,11 @@ package cn.cheny.toolbox.other.map;
 
 import cn.cheny.toolbox.exception.NotImplementedException;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
-import cn.cheny.toolbox.other.DateUtils;
 import cn.cheny.toolbox.property.token.ParseTokenException;
 import cn.cheny.toolbox.property.token.TokenParser;
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
+import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.reflect.TypeVariableParser;
 
 import java.lang.reflect.*;
@@ -19,8 +19,8 @@ import java.util.stream.Stream;
 /**
  * 简化map获取操作
  *
- * @date 2021/2/8
  * @author by chenyi
+ * @date 2021/2/8
  */
 @SuppressWarnings("unchecked")
 public class EasyMap extends HashMap<String, Object> {
@@ -102,7 +102,7 @@ public class EasyMap extends HashMap<String, Object> {
                 return (T[]) val;
             } else {
                 int length = Array.getLength(val);
-                Class<?> class0 = ifPrimitiveToWrapClass(tClass);
+                Class<?> class0 = TypeUtils.ifPrimitiveToWrapClass(tClass);
                 Object array = Array.newInstance(class0, length);
                 for (int i = 0; i < length; i++) {
                     Array.set(array, i, caseToObject(key, Array.get(val, 0), tClass));
@@ -233,21 +233,21 @@ public class EasyMap extends HashMap<String, Object> {
         Class<?> class0 = obj.getClass();
         if (objType.isAssignableFrom(class0)) {
             return (T) obj;
-        } else if (isBaseClass(class0) && isBaseClass(objType)) {
+        } else if (TypeUtils.isBaseClass(class0) && TypeUtils.isBaseClass(objType)) {
             return tryCoverBase(property, obj, objType);
         } else if (obj instanceof Map) {
             if (Map.class.isAssignableFrom(objType)) {
                 return (T) coverMapInstance((Map<Object, Object>) obj, (Class<? extends Map<Object, Object>>) objType);
             } else if (!objType.isArray() &&
                     !Collection.class.isAssignableFrom(objType) &&
-                    !isBaseClass(objType)) {
+                    !TypeUtils.isBaseClass(objType)) {
                 return mapToObject((Map<String, Object>) obj, objType);
             }
             throw new ParseTokenException("property '" + property + "' is " + class0 + " ,expect " + objType);
         } else if (Map.class.isAssignableFrom(objType) &&
                 !class0.isArray() &&
                 !Collection.class.isAssignableFrom(class0) &&
-                !isBaseClass(class0)) {
+                !TypeUtils.isBaseClass(class0)) {
             return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
         } else if (obj instanceof Collection && objType.isArray()) {
             return (T) collectionToArray(property, (Collection<?>) obj, objType.getComponentType());
@@ -396,7 +396,11 @@ public class EasyMap extends HashMap<String, Object> {
                 return new HashMap<>();
             }
         }
-        return ReflectUtils.newObject(mapClass, null, null);
+        try {
+            return ReflectUtils.newObject(mapClass, null, null);
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
     }
 
     private <T> Collection<T> arrayToList(String property, Object array, Class<?> collectionClass, Class<T> tClass) {
@@ -434,7 +438,7 @@ public class EasyMap extends HashMap<String, Object> {
     }
 
     private <T> T[] collectionToArray(String property, Collection<?> collection, Class<T> tClass) {
-        Class<?> class0 = ifPrimitiveToWrapClass(tClass);
+        Class<?> class0 = TypeUtils.ifPrimitiveToWrapClass(tClass);
         Object array = Array.newInstance(class0, collection.size());
         int i = 0;
         for (Object o : collection) {
@@ -442,26 +446,6 @@ public class EasyMap extends HashMap<String, Object> {
             Array.set(array, i++, t);
         }
         return (T[]) array;
-    }
-
-    /**
-     * 判断是否是基础类型，或者基础类型的包装类，或者BigDecimal，Date
-     *
-     * @param aClass 类型
-     * @return 是否基础类型
-     */
-    private boolean isBaseClass(Class<?> aClass) {
-        return aClass.isPrimitive()
-                || aClass.equals(Integer.class)
-                || aClass.equals(Short.class)
-                || aClass.equals(Double.class)
-                || aClass.equals(Float.class)
-                || aClass.equals(String.class)
-                || aClass.equals(Boolean.class)
-                || aClass.equals(Long.class)
-                || aClass.equals(Byte.class)
-                || aClass.equals(BigDecimal.class)
-                || aClass.equals(Date.class);
     }
 
     /**
@@ -474,69 +458,11 @@ public class EasyMap extends HashMap<String, Object> {
      * @return 转换结果
      */
     private static <T> T tryCoverBase(String property, Object obj, Class<T> targetClass) {
-        if (obj == null) {
-            return null;
-        }
-        if (targetClass.equals(obj.getClass())){
-            return (T) obj;
-        }
         try {
-            if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
-                return (T) Integer.valueOf(obj.toString());
-            } else if (targetClass.equals(short.class) || targetClass.equals(Short.class)) {
-                return (T) Short.valueOf(obj.toString());
-            } else if (targetClass.equals(double.class) || targetClass.equals(Double.class)) {
-                return (T) Double.valueOf(obj.toString());
-            } else if (targetClass.equals(float.class) || targetClass.equals(Float.class)) {
-                return (T) Float.valueOf(obj.toString());
-            } else if (targetClass.equals(boolean.class) || targetClass.equals(Boolean.class)) {
-                if (obj instanceof String) {
-                    return (T) Boolean.valueOf((String) obj);
-                }
-            } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
-                return (T) Long.valueOf(obj.toString());
-            } else if (targetClass.equals(byte.class) || targetClass.equals(Byte.class)) {
-                return (T) Byte.valueOf(obj.toString());
-            } else if (targetClass.equals(char.class) || targetClass.equals(Character.class)) {
-                return (T) Character.valueOf((char) obj);
-            } else if (targetClass.equals(String.class)) {
-                return (T) obj.toString();
-            } else if (targetClass.equals(BigDecimal.class)) {
-                return (T) new BigDecimal(obj.toString());
-            } else if (targetClass.equals(Date.class)) {
-                return (T) DateUtils.toDate(obj);
-            }
-        } catch (Exception e) {
-            // do nothing
+            return TypeUtils.tryCoverBase(obj, targetClass);
+        } catch (ParseTokenException e) {
+            throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + targetClass);
         }
-        throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + targetClass);
-    }
-
-    /**
-     * 判断是否是基础类型
-     *
-     * @param pc 类型
-     * @return
-     */
-    private Class<?> ifPrimitiveToWrapClass(Class<?> pc) {
-        if (int.class.equals(pc)) {
-            return Integer.class;
-        } else if (long.class.equals(pc)) {
-            return Long.class;
-        } else if (float.class.equals(pc)) {
-            return Float.class;
-        } else if (double.class.equals(pc)) {
-            return Double.class;
-        } else if (char.class.equals(pc)) {
-            return Character.class;
-        } else if (byte.class.equals(pc)) {
-            return Byte.class;
-        } else if (boolean.class.equals(pc)) {
-            return Boolean.class;
-        } else if (short.class.equals(pc)) {
-            return Short.class;
-        }
-        return pc;
     }
 
 }
