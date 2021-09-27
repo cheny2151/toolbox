@@ -70,6 +70,11 @@ public class PathScanner {
     private static final String JAR_URL_ENTRY_PRE = "!/";
 
     /**
+     * jar extension & ENTRY PRE length
+     */
+    private static final int JAR_TAIL_LEN = JAR_FILE_EXTENSION.length() + JAR_URL_ENTRY_PRE.length();
+
+    /**
      * maven build jar: BOOT-INF url pre
      */
     private static final String BOOT_INF_URL_PRE = "BOOT-INF/classes/";
@@ -286,7 +291,14 @@ public class PathScanner {
     }
 
     private boolean loadingJar(JarUrl jarUrl) {
-        return this.isLoadingJar == null || this.isLoadingJar.isLoading(jarUrl.getOrigin());
+        return this.isLoadingJar == null ||
+                this.isLoadingJar.isLoading(new IsLoadingJar.JarInfo(extractJarName(jarUrl.getOrigin()), jarUrl.getOrigin()));
+    }
+
+    private String extractJarName(URL url) {
+        String path = url.getPath();
+        String[] split = path.substring(0, path.length() - JAR_TAIL_LEN).split(URL_SEPARATE_CHARACTER);
+        return split[split.length - 1];
     }
 
     /**
