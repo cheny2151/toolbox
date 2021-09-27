@@ -286,7 +286,7 @@ public class PathScanner {
     }
 
     private boolean loadingJar(JarUrl jarUrl) {
-        return this.isLoadingJar == null || this.isLoadingJar.isLoading(jarUrl);
+        return this.isLoadingJar == null || this.isLoadingJar.isLoading(jarUrl.getOrigin());
     }
 
     /**
