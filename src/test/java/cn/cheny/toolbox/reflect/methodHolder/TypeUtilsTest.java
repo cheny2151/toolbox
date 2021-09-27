@@ -16,7 +16,7 @@ public class TypeUtilsTest {
     public void test2() {
         Type[] actualType = TypeUtils.getActualType(TestResultAndFlag2.class, Tuple3.class);
         for (Type type : actualType) {
-            System.out.println(type.getClass());
+            System.out.println(type);
         }
     }
 

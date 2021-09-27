@@ -121,40 +121,53 @@ public class TypeUtils {
         if (!typeReference.isAssignableFrom(clazz)) {
             throw new IllegalArgumentException(clazz + " is not a subclass of " + typeReference);
         }
-        if (typeReference.getTypeParameters().length == 0) {
+        TypeVariable<? extends Class<?>>[] typeParameters = typeReference.getTypeParameters();
+        if (typeParameters.length == 0) {
             throw new IllegalArgumentException(typeReference + " has not type variable");
         }
+
         Map<TypeVariable<?>, Type> typeMap = new HashMap<>();
-        return getActualType(clazz, typeReference, typeMap);
+        // extract all type map
+        extractTypeMap(clazz, typeReference, typeMap);
+
+        Type[] actualTypes = new Type[typeParameters.length];
+        for (int i = 0; i < typeParameters.length; i++) {
+            Type actualType = typeMap.get(typeParameters[i]);
+            if (actualType == null) {
+                throw new ToolboxRuntimeException("TypeReference fail to get actualType");
+            }
+            actualTypes[i] = actualType;
+        }
+        return actualTypes;
     }
 
-    private static Type[] getActualType(Class<?> clazz, Class<?> typeReference, Map<TypeVariable<?>, Type> typeMap) {
+    private static void extractTypeMap(Class<?> clazz, Class<?> typeReference, Map<TypeVariable<?>, Type> typeMap) {
+        if (clazz == null || typeReference.equals(clazz)) {
+            return;
+        }
+        // genericSuperclass
         Type genericSuperclass = clazz.getGenericSuperclass();
+        Class<?> next = extractType(genericSuperclass, typeMap);
+        extractTypeMap(next, typeReference, typeMap);
+        // genericInterfaces
+        Type[] genericInterfaces = clazz.getGenericInterfaces();
+        for (Type genericInterface : genericInterfaces) {
+            next = extractType(genericInterface, typeMap);
+            extractTypeMap(next, typeReference, typeMap);
+        }
+    }
+
+    private static Class<?> extractType(Type type, Map<TypeVariable<?>, Type> typeMap) {
         Class<?> next = null;
-        if (genericSuperclass instanceof ParameterizedType) {
+        if (type instanceof ParameterizedType) {
             // genericSuperclass为ParameterizedType，尝试提取泛型参数
-            ParameterizedType typeAsParameterized = (ParameterizedType) genericSuperclass;
-            extractTypeMap(typeAsParameterized, typeMap);
+            ParameterizedType typeAsParameterized = (ParameterizedType) type;
+            extractParameterizedType(typeAsParameterized, typeMap);
             next = (Class<?>) (typeAsParameterized).getRawType();
-            if (typeReference.equals(next)) {
-                // genericSuperclass命中TypeReference，尝试从typeMap中获取actualType
-                TypeVariable<?>[] typeParameters = typeReference.getTypeParameters();
-                Type[] actualTypes = new Type[typeParameters.length];
-                for (int i = 0; i < typeParameters.length; i++) {
-                    TypeVariable<?> typeParameter = typeParameters[i];
-                    actualTypes[i] = typeMap.get(typeParameter);
-                }
-                return actualTypes;
-            }
-        } else if (genericSuperclass instanceof Class) {
-            next = (Class<?>) genericSuperclass;
+        } else if (type instanceof Class && !type.equals(Object.class)) {
+            next = (Class<?>) type;
         }
-
-        if (next == null) {
-            throw new ToolboxRuntimeException("TypeReference fail to get actualType");
-        }
-
-        return getActualType(next, typeReference, typeMap);
+        return next;
     }
 
     /**
@@ -163,7 +176,7 @@ public class TypeUtils {
      * @param classAsParameterized ParameterizedType
      * @param typeMap              已知泛型映射
      */
-    static void extractTypeMap(ParameterizedType classAsParameterized, Map<TypeVariable<?>, Type> typeMap) {
+    static void extractParameterizedType(ParameterizedType classAsParameterized, Map<TypeVariable<?>, Type> typeMap) {
         Type[] actualTypeArguments = classAsParameterized.getActualTypeArguments();
         Class<?> rawType = (Class<?>) classAsParameterized.getRawType();
         TypeVariable<? extends Class<?>>[] typeParameters = rawType.getTypeParameters();

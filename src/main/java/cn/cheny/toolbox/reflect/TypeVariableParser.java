@@ -40,7 +40,7 @@ public class TypeVariableParser {
     }
 
     private static void parse(ParameterizedType parameterizedType, Map<TypeVariable<?>, Type> typeMap) {
-        TypeUtils.extractTypeMap(parameterizedType, typeMap);
+        TypeUtils.extractParameterizedType(parameterizedType, typeMap);
     }
 
 }
