@@ -1,7 +1,10 @@
 package cn.cheny.toolbox.reflect.methodHolder;
 
 import cn.cheny.toolbox.reflect.ReflectUtils;
+import cn.cheny.toolbox.reflect.TypeUtils;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collection;
 
 /**
@@ -47,6 +50,27 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
      */
     public Collection<String> getAllProperties() {
         return methodMap.keySet();
+    }
+
+    /**
+     * 方法增强，提供基础类型转换
+     */
+    protected Object doInvoke(Method method, Object obj, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        int parameterCount = method.getParameterCount();
+        Object[] args0 = args;
+        if (parameterCount != 0) {
+            int length = args.length;
+            args0 = new Object[length];
+            System.arraycopy(args, 0, args0, 0, length);
+            Class<?>[] types = method.getParameterTypes();
+            for (int i = 0; i < types.length; i++) {
+                Class<?> type = types[i];
+                if (TypeUtils.isBaseClass(type)) {
+                    args0[i] = TypeUtils.tryCoverBase(args0[i], type);
+                }
+            }
+        }
+        return method.invoke(obj, args0);
     }
 
 }

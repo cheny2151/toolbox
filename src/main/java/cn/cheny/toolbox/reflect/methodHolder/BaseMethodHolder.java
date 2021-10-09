@@ -7,6 +7,7 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,19 +63,33 @@ public abstract class BaseMethodHolder implements MethodHolder {
             Class<?> parameterType;
             if (args == null) {
                 // 参数为null时填充null数组为入参
-                return method.invoke(obj, createNullArray(parameterCount));
+                return doInvoke(method, obj, createNullArray(parameterCount));
             } else if (parameterCount > 0
                     && (parameterType = method.getParameterTypes()[parameterCount - 1]).isArray()) {
                 // 不定参数必在最后一位,对不定参数进行参数修复
                 Class<?> componentType = parameterType.getComponentType();
-                return method.invoke(obj, castToObjectArray(args, componentType, parameterCount));
+                return doInvoke(method, obj, castToObjectArray(args, componentType, parameterCount));
             } else {
-                return method.invoke(obj, args);
+                return doInvoke(method, obj, args);
             }
         } catch (Exception e) {
             throw new MethodHolderInvokeException("执行方法:" + holdClass.getSimpleName() + "#" + method.getName() + "异常，" +
                     "方法入参:" + JSON.toJSONString(args), e);
         }
+    }
+
+    /**
+     * 执行method
+     *
+     * @param method 方法
+     * @param obj    对象
+     * @param args   参数
+     * @return 方法执行结果
+     * @throws InvocationTargetException 异常
+     * @throws IllegalAccessException    异常
+     */
+    protected Object doInvoke(Method method, Object obj, Object[] args) throws InvocationTargetException, IllegalAccessException {
+        return method.invoke(obj, args);
     }
 
     @Override
