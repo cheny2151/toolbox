@@ -6,6 +6,8 @@ import cn.cheny.toolbox.reflect.TypeUtils;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 读写方法持有者
@@ -15,10 +17,24 @@ import java.util.Collection;
  */
 public class ReadWriteMethodHolder extends BaseMethodHolder {
 
+    private final List<String> readableProperties;
+    private final List<String> writableProperties;
+
     public ReadWriteMethodHolder(Class<?> clazz) {
         super(clazz);
-        ReflectUtils.getAllReadMethod(clazz, Object.class).values().forEach(method -> cacheMethod(ReflectUtils.extractPropertyName(method), method));
-        ReflectUtils.getAllWriterMethod(clazz, Object.class).values().forEach(method -> cacheMethod(ReflectUtils.extractPropertyName(method), method));
+        Collection<Method> readMethods = ReflectUtils.getAllReadMethod(clazz, Object.class).values();
+        this.readableProperties = cacheMethods(readMethods);
+        Collection<Method> writeMethods = ReflectUtils.getAllWriterMethod(clazz, Object.class).values();
+        this.writableProperties = cacheMethods(writeMethods);
+    }
+
+    private List<String> cacheMethods(Collection<Method> methods) {
+        return methods
+                .stream().map(method -> {
+                    String property = ReflectUtils.extractPropertyName(method);
+                    cacheMethod(property, method);
+                    return property;
+                }).collect(Collectors.toList());
     }
 
     /**
@@ -50,6 +66,24 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
      */
     public Collection<String> getAllProperties() {
         return methodMap.keySet();
+    }
+
+    /**
+     * 返回所有可写的属性名称
+     *
+     * @return 属性名称集合
+     */
+    public Collection<String> getWritableProperties() {
+        return writableProperties;
+    }
+
+    /**
+     * 返回所有可读的属性名称
+     *
+     * @return 属性名称集合
+     */
+    public Collection<String> getReadableProperties() {
+        return readableProperties;
     }
 
     /**

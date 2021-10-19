@@ -8,11 +8,12 @@ import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.reflect.TypeVariableParser;
+import cn.cheny.toolbox.reflect.methodHolder.ReadWriteMethodHolder;
+import cn.cheny.toolbox.reflect.methodHolder.factory.ReadWriteMethodHolderFactory;
 
 import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,9 +26,7 @@ import java.util.stream.Stream;
 @SuppressWarnings("unchecked")
 public class EasyMap extends HashMap<String, Object> {
 
-    private final Map<Class<?>, Map<String, Method>> typeWriterCache = new ConcurrentHashMap<>();
-
-    private final Map<Class<?>, Map<String, Method>> typeReaderCache = new ConcurrentHashMap<>();
+    private final static ReadWriteMethodHolderFactory methodHolderFactory = ReadWriteMethodHolderFactory.getInstance();
 
     public EasyMap(int initialCapacity, float loadFactor) {
         super(initialCapacity, loadFactor);
@@ -330,13 +329,12 @@ public class EasyMap extends HashMap<String, Object> {
     }
 
     private <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
-        Map<String, Method> writerMethod =
-                typeWriterCache.computeIfAbsent(objType, k -> ReflectUtils.getAllWriterMethod(objType, Object.class));
+        ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objType);
         T t = ReflectUtils.newObject(objType, null, null);
-        writerMethod.forEach((f, m) -> {
-            Object fieldVal = map.get(f);
+        methodHolder.getWritableProperties().forEach(property -> {
+            Object fieldVal = map.get(property);
             if (fieldVal != null) {
-                ReflectUtils.writeValue(t, m, fieldVal);
+                methodHolder.write(t, property, fieldVal);
             }
         });
         // 泛型处理
@@ -364,10 +362,9 @@ public class EasyMap extends HashMap<String, Object> {
 
     private Map<String, Object> objectToMap(Object obj, Class<? extends Map<String, Object>> mapClass) {
         Class<?> objClass = obj.getClass();
-        Map<String, Method> writerMethod =
-                typeReaderCache.computeIfAbsent(objClass, k -> ReflectUtils.getAllReadMethod(objClass, Object.class));
+        ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objClass);
         Map<String, Object> map = newMap(mapClass);
-        writerMethod.forEach((f, m) -> map.put(f, ReflectUtils.readValue(obj, m)));
+        methodHolder.getReadableProperties().forEach(property -> map.put(property, methodHolder.read(obj, property)));
         return map;
     }
 

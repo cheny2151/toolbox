@@ -29,7 +29,7 @@ public class BeanUtils {
     public static Map<String, Object> beanToMap(Object bean) {
         Map<String, Object> map = new HashMap<>();
         ReadWriteMethodHolder methodHolder = ReadWriteMethodHolderFactory.getInstance().getMethodHolder(bean.getClass());
-        for (String property : methodHolder.getAllProperties()) {
+        for (String property : methodHolder.getReadableProperties()) {
             try {
                 Object val = methodHolder.read(bean, property);
                 map.put(property, val);
@@ -50,8 +50,8 @@ public class BeanUtils {
     public static void copyProperties(Object target, Object source, String... ignoreProperties) {
         ReadWriteMethodHolder targetMethodHolder = ReadWriteMethodHolderFactory.getInstance().getMethodHolder(target.getClass());
         ReadWriteMethodHolder sourceMethodHolder = ReadWriteMethodHolderFactory.getInstance().getMethodHolder(source.getClass());
-        Collection<String> targetProperties = targetMethodHolder.getAllProperties();
-        Collection<String> sourceProperties = sourceMethodHolder.getAllProperties().stream()
+        Collection<String> targetProperties = targetMethodHolder.getWritableProperties();
+        Collection<String> sourceProperties = sourceMethodHolder.getReadableProperties().stream()
                 .filter(field -> !ArrayUtils.contains(ignoreProperties, field))
                 .collect(Collectors.toList());
         if (targetProperties.size() == 0 || sourceProperties.size() == 0) {
