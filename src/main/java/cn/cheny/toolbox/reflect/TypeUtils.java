@@ -464,17 +464,17 @@ public class TypeUtils {
      * @return Map实例
      */
     private static <K, V> Map<K, V> newMap(Class<? extends Map<K, V>> mapClass) {
-        if (mapClass.isInterface()) {
-            if (!mapClass.equals(Map.class)) {
-                throw new ToolboxRuntimeException("not support type interface " + mapClass.getName());
-            } else {
-                return new HashMap<>();
+        if (!mapClass.isInterface()) {
+            try {
+                return ReflectUtils.newObject(mapClass, null, null);
+            } catch (Exception e) {
+                // try next
             }
         }
-        try {
-            return ReflectUtils.newObject(mapClass, null, null);
-        } catch (Exception e) {
+        if (Map.class.isAssignableFrom(mapClass)) {
             return new HashMap<>();
+        } else {
+            throw new ToolboxRuntimeException("not support type interface " + mapClass.getName());
         }
     }
 
@@ -485,16 +485,20 @@ public class TypeUtils {
      * @return Collection实例
      */
     private static <T> Collection<T> newCollection(Class<? extends Collection<T>> collectionClass) {
-        if (collectionClass.isInterface()) {
-            if (collectionClass.equals(List.class)) {
-                return new ArrayList<>();
-            } else if (collectionClass.equals(Set.class)) {
-                return new HashSet<>();
-            } else {
-                throw new ToolboxRuntimeException("not support type interface " + collectionClass.getName());
+        if (!collectionClass.isInterface()) {
+            try {
+                return ReflectUtils.newObject(collectionClass, null, null);
+            } catch (Exception e) {
+                // try next
             }
         }
-        return ReflectUtils.newObject(collectionClass, null, null);
+        if (List.class.isAssignableFrom(collectionClass)) {
+            return new ArrayList<>();
+        } else if (Set.class.isAssignableFrom(collectionClass)) {
+            return new HashSet<>();
+        } else {
+            throw new ToolboxRuntimeException("not support type interface " + collectionClass.getName());
+        }
     }
 
 }
