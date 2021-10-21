@@ -1,17 +1,16 @@
 package cn.cheny.toolbox.reflect;
 
+import cn.cheny.toolbox.exception.NotImplementedException;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.DateUtils;
 import cn.cheny.toolbox.property.token.ParseTokenException;
+import cn.cheny.toolbox.reflect.methodHolder.ReadWriteMethodHolder;
+import cn.cheny.toolbox.reflect.methodHolder.factory.ReadWriteMethodHolderFactory;
 
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.lang.reflect.TypeVariable;
+import java.lang.reflect.*;
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 类型工具类
@@ -21,6 +20,132 @@ import java.util.Optional;
  */
 public class TypeUtils {
 
+    private final static ReadWriteMethodHolderFactory methodHolderFactory = ReadWriteMethodHolderFactory.getInstance();
+
+    /**
+     * object转换为Type对应的类型
+     *
+     * @param obj     对象
+     * @param objType 参数泛型
+     * @param <T>     泛型
+     * @return 转换后结果
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T caseToObject(Object obj, Type objType) {
+        if (obj == null) {
+            return null;
+        } else if (objType instanceof Class) {
+            return caseToObject(obj, (Class<T>) objType);
+        } else if (objType instanceof ParameterizedType) {
+            return caseToObject(obj, (ParameterizedType) objType);
+        } else if (objType instanceof TypeVariable) {
+            return caseToObject(obj, (TypeVariable<?>) objType);
+        } else if (objType instanceof WildcardType) {
+            return caseToObject(obj, (WildcardType) objType);
+        } else {
+            throw new ParseTokenException(obj.getClass() + " can not cover to " + objType);
+        }
+    }
+
+    /**
+     * map转换为object对象
+     *
+     * @param map     map实例
+     * @param objType 对象类型
+     * @param <T>     对象泛型
+     * @return 对象实例
+     */
+    public static <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
+        ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objType);
+        T t = ReflectUtils.newObject(objType, null, null);
+        methodHolder.getWritableProperties().forEach(property -> {
+            Object fieldVal = map.get(property);
+            if (fieldVal != null) {
+                methodHolder.write(t, property, fieldVal);
+            }
+        });
+        // 泛型处理
+        List<Field> variableFields = ReflectUtils.getPropertyFields(objType, Object.class)
+                .stream().filter(e -> e.getGenericType() instanceof TypeVariable)
+                .collect(Collectors.toList());
+        if (variableFields.size() > 0) {
+            Map<TypeVariable<?>, Type> typeMap = TypeVariableParser.parse(objType);
+            for (Field field : variableFields) {
+                TypeVariable<?> fieldGenericType = (TypeVariable<?>) field.getGenericType();
+                Type type = typeMap.get(fieldGenericType);
+                if (type != null) {
+                    Object val = ReflectUtils.getFieldVal(field, t);
+                    if (val != null) {
+                        Object newVal = caseToObject(val, type);
+                        if (val != newVal) {
+                            ReflectUtils.setFieldVal(field, t, newVal);
+                        }
+                    }
+                }
+            }
+        }
+        return t;
+    }
+
+    /**
+     * object对象转换为Map
+     *
+     * @param obj      对象实例
+     * @param mapClass map类型
+     * @return map集合
+     */
+    public static Map<String, Object> objectToMap(Object obj, Class<? extends Map<String, Object>> mapClass) {
+        Class<?> objClass = obj.getClass();
+        ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objClass);
+        Map<String, Object> map = newMap(mapClass);
+        methodHolder.getReadableProperties().forEach(property -> map.put(property, methodHolder.read(obj, property)));
+        return map;
+    }
+
+    /**
+     * 将数组转换为集合
+     *
+     * @param array           数组
+     * @param collectionClass 集合类型
+     * @param tClass          元素类型
+     * @param <T>             元素泛型
+     * @return 集合
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> Collection<T> arrayToCollection(Object array, Class<?> collectionClass, Class<T> tClass) {
+        Class<?> componentType = array.getClass().getComponentType();
+        Collection<T> rs = newCollection((Class<? extends Collection<T>>) collectionClass);
+        if (tClass.isAssignableFrom(componentType)) {
+            rs.addAll(Arrays.asList(((T[]) array)));
+        } else {
+            int length = Array.getLength(array);
+            for (int i = 0; i < length; i++) {
+                Object o = Array.get(array, i);
+                rs.add(caseToObject(o, tClass));
+            }
+        }
+        return rs;
+    }
+
+    /**
+     * 将集合转换为数组
+     *
+     * @param collection 集合
+     * @param tClass     元素类型
+     * @param <T>        元素泛型
+     * @return 数组
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T[] collectionToArray(Collection<?> collection, Class<T> tClass) {
+        Class<?> class0 = TypeUtils.ifPrimitiveToWrapClass(tClass);
+        Object array = Array.newInstance(class0, collection.size());
+        int i = 0;
+        for (Object o : collection) {
+            T t = (T) caseToObject(o, class0);
+            Array.set(array, i++, t);
+        }
+        return (T[]) array;
+    }
 
     /**
      * 判断是否是基础类型，或者基础类型的包装类，或者BigDecimal，Date
@@ -91,10 +216,10 @@ public class TypeUtils {
     }
 
     /**
-     * 判断是否是基础类型
+     * 若为基础类型则返回其包装类
      *
      * @param pc 类型
-     * @return
+     * @return 返回对于的基础类型包装类
      */
     public static Class<?> ifPrimitiveToWrapClass(Class<?> pc) {
         if (int.class.equals(pc)) {
@@ -117,9 +242,16 @@ public class TypeUtils {
         return pc;
     }
 
-    public static Type[] getActualType(Class<?> clazz, Class<?> typeReference) {
-        if (!typeReference.isAssignableFrom(clazz)) {
-            throw new IllegalArgumentException(clazz + " is not a subclass of " + typeReference);
+    /**
+     * 获取父类typeReference上被子类clazz擦除的泛型实际类型
+     *
+     * @param childrenClass 子类
+     * @param typeReference 存在泛型的父类
+     * @return 擦除后的类型
+     */
+    public static Type[] getActualType(Class<?> childrenClass, Class<?> typeReference) {
+        if (!typeReference.isAssignableFrom(childrenClass)) {
+            throw new IllegalArgumentException(childrenClass + " is not a subclass of " + typeReference);
         }
         TypeVariable<? extends Class<?>>[] typeParameters = typeReference.getTypeParameters();
         if (typeParameters.length == 0) {
@@ -128,7 +260,7 @@ public class TypeUtils {
 
         Map<TypeVariable<?>, Type> typeMap = new HashMap<>();
         // extract all type map
-        extractTypeMap(clazz, typeReference, typeMap);
+        extractTypeMap(childrenClass, typeReference, typeMap);
 
         Type[] actualTypes = new Type[typeParameters.length];
         for (int i = 0; i < typeParameters.length; i++) {
@@ -199,6 +331,170 @@ public class TypeUtils {
             }
             typeMap.put(typeParameters[i], actualTypeArgument);
         }
+    }
+
+    /**
+     * object转换为Class<T>类型
+     *
+     * @param obj     对象
+     * @param objType 参数泛型
+     * @param <T>     泛型
+     * @return 转换后结果
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> T caseToObject(Object obj, Class<T> objType) {
+        if (obj == null) {
+            return null;
+        }
+        Class<?> class0 = obj.getClass();
+        if (objType.isAssignableFrom(class0)) {
+            return (T) obj;
+        } else if (TypeUtils.isBaseClass(class0) && TypeUtils.isBaseClass(objType)) {
+            return tryCoverBase(obj, objType);
+        } else if (obj instanceof Map) {
+            if (Map.class.isAssignableFrom(objType)) {
+                return (T) coverMapInstance((Map<Object, Object>) obj, (Class<? extends Map<Object, Object>>) objType);
+            } else if (!objType.isArray() &&
+                    !Collection.class.isAssignableFrom(objType) &&
+                    !TypeUtils.isBaseClass(objType)) {
+                return mapToObject((Map<String, Object>) obj, objType);
+            }
+            throw new ParseTokenException(class0 + " can not cover to " + objType);
+        } else if (Map.class.isAssignableFrom(objType) &&
+                !class0.isArray() &&
+                !Collection.class.isAssignableFrom(class0) &&
+                !TypeUtils.isBaseClass(class0)) {
+            return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
+        } else if (obj instanceof Collection && objType.isArray()) {
+            return (T) collectionToArray((Collection<?>) obj, objType.getComponentType());
+        } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
+            return (T) arrayToCollection(obj, objType, class0.getComponentType());
+        }
+        throw new ParseTokenException(class0 + " can not cover to " + objType);
+    }
+
+    /**
+     * object转换为ParameterizedType对应的类型
+     *
+     * @param obj     对象
+     * @param objType 参数泛型
+     * @param <T>     泛型
+     * @return 转换后结果
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> T caseToObject(Object obj, ParameterizedType objType) {
+        Type rawType = objType.getRawType();
+        Object obj0 = caseToObject(obj, rawType);
+        if (obj0 == null) {
+            return null;
+        } else if (obj0 instanceof Map) {
+            Type[] argTypes = objType.getActualTypeArguments();
+            Map<Object, Object> map = (Map<Object, Object>) obj0;
+            Map<Object, Object> results = newMap((Class<? extends Map<Object, Object>>) map.getClass());
+            for (Map.Entry<?, ?> entry : map.entrySet()) {
+                results.put(caseToObject(entry.getKey(), argTypes[0]),
+                        caseToObject(entry.getValue(), argTypes[1]));
+            }
+            return (T) results;
+        } else if (obj0 instanceof Collection) {
+            Type[] argTypes = objType.getActualTypeArguments();
+            Collection<Object> col = (Collection<Object>) obj0;
+            Collection<Object> results = newCollection((Class<? extends Collection<Object>>) col.getClass());
+            for (Object e : col) {
+                Object o = caseToObject(e, argTypes[0]);
+                results.add(o);
+            }
+            return (T) results;
+        } else {
+            Type[] argTypes = objType.getActualTypeArguments();
+            TypeVariable<? extends Class<?>>[] superTypeVariables = obj0.getClass().getTypeParameters();
+            List<Field> fields = ReflectUtils.getPropertyFields(obj0.getClass(), Object.class);
+            for (Field field : fields) {
+                if (field.getGenericType() instanceof TypeVariable) {
+                    Integer typeIdx = null;
+                    for (int i = 0; i < superTypeVariables.length; i++) {
+                        if (superTypeVariables[i].equals(field.getGenericType())) {
+                            typeIdx = i;
+                        }
+                    }
+                    if (typeIdx == null) {
+                        continue;
+                    }
+                    Object fv = ReflectUtils.getFieldVal(field, obj0);
+                    Object newVal = caseToObject(fv, argTypes[typeIdx]);
+                    if (newVal != fv) {
+                        ReflectUtils.setFieldVal(field, obj0, newVal);
+                    }
+                }
+            }
+            return (T) obj0;
+        }
+    }
+
+    /**
+     * todo
+     */
+    private static <T> T caseToObject(Object obj, TypeVariable<?> objType) {
+        throw new NotImplementedException("not implement");
+    }
+
+    /**
+     * todo
+     */
+    private static <T> T caseToObject(Object obj, WildcardType objType) {
+        throw new NotImplementedException("not implement");
+    }
+
+    /**
+     * 转换Map实现类
+     */
+    @SuppressWarnings("unchecked")
+    private static <T extends Map<Object, Object>> T coverMapInstance(Map<Object, Object> obj, Class<T> objType) {
+        Map<Object, Object> newMap = newMap(objType);
+        newMap.putAll(obj);
+        return (T) newMap;
+    }
+
+    /**
+     * Map子类实例化
+     *
+     * @param mapClass map class
+     * @param <K>      key
+     * @param <V>      value
+     * @return Map实例
+     */
+    private static <K, V> Map<K, V> newMap(Class<? extends Map<K, V>> mapClass) {
+        if (mapClass.isInterface()) {
+            if (!mapClass.equals(Map.class)) {
+                throw new ToolboxRuntimeException("not support type interface " + mapClass.getName());
+            } else {
+                return new HashMap<>();
+            }
+        }
+        try {
+            return ReflectUtils.newObject(mapClass, null, null);
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * Collection子类实例化
+     *
+     * @param collectionClass Collection class
+     * @return Collection实例
+     */
+    private static <T> Collection<T> newCollection(Class<? extends Collection<T>> collectionClass) {
+        if (collectionClass.isInterface()) {
+            if (collectionClass.equals(List.class)) {
+                return new ArrayList<>();
+            } else if (collectionClass.equals(Set.class)) {
+                return new HashSet<>();
+            } else {
+                throw new ToolboxRuntimeException("not support type interface " + collectionClass.getName());
+            }
+        }
+        return ReflectUtils.newObject(collectionClass, null, null);
     }
 
 }
