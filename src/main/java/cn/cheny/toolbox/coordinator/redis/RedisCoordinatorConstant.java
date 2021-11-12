@@ -12,7 +12,7 @@ public class RedisCoordinatorConstant {
     public static final String HEART_BEAT_KEY_PRE = "COORDINATOR:HEART_BEAT";
     public static final String HEARTBEAT_VAL = "1";
 
-    public static final String INIT_REGISTER_SCRIPT = "redis.call('set', KEYS[1],ARGV[1])) " +
+    public static final String INIT_REGISTER_SCRIPT = "redis.call('set', KEYS[1], ARGV[1]) " +
             "redis.call('hset', KEYS[2], KEYS[3], ARGV[2]) return nil";
 
 }

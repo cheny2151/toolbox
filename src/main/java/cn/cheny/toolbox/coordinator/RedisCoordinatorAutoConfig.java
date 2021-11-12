@@ -18,7 +18,6 @@ import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.listener.ChannelTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.listener.Topic;
@@ -40,7 +39,6 @@ import java.util.Map;
 public class RedisCoordinatorAutoConfig {
 
     @Bean
-    @ConditionalOnBean(value = StringRedisTemplate.class)
     public <T extends Resource> RedisCoordinator<T> resourceCoordinator(ResourceManager<T> resourceManager) {
         Integer port = SpringUtils.getEnvironment().getProperty("server.port", Integer.class, 8080);
         String host = NetUtils.getHost();
@@ -53,7 +51,6 @@ public class RedisCoordinatorAutoConfig {
     public RedisCoordinatorEventListener redisCoordinatorEventListener(RedisCoordinator<?> resourceCoordinator) {
         return new RedisCoordinatorEventListener(resourceCoordinator);
     }
-
 
     @Bean
     public RedisMessageListenerContainer coordinatorMessageListenerContainer(RedisCoordinatorEventListener redisCoordinatorEventListener,
