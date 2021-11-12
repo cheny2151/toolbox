@@ -59,6 +59,11 @@ public class JedisClient implements RedisClient<String> {
     }
 
     @Override
+    public void set(String key, String val) {
+        execAndClose(jedis -> jedis.set(key, val));
+    }
+
+    @Override
     public String get(String key) {
         return execAndClose(jedis -> jedis.get(key));
     }
@@ -150,8 +155,11 @@ public class JedisClient implements RedisClient<String> {
     }
 
     @Override
-    public void expire(String key, long time, TimeUnit timeUnit) {
-        execAndClose(jedis -> jedis.pexpire(key, timeUnit.toMillis(time)));
+    public boolean expire(String key, long time, TimeUnit timeUnit) {
+        return execAndClose(jedis -> {
+            Long pexpire = jedis.pexpire(key, timeUnit.toMillis(time));
+            return pexpire != null && pexpire == 1;
+        });
     }
 
     @Override

@@ -50,20 +50,19 @@ public class SpringRedisExecutor implements RedisExecutor {
     }
 
     @Override
-    public void del(String key) {
-        byte[] rawKey = key.getBytes(StandardCharsets.UTF_8);
-        redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
+    public void set(String key, String val) {
+        redisTemplate.opsForValue().set(key, val);
     }
 
     @Override
-    public Map<String, String> hgetall(String key) {
+    public String get(String key) {
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    @Override
+    public String hget(String key, String hkey) {
         HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
-        return hashOperations.entries(key);
-    }
-
-    @Override
-    public void expire(String key, long time, TimeUnit timeUnit) {
-        redisTemplate.expire(key, time, timeUnit);
+        return hashOperations.get(key, hkey);
     }
 
     @Override
@@ -73,8 +72,37 @@ public class SpringRedisExecutor implements RedisExecutor {
     }
 
     @Override
-    public void hset(String key, Map<String, String> map) {
+    public void del(String key) {
+        byte[] rawKey = key.getBytes(StandardCharsets.UTF_8);
+        redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
+    }
+
+    @Override
+    public boolean expire(String key, long time, TimeUnit timeUnit) {
+        Boolean expire = redisTemplate.expire(key, time, timeUnit);
+        return expire != null && expire;
+    }
+
+    @Override
+    public Map<String, String> hgetall(String key) {
+        HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
+        return hashOperations.entries(key);
+    }
+
+    @Override
+    public void hmset(String key, Map<String, String> map) {
         redisTemplate.opsForHash().putAll(key, map);
+    }
+
+    @Override
+    public void hset(String key, String hk, String hv) {
+        redisTemplate.opsForHash().put(key, hk, hv);
+    }
+
+    @Override
+    public void hdel(String key, String... hkey) {
+        HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
+        hashOperations.delete(key, (Object[]) hkey);
     }
 
     @Override

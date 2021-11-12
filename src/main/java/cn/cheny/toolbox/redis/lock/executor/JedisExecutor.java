@@ -29,18 +29,18 @@ public class JedisExecutor implements RedisExecutor {
     }
 
     @Override
+    public void set(String key, String val) {
+        jedisClient.set(key, val);
+    }
+
+    @Override
+    public String get(String key) {
+        return jedisClient.get(key);
+    }
+
+    @Override
     public void del(String key) {
         jedisClient.del(key);
-    }
-
-    @Override
-    public Map<String, String> hgetall(String key) {
-        return jedisClient.hgetall(key);
-    }
-
-    @Override
-    public void expire(String key, long time, TimeUnit timeUnit) {
-        jedisClient.expire(key, time, timeUnit);
     }
 
     @Override
@@ -49,8 +49,33 @@ public class JedisExecutor implements RedisExecutor {
     }
 
     @Override
-    public void hset(String key, Map<String, String> map) {
+    public Map<String, String> hgetall(String key) {
+        return jedisClient.hgetall(key);
+    }
+
+    @Override
+    public String hget(String key, String hkey) {
+        return jedisClient.hget(key, hkey);
+    }
+
+    @Override
+    public void hmset(String key, Map<String, String> map) {
         jedisClient.hset(key, map);
+    }
+
+    @Override
+    public void hset(String key, String hk, String hv) {
+        jedisClient.hset(key, hk, hv);
+    }
+
+    @Override
+    public void hdel(String key, String... hkey) {
+        jedisClient.hdel(key, hkey);
+    }
+
+    @Override
+    public boolean expire(String key, long time, TimeUnit timeUnit) {
+        return jedisClient.expire(key, time, timeUnit);
     }
 
     @Override

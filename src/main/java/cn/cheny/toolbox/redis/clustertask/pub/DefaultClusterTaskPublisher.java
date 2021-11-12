@@ -47,7 +47,7 @@ public class DefaultClusterTaskPublisher implements ClusterTaskPublisher {
         }
         // set taskInfo
         Map<String, String> taskInfo = new TaskInfo(taskId, dataNums, 0, stepSize, desc, header);
-        redisExecutor.hset(taskRedisKey, taskInfo);
+        redisExecutor.hmset(taskRedisKey, taskInfo);
         // 设置过期时间，防止所有线程终止，无法删除任务标识
         redisExecutor.expire(taskRedisKey, TaskConfig.KEY_EXPIRE_SECONDS, TimeUnit.SECONDS);
         // pub task

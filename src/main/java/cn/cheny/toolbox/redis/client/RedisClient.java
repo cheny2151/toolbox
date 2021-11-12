@@ -17,13 +17,15 @@ public interface RedisClient<V> {
 
     Boolean exists(String key);
 
-    void expire(String key, long time, TimeUnit timeUnit);
+    boolean expire(String key, long time, TimeUnit timeUnit);
 
     Long expireAt(String key, long unixTime);
 
     Long pexpireAt(String key, long millisecondsTimestamp);
 
     void del(String... key);
+
+    void set(V key, V val);
 
     V get(String key);
 
