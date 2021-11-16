@@ -476,9 +476,9 @@ public class PathScanner {
      */
     private boolean filterByAsm(String classFileUrl) {
         try {
-            ClassFilterVisitor classVisitor = new ClassFilterVisitor(this.scanFilter);
             URL resource = getClassLoader().getResource(classFileUrl);
             if (resource != null) {
+                ClassFilterVisitor classVisitor = new ClassFilterVisitor(this.scanFilter);
                 new ClassReader(resource.openStream()).accept(classVisitor, ClassReader.SKIP_CODE);
                 return classVisitor.isPass();
             } else if (log.isDebugEnabled()) {
