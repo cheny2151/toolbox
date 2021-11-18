@@ -160,6 +160,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                     .collect(Collectors.toList());
             List<String> flagInRedis = registerInfo.values()
                     .stream()
+                    .filter(StringUtils::isNotEmpty)
                     .flatMap(info -> Arrays.stream(info.split(VAL_SPLIT)))
                     .collect(Collectors.toList());
             Collection<String> disjunctionResources = CollectionUtils.disjunction(flagList, flagInRedis);
