@@ -154,7 +154,9 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      */
     private boolean checkShouldReBalance(Map<String, String> registerInfo, Map<String, String> active, Set<T> allResources) {
         // 检查实例curFlag
-        Collection<String> disjunction = CollectionUtils.disjunction(registerInfo.keySet(), active.keySet());
+        Set<String> registerKeys = registerInfo.keySet();
+        Set<String> activeKeys = active.keySet();
+        Collection<String> disjunction = CollectionUtils.disjunction(registerKeys, activeKeys);
         if (disjunction.size() == 0) {
             // 检查resource
             List<String> flagList = allResources.stream()
@@ -175,8 +177,16 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                         .max(Comparator.comparingInt(l -> l));
                 Optional<Integer> min = resourceLen.stream()
                         .min(Comparator.comparingInt(l -> l));
-                return !max.isPresent() || !min.isPresent() || max.get() - min.get() > 1;
+                if (!max.isPresent() || !min.isPresent() || max.get() - min.get() > 1) {
+                    log.info("[Coordinator] 触发rebalanced，资源分配不均衡");
+                } else {
+                    return false;
+                }
+            } else {
+                log.info("[Coordinator] 触发rebalanced，发现新资源列表:{}", allResources);
             }
+        } else {
+            log.info("[Coordinator] 实例发生变化，原实例:{}，现有实例:{}", registerKeys, activeKeys);
         }
         return true;
     }
