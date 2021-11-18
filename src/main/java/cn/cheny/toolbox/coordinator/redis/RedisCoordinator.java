@@ -58,8 +58,8 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     private void register() {
         String curFlag = this.curFlag;
         final String heartbeatKey = buildHeartbeatKey(curFlag);
-        List<String> keys = Arrays.asList(heartbeatKey, RedisCoordinatorConstant.RESOURCES_REGISTER, curFlag);
-        List<String> values = Arrays.asList(RedisCoordinatorConstant.HEARTBEAT_VAL, "");
+        List<String> keys = Arrays.asList(heartbeatKey, RedisCoordinatorConstant.RESOURCES_REGISTER);
+        List<String> values = Arrays.asList(RedisCoordinatorConstant.HEARTBEAT_VAL, curFlag, "");
         // lua初始化注册信息
         redisExecutor.execute(RedisCoordinatorConstant.INIT_REGISTER_SCRIPT, keys, values);
     }
