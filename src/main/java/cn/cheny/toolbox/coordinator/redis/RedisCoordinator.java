@@ -89,18 +89,14 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 }
                 // 执行reBalance
                 List<T> allocated = new ArrayList<>();
-                if (CollectionUtils.isEmpty(allResources)) {
-                    redisExecutor.del(RedisCoordinatorConstant.RESOURCES_REGISTER);
-                } else {
-                    reBalanceResources(active, allResources);
-                    redisExecutor.del(RedisCoordinatorConstant.RESOURCES_REGISTER);
-                    redisExecutor.hmset(RedisCoordinatorConstant.RESOURCES_REGISTER, active);
+                reBalanceResources(active, allResources);
+                redisExecutor.del(RedisCoordinatorConstant.RESOURCES_REGISTER);
+                redisExecutor.hmset(RedisCoordinatorConstant.RESOURCES_REGISTER, active);
 
-                    String flags = active.get(curFlag);
-                    if (StringUtils.isNotEmpty(flags)) {
-                        List<T> curResources = buildByFlags(flags);
-                        allocated.addAll(curResources);
-                    }
+                String flags = active.get(curFlag);
+                if (StringUtils.isNotEmpty(flags)) {
+                    List<T> curResources = buildByFlags(flags);
+                    allocated.addAll(curResources);
                 }
                 log.info("[Coordinator] 完成重平衡,资源分配结果为:{}", active);
                 allocateNewResources(allocated);
@@ -221,6 +217,9 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      * @param allResources 所有现存资源
      */
     private void reBalanceResources(ConcurrentHashMap<String, String> active, Set<T> allResources) {
+        if (CollectionUtils.isEmpty(allResources)) {
+            active.replaceAll((k, v) -> "");
+        }
         Set<String> flags = allResources.stream().map(Resource::flag).collect(Collectors.toSet());
         List<String> availableFlag = new ArrayList<>(flags);
         int curFlagSize = active.size();
