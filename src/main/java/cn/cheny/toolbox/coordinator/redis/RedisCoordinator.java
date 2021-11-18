@@ -234,6 +234,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                     // 该curFlag原可用注册数小于当前平均值
                     int addSize = leastSize - hfSize;
                     newFlags = new HashSet<>(originAvailableFlag);
+                    availableFlag.removeAll(newFlags);
                     for (int i = 0; i < addSize; i++) {
                         newFlags.add(availableFlag.get(i));
                     }
@@ -350,13 +351,11 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
 
     private void sendReBalanceRequiredMsg() {
         ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, curFlag);
-        log.info("[Coordinator] 广播 rebalanced required");
         this.redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 
     private void sendReBalanced() {
         ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_RE_BALANCE, this.curFlag);
-        log.info("[Coordinator] 广播 finished rebalanced");
         redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 
