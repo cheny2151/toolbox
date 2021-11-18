@@ -219,6 +219,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     private void reBalanceResources(ConcurrentHashMap<String, String> active, Set<T> allResources) {
         if (CollectionUtils.isEmpty(allResources)) {
             active.replaceAll((k, v) -> "");
+            return;
         }
         Set<String> flags = allResources.stream().map(Resource::flag).collect(Collectors.toSet());
         List<String> availableFlag = new ArrayList<>(flags);
