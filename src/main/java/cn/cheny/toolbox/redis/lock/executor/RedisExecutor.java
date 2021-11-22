@@ -63,6 +63,23 @@ public interface RedisExecutor {
     boolean expire(String key, long time, TimeUnit timeUnit);
 
     /**
+     * 递增1
+     *
+     * @param key key
+     * @return 递增后的值
+     */
+    Long incr(String key);
+
+    /**
+     * 递增n
+     *
+     * @param key key
+     * @param val n
+     * @return 递增后的值
+     */
+    Long incrBy(String key, long val);
+
+    /**
      * 获取hash所有值
      *
      * @param key key
@@ -103,6 +120,16 @@ public interface RedisExecutor {
      * @param hv  hval
      */
     void hset(String key, String hk, String hv);
+
+    /**
+     * hash字段递增
+     *
+     * @param key key
+     * @param hk  hkey
+     * @param val 递增值
+     * @return 递增后的值
+     */
+    Long hincrBy(String key, String hk, long val);
 
     /**
      * 发送广播信息

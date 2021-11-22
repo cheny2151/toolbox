@@ -84,6 +84,16 @@ public class SpringRedisExecutor implements RedisExecutor {
     }
 
     @Override
+    public Long incr(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
+
+    @Override
+    public Long incrBy(String key, long val) {
+        return redisTemplate.opsForValue().increment(key, val);
+    }
+
+    @Override
     public Map<String, String> hgetall(String key) {
         HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
         return hashOperations.entries(key);
@@ -97,6 +107,11 @@ public class SpringRedisExecutor implements RedisExecutor {
     @Override
     public void hset(String key, String hk, String hv) {
         redisTemplate.opsForHash().put(key, hk, hv);
+    }
+
+    @Override
+    public Long hincrBy(String key, String hk, long val) {
+        return redisTemplate.opsForHash().increment(key, hk, val);
     }
 
     @Override

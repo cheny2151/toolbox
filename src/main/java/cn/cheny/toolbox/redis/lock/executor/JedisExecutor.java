@@ -69,6 +69,11 @@ public class JedisExecutor implements RedisExecutor {
     }
 
     @Override
+    public Long hincrBy(String key, String hk, long val) {
+        return jedisClient.hincrBy(key, hk, val);
+    }
+
+    @Override
     public void hdel(String key, String... hkey) {
         jedisClient.hdel(key, hkey);
     }
@@ -76,6 +81,16 @@ public class JedisExecutor implements RedisExecutor {
     @Override
     public boolean expire(String key, long time, TimeUnit timeUnit) {
         return jedisClient.expire(key, time, timeUnit);
+    }
+
+    @Override
+    public Long incr(String key) {
+        return jedisClient.incr(key);
+    }
+
+    @Override
+    public Long incrBy(String key, long val) {
+        return jedisClient.incrBy(key, val);
     }
 
     @Override
