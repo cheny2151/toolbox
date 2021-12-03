@@ -2,6 +2,8 @@ package cn.cheny.toolbox.reflect.methodHolder;
 
 import cn.cheny.toolbox.reflect.ReflectUtils;
 import cn.cheny.toolbox.reflect.TypeUtils;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -17,8 +19,8 @@ import java.util.stream.Collectors;
  */
 public class ReadWriteMethodHolder extends BaseMethodHolder {
 
-    private final List<String> readableProperties;
-    private final List<String> writableProperties;
+    private final List<PropertySignature> readableProperties;
+    private final List<PropertySignature> writableProperties;
 
     public ReadWriteMethodHolder(Class<?> clazz) {
         super(clazz);
@@ -28,12 +30,18 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
         this.writableProperties = cacheMethods(writeMethods);
     }
 
-    private List<String> cacheMethods(Collection<Method> methods) {
+    private List<PropertySignature> cacheMethods(Collection<Method> methods) {
         return methods
                 .stream().map(method -> {
                     String property = ReflectUtils.extractPropertyName(method);
                     cacheMethod(property, method);
-                    return property;
+                    Class<?> type;
+                    if (method.getParameterCount() == 0) {
+                        type = method.getReturnType();
+                    } else {
+                        type = method.getParameterTypes()[0];
+                    }
+                    return new PropertySignature(property, type);
                 }).collect(Collectors.toList());
     }
 
@@ -73,8 +81,8 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
      *
      * @return 属性名称集合
      */
-    public Collection<String> getWritableProperties() {
-        return writableProperties;
+    public Collection<String> getWritablePropertyNames() {
+        return writableProperties.stream().map(PropertySignature::getName).collect(Collectors.toList());
     }
 
     /**
@@ -82,14 +90,32 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
      *
      * @return 属性名称集合
      */
-    public Collection<String> getReadableProperties() {
+    public Collection<String> getReadablePropertyNames() {
+        return readableProperties.stream().map(PropertySignature::getName).collect(Collectors.toList());
+    }
+
+    /**
+     * 返回所有可写的属性签名
+     *
+     * @return 属性名称集合
+     */
+    public List<PropertySignature> getReadableProperties() {
         return readableProperties;
+    }
+
+    /**
+     * 返回所有可读的属性签名
+     *
+     * @return 属性名称集合
+     */
+    public List<PropertySignature> getWritableProperties() {
+        return writableProperties;
     }
 
     /**
      * 方法增强，提供基础类型转换
      */
-    protected Object doInvoke(Method method, Object obj, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    protected Object doInvoke(Method method, Object obj, Object... args) throws InvocationTargetException, IllegalAccessException {
         int parameterCount = method.getParameterCount();
         Object[] args0 = args;
         if (parameterCount != 0) {
@@ -105,6 +131,16 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
             }
         }
         return method.invoke(obj, args0);
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class PropertySignature {
+
+        private String name;
+
+        private Class<?> type;
+
     }
 
 }

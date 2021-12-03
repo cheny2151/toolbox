@@ -90,7 +90,7 @@ public abstract class BaseMethodHolder implements MethodHolder {
      * @throws InvocationTargetException 异常
      * @throws IllegalAccessException    异常
      */
-    protected Object doInvoke(Method method, Object obj, Object[] args) throws InvocationTargetException, IllegalAccessException {
+    protected Object doInvoke(Method method, Object obj, Object... args) throws InvocationTargetException, IllegalAccessException {
         return method.invoke(obj, args);
     }
 

@@ -58,10 +58,12 @@ public class TypeUtils {
     public static <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
         ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objType);
         T t = ReflectUtils.newObject(objType, null, null);
-        methodHolder.getWritableProperties().forEach(property -> {
-            Object fieldVal = map.get(property);
+        methodHolder.getWritableProperties().forEach(signature -> {
+            String name = signature.getName();
+            Object fieldVal = map.get(name);
             if (fieldVal != null) {
-                methodHolder.write(t, property, fieldVal);
+                fieldVal = caseToObject(fieldVal, signature.getType());
+                methodHolder.write(t, name, fieldVal);
             }
         });
         // 泛型处理
@@ -98,7 +100,7 @@ public class TypeUtils {
         Class<?> objClass = obj.getClass();
         ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objClass);
         Map<String, Object> map = newMap(mapClass);
-        methodHolder.getReadableProperties().forEach(property -> map.put(property, methodHolder.read(obj, property)));
+        methodHolder.getReadablePropertyNames().forEach(property -> map.put(property, methodHolder.read(obj, property)));
         return map;
     }
 
