@@ -188,28 +188,30 @@ public abstract class BaseMethodHolder implements MethodHolder {
      */
     private Object[] castToObjectArray(Object[] args, Class<?> arrayType, int parameterCount) {
         // 如果入参与方法参数长度一致，并且最后一个入参即为array类型/Collection类型，则直接返回原入参
+        int lastIndex = parameterCount - 1;
         if (args.length == parameterCount) {
-            Object lastArg = args[parameterCount - 1];
+            Object lastArg = args[lastIndex];
             Class<?> lastArgsClass = lastArg.getClass();
             if (lastArgsClass.isArray()) {
                 return args;
             } else if (Collection.class.isAssignableFrom(lastArgsClass)) {
-                return TypeUtils.collectionToArray((Collection<?>) lastArg, arrayType);
+                Object[] fixArgs = TypeUtils.collectionToArray((Collection<?>) lastArg, arrayType);
+                args[lastIndex] = fixArgs;
+                return args;
             }
         }
         Object[] fixArgs = new Object[parameterCount];
-        int defineNum = parameterCount - 1;
-        if (defineNum != 0) {
+        if (lastIndex != 0) {
             // 非不定参数不变，copy
-            System.arraycopy(args, 0, fixArgs, 0, defineNum);
+            System.arraycopy(args, 0, fixArgs, 0, lastIndex);
         }
         // 通过反射将不定参数包装到array中，存到fixArgs最后一位
         Object array = Array.newInstance(arrayType, args.length - parameterCount + 1);
         int index = 0;
-        for (int i = defineNum; i < args.length; i++) {
+        for (int i = lastIndex; i < args.length; i++) {
             Array.set(array, index++, args[i]);
         }
-        fixArgs[defineNum] = array;
+        fixArgs[lastIndex] = array;
         return fixArgs;
     }
 
