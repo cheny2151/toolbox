@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.reflect.methodHolder;
 
+import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.reflect.methodHolder.exception.MethodHolderInvokeException;
 import cn.cheny.toolbox.reflect.methodHolder.exception.NoSuchMethodException;
 import cn.cheny.toolbox.reflect.methodHolder.model.MetaMethodCollect;
@@ -9,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -185,13 +187,19 @@ public abstract class BaseMethodHolder implements MethodHolder {
      * @return 修复后的数据
      */
     private Object[] castToObjectArray(Object[] args, Class<?> arrayType, int parameterCount) {
-        // 如果入参与方法参数长度一致，并且最后一个入参即为array类型，则直接返回原入参
-        if (args.length == parameterCount && args[parameterCount - 1].getClass().isArray()) {
-            return args;
+        // 如果入参与方法参数长度一致，并且最后一个入参即为array类型/Collection类型，则直接返回原入参
+        if (args.length == parameterCount) {
+            Object lastArg = args[parameterCount - 1];
+            Class<?> lastArgsClass = lastArg.getClass();
+            if (lastArgsClass.isArray()) {
+                return args;
+            } else if (Collection.class.isAssignableFrom(lastArgsClass)) {
+                TypeUtils.collectionToArray((Collection<?>) lastArg, arrayType);
+            }
         }
         Object[] fixArgs = new Object[parameterCount];
         int defineNum = parameterCount - 1;
-        if (defineNum != 0){
+        if (defineNum != 0) {
             // 非不定参数不变，copy
             System.arraycopy(args, 0, fixArgs, 0, defineNum);
         }
