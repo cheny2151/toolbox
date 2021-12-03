@@ -194,7 +194,7 @@ public abstract class BaseMethodHolder implements MethodHolder {
             if (lastArgsClass.isArray()) {
                 return args;
             } else if (Collection.class.isAssignableFrom(lastArgsClass)) {
-                TypeUtils.collectionToArray((Collection<?>) lastArg, arrayType);
+                return TypeUtils.collectionToArray((Collection<?>) lastArg, arrayType);
             }
         }
         Object[] fixArgs = new Object[parameterCount];
