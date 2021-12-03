@@ -14,7 +14,7 @@ public class NetUtils {
 
     private final static Pattern LOCAL_IP_PATTERN = Pattern.compile("127(\\.\\d{1,3}){3}$");
 
-    private final static Pattern IP_PATTERN = Pattern.compile("(2(5[0-5]|[0-4]\\d))|[0-1]?\\d{1,2}");
+//    private final static Pattern IP_PATTERN = Pattern.compile("(2(5[0-5]|[0-4]\\d))|[0-1]?\\d{1,2}");
 
     public static String getHost() {
         try {
@@ -29,7 +29,8 @@ public class NetUtils {
     }
 
     public static boolean isIp(String ip) {
-        return ip != null && (IP_PATTERN.matcher(ip).matches() || ip.equalsIgnoreCase("localhost"));
+        //todo 修改为正确的正则 return ip != null && (IP_PATTERN.matcher(ip).matches() || ip.equalsIgnoreCase("localhost"));
+        return true;
     }
 
     public static IpAndPort parse(String text) {

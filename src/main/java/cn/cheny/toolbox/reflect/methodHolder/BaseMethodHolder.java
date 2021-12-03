@@ -191,8 +191,10 @@ public abstract class BaseMethodHolder implements MethodHolder {
         }
         Object[] fixArgs = new Object[parameterCount];
         int defineNum = parameterCount - 1;
-        // 非不定参数不变，copy
-        System.arraycopy(args, 0, fixArgs, 0, defineNum);
+        if (defineNum != 0){
+            // 非不定参数不变，copy
+            System.arraycopy(args, 0, fixArgs, 0, defineNum);
+        }
         // 通过反射将不定参数包装到array中，存到fixArgs最后一位
         Object array = Array.newInstance(arrayType, args.length - parameterCount + 1);
         int index = 0;
