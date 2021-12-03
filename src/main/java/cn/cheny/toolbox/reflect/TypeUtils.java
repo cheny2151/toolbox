@@ -150,6 +150,23 @@ public class TypeUtils {
     }
 
     /**
+     * 将集合转换为数组(无泛型)
+     *
+     * @param collection 集合
+     * @param tClass     元素类型
+     * @return 数组
+     */
+    public static Object collectionToArrayObject(Collection<?> collection, Class<?> tClass) {
+        Object array = Array.newInstance(tClass, collection.size());
+        int i = 0;
+        for (Object o : collection) {
+            Object element = caseToObject(o, tClass);
+            Array.set(array, i++, element);
+        }
+        return array;
+    }
+
+    /**
      * 判断是否是基础类型，或者基础类型的包装类，或者BigDecimal，Date
      *
      * @param aClass 类型
@@ -375,7 +392,7 @@ public class TypeUtils {
                 !TypeUtils.isBaseClass(class0)) {
             return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
         } else if (obj instanceof Collection && objType.isArray()) {
-            return (T) collectionToArray((Collection<?>) obj, objType.getComponentType());
+            return (T) collectionToArrayObject((Collection<?>) obj, objType.getComponentType());
         } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
             return (T) arrayToCollection(obj, objType, class0.getComponentType());
         }
