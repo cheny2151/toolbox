@@ -60,6 +60,16 @@ public class EasyMap extends HashMap<String, Object> {
         return tryCoverBase(key, val, Long.class);
     }
 
+    public Float getFloat(String key) {
+        Object val = getObject(key);
+        return tryCoverBase(key, val, Float.class);
+    }
+
+    public Double getDouble(String key) {
+        Object val = getObject(key);
+        return tryCoverBase(key, val, Double.class);
+    }
+
     public Boolean getBoolean(String key) {
         Object val = getObject(key);
         return tryCoverBase(key, val, Boolean.class);
