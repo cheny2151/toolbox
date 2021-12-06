@@ -98,7 +98,7 @@ public class EasyMap extends HashMap<String, Object> {
                 Class<?> class0 = TypeUtils.ifPrimitiveToWrapClass(tClass);
                 Object array = Array.newInstance(class0, length);
                 for (int i = 0; i < length; i++) {
-                    Array.set(array, i, TypeUtils.caseToObject(Array.get(val, 0), tClass));
+                    Array.set(array, i, TypeUtils.caseToObject(Array.get(val, i), tClass));
                 }
                 return (T[]) array;
             }
