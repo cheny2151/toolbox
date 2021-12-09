@@ -47,7 +47,7 @@
         <commons-lang3.version>3.9</commons-lang3.version>
         <poi-ooxml.version>4.1.2</poi-ooxml.version>
         <jackson-core.version>2.9.2</jackson-core.version>
-        <jackson-databind.version>2.9.10.7</jackson-databind.version>
+        <jackson-databind.version>2.9.10.8</jackson-databind.version>
         <fastjson.version>1.2.62</fastjson.version>
         <junit.version>4.12</junit.version>
         <lombok.version>1.18.2</lombok.version>
