@@ -35,7 +35,7 @@ public abstract class BaseResourceCoordinator<T extends Resource> implements Res
     protected void allocateNewResources(Collection<T> allocated) {
         Collection<T> origin = resourceManager.getHoldResources();
         if (origin == null || !CollectionUtils.isEqualCollection(allocated, origin)) {
-            log.info("[Coordinator] 当前实例资源分配结果:{}", allocated);
+            log.info("[Coordinator] 当前实例分配新资源\"{}\"：{}", resourceManager.resourceKey(), allocated);
             resourceManager.setHoldResources(allocated);
             resourceManager.changeHook();
         }
