@@ -18,6 +18,10 @@ public class CoordinatorHolder implements Closeable {
         this.coordinatorMap = coordinatorMap;
     }
 
+    public ResourceCoordinator<?> get(String resourceKey) {
+        return coordinatorMap.get(resourceKey);
+    }
+
     @Override
     public void close() throws IOException {
         for (ResourceCoordinator<?> resourceCoordinator : coordinatorMap.values()) {

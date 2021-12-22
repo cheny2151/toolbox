@@ -298,12 +298,12 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     }
 
     private void sendReBalanceRequiredMsg() {
-        ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, this.getSid());
+        ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, this.getSid());
         this.redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 
     private void sendReBalanced() {
-        ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_RE_BALANCE, this.getSid());
+        ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_RE_BALANCE, this.getSid());
         redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 

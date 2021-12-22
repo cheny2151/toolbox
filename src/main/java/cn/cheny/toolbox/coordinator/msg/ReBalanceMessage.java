@@ -16,11 +16,13 @@ public class ReBalanceMessage {
 
     private String type;
     private String sender;
+    private String resourceKey;
 
     public ReBalanceMessage() {
     }
 
-    public ReBalanceMessage(String type, String sender) {
+    public ReBalanceMessage(String resourceKey, String type, String sender) {
+        this.resourceKey = resourceKey;
         this.type = type;
         this.sender = sender;
     }

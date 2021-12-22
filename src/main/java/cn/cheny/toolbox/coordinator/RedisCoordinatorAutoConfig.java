@@ -59,8 +59,8 @@ public class RedisCoordinatorAutoConfig {
     }
 
     @Bean
-    public RedisCoordinatorEventListener redisCoordinatorEventListener(RedisCoordinator<?> resourceCoordinator) {
-        return new RedisCoordinatorEventListener(resourceCoordinator);
+    public RedisCoordinatorEventListener redisCoordinatorEventListener(HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
+        return new RedisCoordinatorEventListener(heartBeatManager, coordinatorHolder);
     }
 
     @Bean
