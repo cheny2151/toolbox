@@ -64,7 +64,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                     allResources = new HashSet<>();
                 }
                 // 当前注册的实例信息
-                Map<String, String> registerInfo = redisExecutor.hgetall(RedisCoordinatorConstant.RESOURCES_REGISTER);
+                Map<String, String> registerInfo = redisExecutor.hgetall(resourceKey);
                 // 当前存活实例的注册信息
                 ConcurrentHashMap<String, String> active = filterActive(registerInfo);
                 if (!active.containsKey(curFlag)) {
@@ -76,8 +76,8 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 // 执行reBalance
                 List<T> allocated = new ArrayList<>();
                 reBalanceResources(active, allResources);
-                redisExecutor.del(RedisCoordinatorConstant.RESOURCES_REGISTER);
-                redisExecutor.hmset(RedisCoordinatorConstant.RESOURCES_REGISTER, active);
+                redisExecutor.del(resourceKey);
+                redisExecutor.hmset(resourceKey, active);
 
                 String flags = active.get(curFlag);
                 if (StringUtils.isNotEmpty(flags)) {
@@ -112,7 +112,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         String sid = getSid();
         this.status = 0;
         this.checkThread.shutdownNow();
-        this.redisExecutor.hdel(RedisCoordinatorConstant.RESOURCES_REGISTER, sid);
+        this.redisExecutor.hdel(resourceKey, sid);
         this.sendReBalanceRequiredMsg();
     }
 
@@ -263,7 +263,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 ResourceManager<T> resourceManager = this.getResourceManager();
                 List<T> allResources = resourceManager.getAllResources();
                 HashOperations<String, String, String> opsForHash = redisTemplate.opsForHash();
-                Map<String, String> registerInfo = opsForHash.entries(RedisCoordinatorConstant.RESOURCES_REGISTER);
+                Map<String, String> registerInfo = opsForHash.entries(resourceKey);
                 List<String> flagsInRedis = registerInfo.values()
                         .stream()
                         .map(this::parseFlags)
