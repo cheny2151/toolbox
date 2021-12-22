@@ -13,6 +13,7 @@ public class RedisCoordinatorConstant {
     public static final String RE_BALANCE_LOCK = "COORDINATOR:RE_BALANCE:LOCK";
     public static final String HEART_BEAT_KEY_PRE = "{COORDINATOR}:HEART_BEAT";
     public static final String HEARTBEAT_VAL = "1";
+    public static final String KEY_SPLIT = ":";
 
     public static final String INIT_REGISTER_SCRIPT = "redis.call('set', KEYS[1], ARGV[1])\n" +
             "redis.call('hset', KEYS[2], ARGV[2], ARGV[3]) return nil";

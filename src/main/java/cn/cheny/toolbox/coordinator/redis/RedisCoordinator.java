@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.coordinator.redis;
 
 import cn.cheny.toolbox.coordinator.BaseResourceCoordinator;
+import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.coordinator.msg.ReBalanceMessage;
 import cn.cheny.toolbox.coordinator.resource.Resource;
 import cn.cheny.toolbox.coordinator.resource.ResourceManager;
@@ -29,39 +30,24 @@ import java.util.stream.Collectors;
 public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinator<T> {
 
     private static final int CHECK_PERIOD = 10 * 1000;
-    private static final int HEARTBEAT_PERIOD = 1100;
-    private static final String KEY_SPLIT = ":";
     private static final String VAL_SPLIT = ",";
-    private static final String EXIST_FLAG = "1";
 
-    private final String curFlag;
-
+    private final HeartbeatManager heartBeatManager;
     private final RedisExecutor redisExecutor;
-    private ScheduledExecutorService heartbeatThread;
     private final ScheduledExecutorService checkThread;
+    private final String resourceKey;
 
     private volatile Integer status;
 
-    public RedisCoordinator(String curFlag, Integer port, ResourceManager<T> resourceManager, RedisExecutor redisExecutor) {
+    public RedisCoordinator(HeartbeatManager heartBeatManager, ResourceManager<T> resourceManager, RedisExecutor redisExecutor) {
         super(resourceManager);
+        this.heartBeatManager = heartBeatManager;
         this.redisExecutor = redisExecutor;
-        this.curFlag = curFlag + KEY_SPLIT + port;
-        this.heartbeatThread = Executors.newSingleThreadScheduledExecutor();
         this.checkThread = Executors.newSingleThreadScheduledExecutor();
         this.status = 1;
-        this.register();
-        this.startHeartbeatThread();
+        this.resourceKey = RedisCoordinatorConstant.RESOURCES_REGISTER + RedisCoordinatorConstant.KEY_SPLIT + resourceManager.resourceKey();
         this.tryRebalanced();
         this.startCheckThread();
-    }
-
-    private void register() {
-        String curFlag = this.curFlag;
-        final String heartbeatKey = buildHeartbeatKey(curFlag);
-        List<String> keys = Arrays.asList(heartbeatKey, RedisCoordinatorConstant.RESOURCES_REGISTER);
-        List<String> values = Arrays.asList(RedisCoordinatorConstant.HEARTBEAT_VAL, curFlag, "");
-        // lua初始化注册信息
-        redisExecutor.execute(RedisCoordinatorConstant.INIT_REGISTER_SCRIPT, keys, values);
     }
 
     @Override
@@ -71,7 +57,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         }
         try (RedisLock redisLock = new ReentrantRedisLock(RedisCoordinatorConstant.RE_BALANCE_LOCK)) {
             if (redisLock.tryLock(0, TimeUnit.SECONDS)) {
-                String curFlag = this.curFlag;
+                String curFlag = this.getSid();
                 ResourceManager<T> resourceManager = getResourceManager();
                 Set<T> allResources = resourceManager.getAllResources();
                 if (allResources == null) {
@@ -110,10 +96,10 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         if (status != 1) {
             return;
         }
-        String flags = redisExecutor.hget(RedisCoordinatorConstant.RESOURCES_REGISTER, this.curFlag);
+        String flags = redisExecutor.hget(resourceKey, this.getSid());
         if (flags == null) {
             log.info("[Coordinator] 当前实例未分配资源,执行reBalance");
-            this.checkHeartbeat();
+            this.heartBeatManager.checkHeartbeat();
             this.tryRebalanced();
         } else {
             List<T> curResources = buildByFlags(flags);
@@ -123,18 +109,15 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
 
     @Override
     public void close() {
+        String sid = getSid();
         this.status = 0;
-        this.heartbeatThread.shutdownNow();
         this.checkThread.shutdownNow();
-        String curFlag = this.curFlag;
-        String key = buildHeartbeatKey(curFlag);
-        redisExecutor.del(key);
-        redisExecutor.hdel(RedisCoordinatorConstant.RESOURCES_REGISTER, this.curFlag);
+        this.redisExecutor.hdel(RedisCoordinatorConstant.RESOURCES_REGISTER, sid);
         this.sendReBalanceRequiredMsg();
     }
 
-    public String getCurFlag() {
-        return curFlag;
+    public String getSid() {
+        return heartBeatManager.getSid();
     }
 
     /**
@@ -195,18 +178,12 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      * @return 存活的实例注册信息
      */
     private ConcurrentHashMap<String, String> filterActive(Map<String, String> registerInfo) {
-        String curFlag = this.curFlag;
         ConcurrentHashMap<String, String> fixRegister = new ConcurrentHashMap<>();
         for (Map.Entry<String, String> entry : registerInfo.entrySet()) {
-            String flag = entry.getKey();
-            if (!curFlag.equals(flag)) {
-                String key = buildHeartbeatKey(flag);
-                Boolean hasKey = redisExecutor.hasKey(key);
-                if (hasKey == null || !hasKey) {
-                    continue;
-                }
+            String sid = entry.getKey();
+            if (this.heartBeatManager.isActive(sid)) {
+                fixRegister.put(sid, entry.getValue());
             }
-            fixRegister.put(flag, entry.getValue());
         }
         return fixRegister;
     }
@@ -223,28 +200,29 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
             return;
         }
         Set<String> flags = allResources.stream().map(Resource::flag).collect(Collectors.toSet());
+        // 当前所有可用资源flags
         List<String> availableFlag = new ArrayList<>(flags);
         int curFlagSize = active.size();
         int leastSize = flags.size() / curFlagSize;
         if (leastSize == 0) {
-            log.warn("资源不足分配，请减少实例或者增加资源；当前实例数:{},当前资源数:{}", curFlagSize, leastSize);
+            log.warn("[Coordinator] 资源不足分配，请减少实例或者增加资源；当前实例数:{},当前资源数:{}", curFlagSize, leastSize);
         } else {
             for (Map.Entry<String, String> entry : active.entrySet()) {
                 String curFlag = entry.getKey();
                 String val = entry.getValue();
-                // 原注册flag
-                List<String> originFlags = parseFlags(val);
-                // 原可用flag(交集)
-                Collection<String> originAvailableFlag = CollectionUtils.intersection(originFlags, availableFlag);
-                int hfSize = originAvailableFlag.size();
+                // 原注册资源
+                List<String> originFlags = parseResourceFlags(val);
+                // 原可用资源(交集)
+                Collection<String> originAvailable = CollectionUtils.intersection(originFlags, availableFlag);
+                int hfSize = originAvailable.size();
                 Set<String> newFlags;
                 if (hfSize > leastSize) {
                     // 该curFlag原可用注册数大于当前平均值
-                    newFlags = originAvailableFlag.stream().limit(leastSize).collect(Collectors.toSet());
+                    newFlags = originAvailable.stream().limit(leastSize).collect(Collectors.toSet());
                 } else {
                     // 该curFlag原可用注册数小于当前平均值
                     int addSize = leastSize - hfSize;
-                    newFlags = new HashSet<>(originAvailableFlag);
+                    newFlags = new HashSet<>(originAvailable);
                     availableFlag.removeAll(newFlags);
                     for (int i = 0; i < addSize; i++) {
                         newFlags.add(availableFlag.get(i));
@@ -270,24 +248,6 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 }
             }
         }
-    }
-
-    /**
-     * 开始心跳线程
-     */
-    private void startHeartbeatThread() {
-        final String key = buildHeartbeatKey(curFlag);
-        heartbeatThread.scheduleAtFixedRate(() -> {
-            try {
-                boolean expire = redisExecutor.expire(key, 1100, TimeUnit.MILLISECONDS);
-                if (!expire) {
-                    redisExecutor.set(key, EXIST_FLAG);
-                    redisExecutor.expire(key, HEARTBEAT_PERIOD, TimeUnit.MILLISECONDS);
-                }
-            } catch (Exception e) {
-                log.error("[Coordinator] 心跳包发送异常", e);
-            }
-        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -325,30 +285,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         }, CHECK_PERIOD, CHECK_PERIOD, TimeUnit.MILLISECONDS);
     }
 
-    /**
-     * 检查当前实例心跳
-     * 1.是否已注册心跳
-     * 2.未注册则重启心跳线程
-     */
-    private void checkHeartbeat() {
-        final String key = buildHeartbeatKey(curFlag);
-        String val = redisExecutor.get(key);
-        if (val != null) {
-            return;
-        }
-        synchronized (this) {
-            this.heartbeatThread.shutdown();
-            redisExecutor.set(key, EXIST_FLAG);
-            this.heartbeatThread = Executors.newSingleThreadScheduledExecutor();
-            this.startHeartbeatThread();
-        }
-    }
-
-    private String buildHeartbeatKey(String curFlag) {
-        return RedisCoordinatorConstant.HEART_BEAT_KEY_PRE + KEY_SPLIT + curFlag;
-    }
-
-    private List<String> parseFlags(String val) {
+    private List<String> parseResourceFlags(String val) {
         return StringUtils.isEmpty(val) ? Collections.emptyList() : Arrays.asList(val.split(VAL_SPLIT));
     }
 
@@ -361,12 +298,12 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     }
 
     private void sendReBalanceRequiredMsg() {
-        ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, curFlag);
+        ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, this.getSid());
         this.redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 
     private void sendReBalanced() {
-        ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_RE_BALANCE, this.curFlag);
+        ReBalanceMessage message = new ReBalanceMessage(ReBalanceMessage.TYPE_RE_BALANCE, this.getSid());
         redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 

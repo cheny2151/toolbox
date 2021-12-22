@@ -30,7 +30,7 @@ public class RedisCoordinatorEventListener implements MessageListener {
         if (channel.equals(RedisCoordinatorConstant.REDIS_CHANNEL)) {
             String data = new String(message.getBody(), StandardCharsets.UTF_8);
             ReBalanceMessage reBalanceMessage = JSON.parseObject(data, ReBalanceMessage.class);
-            String curFlag = redisCoordinator.getCurFlag();
+            String curFlag = redisCoordinator.getSid();
             if (curFlag.equals(reBalanceMessage.getSender())) {
                 return;
             }

@@ -17,6 +17,8 @@ public interface ResourceManager<T extends Resource> {
 
     void changeHook();
 
+    String resourceKey();
+
     Collection<T> getHoldResources();
 
     void setHoldResources(Collection<T> resources);
