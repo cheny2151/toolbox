@@ -57,7 +57,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         }
         try (RedisLock redisLock = new ReentrantRedisLock(RedisCoordinatorConstant.RE_BALANCE_LOCK)) {
             if (redisLock.tryLock(0, TimeUnit.SECONDS)) {
-                String curFlag = this.getSid();
+                String sid = this.getSid();
                 ResourceManager<T> resourceManager = getResourceManager();
                 Set<T> allResources = resourceManager.getAllResources();
                 if (allResources == null) {
@@ -67,8 +67,8 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 Map<String, String> registerInfo = redisExecutor.hgetall(resourceKey);
                 // 当前存活实例的注册信息
                 ConcurrentHashMap<String, String> active = filterActive(registerInfo);
-                if (!active.containsKey(curFlag)) {
-                    active.put(curFlag, "");
+                if (!active.containsKey(sid)) {
+                    active.put(sid, "");
                 }
                 if (!checkShouldReBalance(registerInfo, active, allResources)) {
                     return;
@@ -79,7 +79,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 redisExecutor.del(resourceKey);
                 redisExecutor.hmset(resourceKey, active);
 
-                String flags = active.get(curFlag);
+                String flags = active.get(sid);
                 if (StringUtils.isNotEmpty(flags)) {
                     List<T> curResources = buildByFlags(flags);
                     allocated.addAll(curResources);
