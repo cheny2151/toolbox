@@ -1,5 +1,7 @@
 package cn.cheny.toolbox.coordinator;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Map;
@@ -10,6 +12,7 @@ import java.util.Map;
  * @author by chenyi
  * @date 2021/12/22
  */
+@Slf4j
 public class CoordinatorHolder implements Closeable {
 
     private final Map<String, ? extends ResourceCoordinator<?>> coordinatorMap;
@@ -24,6 +27,7 @@ public class CoordinatorHolder implements Closeable {
 
     @Override
     public void close() throws IOException {
+        log.info("[Coordinator] 释放资源");
         for (ResourceCoordinator<?> resourceCoordinator : coordinatorMap.values()) {
             try {
                 resourceCoordinator.close();
