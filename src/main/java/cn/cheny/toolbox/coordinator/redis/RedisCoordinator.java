@@ -163,7 +163,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                     return false;
                 }
             } else {
-                log.info("[Coordinator] 触发rebalanced，发现新资源列表:{}", allResources);
+                log.info("[Coordinator] 触发rebalanced，发现新资源列表或有其他实例下线:{}", allResources);
             }
         } else {
             log.info("[Coordinator] 实例发生变化，原实例:{}，现有实例:{}", registerKeys, activeKeys);
