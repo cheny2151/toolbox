@@ -200,26 +200,28 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         Set<String> flags = allResources.stream().map(Resource::flag).collect(Collectors.toSet());
         // 当前所有可用资源flags
         List<String> availableFlag = new ArrayList<>(flags);
-        int curFlagSize = active.size();
-        int leastSize = flags.size() / curFlagSize;
+        // 存活的实例数
+        int serverSize = active.size();
+        // 至少应持有数量
+        int leastSize = flags.size() / serverSize;
         if (leastSize == 0) {
-            log.warn("[Coordinator] 资源不足分配，请减少实例或者增加资源；当前实例数:{},当前资源数:{}", curFlagSize, leastSize);
+            log.warn("[Coordinator] 资源不足分配，请减少实例或者增加资源；当前实例数:{},当前资源数:{}", serverSize, leastSize);
         } else {
             for (Map.Entry<String, String> entry : active.entrySet()) {
-                String curFlag = entry.getKey();
+                String sid = entry.getKey();
                 String val = entry.getValue();
                 // 原注册资源
                 List<String> originFlags = parseResourceFlags(val);
                 // 原可用资源(交集)
                 Collection<String> originAvailable = CollectionUtils.intersection(originFlags, availableFlag);
-                int hfSize = originAvailable.size();
+                int oaSize = originAvailable.size();
                 Set<String> newFlags;
-                if (hfSize > leastSize) {
-                    // 该curFlag原可用注册数大于当前平均值
+                if (oaSize > leastSize) {
+                    // 该实例原可用注册数大于当前平均值
                     newFlags = originAvailable.stream().limit(leastSize).collect(Collectors.toSet());
                 } else {
-                    // 该curFlag原可用注册数小于当前平均值
-                    int addSize = leastSize - hfSize;
+                    // 该实例原可用注册数小于当前平均值
+                    int addSize = leastSize - oaSize;
                     newFlags = new HashSet<>(originAvailable);
                     availableFlag.removeAll(newFlags);
                     for (int i = 0; i < addSize; i++) {
@@ -227,7 +229,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                     }
                 }
                 String newVal = String.join(VAL_SPLIT, newFlags);
-                active.put(curFlag, newVal);
+                active.put(sid, newVal);
                 availableFlag.removeAll(newFlags);
             }
             if (availableFlag.size() > 0) {
