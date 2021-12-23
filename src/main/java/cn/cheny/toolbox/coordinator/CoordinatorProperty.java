@@ -13,7 +13,7 @@ import static cn.cheny.toolbox.coordinator.CoordinatorProperty.PRE;
 @ConfigurationProperties(PRE)
 public class CoordinatorProperty {
 
-    public final static String PRE = "coordinator";
+    public final static String PRE = "toolbox.coordinator";
 
     public String id;
 
