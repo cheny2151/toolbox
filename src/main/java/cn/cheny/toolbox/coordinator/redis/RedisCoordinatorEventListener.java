@@ -1,7 +1,7 @@
 package cn.cheny.toolbox.coordinator.redis;
 
 import cn.cheny.toolbox.coordinator.CoordinatorHolder;
-import cn.cheny.toolbox.coordinator.CoordinatorProperty;
+import cn.cheny.toolbox.coordinator.CoordinatorProperties;
 import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.coordinator.ResourceCoordinator;
 import cn.cheny.toolbox.coordinator.msg.ReBalanceMessage;
@@ -26,9 +26,9 @@ public class RedisCoordinatorEventListener implements MessageListener {
     private final String channelId;
     private final String sid;
 
-    public RedisCoordinatorEventListener(CoordinatorProperty coordinatorProperty, HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
+    public RedisCoordinatorEventListener(CoordinatorProperties coordinatorProperties, HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
         this.coordinatorHolder = coordinatorHolder;
-        this.channelId = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(coordinatorProperty.getId());
+        this.channelId = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(coordinatorProperties.getId());
         this.sid = heartBeatManager.getSid();
     }
 

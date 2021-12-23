@@ -39,13 +39,13 @@ import java.util.stream.Collectors;
 @ConditionalOnBean(value = ResourceManager.class)
 @ConditionalOnMissingBean(value = ResourceCoordinator.class)
 @AutoConfigureAfter({RedisAutoConfiguration.class, SpringToolboxRedisAutoConfig.class})
-@EnableConfigurationProperties(CoordinatorProperty.class)
+@EnableConfigurationProperties(CoordinatorProperties.class)
 public class RedisCoordinatorAutoConfig {
 
-    private final CoordinatorProperty coordinatorProperty;
+    private final CoordinatorProperties coordinatorProperties;
 
-    public RedisCoordinatorAutoConfig(CoordinatorProperty coordinatorProperty) {
-        this.coordinatorProperty = coordinatorProperty;
+    public RedisCoordinatorAutoConfig(CoordinatorProperties coordinatorProperties) {
+        this.coordinatorProperties = coordinatorProperties;
     }
 
     @Bean
@@ -63,12 +63,12 @@ public class RedisCoordinatorAutoConfig {
         String sid = host + RedisCoordinatorConstant.KEY_SPLIT + port;
         RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
         RedisExecutor redisExecutor = redisManagerFactory.getRedisExecutor();
-        return new RedisHeartbeatManager(coordinatorProperty, sid, redisExecutor);
+        return new RedisHeartbeatManager(coordinatorProperties, sid, redisExecutor);
     }
 
     @Bean
     public RedisCoordinatorEventListener redisCoordinatorEventListener(HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
-        return new RedisCoordinatorEventListener(coordinatorProperty, heartBeatManager, coordinatorHolder);
+        return new RedisCoordinatorEventListener(coordinatorProperties, heartBeatManager, coordinatorHolder);
     }
 
     @Bean
@@ -77,7 +77,7 @@ public class RedisCoordinatorAutoConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
         Map<MessageListener, Collection<? extends Topic>> messageListeners = new HashMap<>();
-        String id = coordinatorProperty.getId();
+        String id = coordinatorProperties.getId();
         String key = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(id);
         messageListeners.put(redisCoordinatorEventListener, Collections.singleton(new ChannelTopic(key)));
         container.setMessageListeners(messageListeners);
@@ -87,7 +87,7 @@ public class RedisCoordinatorAutoConfig {
     private RedisCoordinator<?> createRedisCoordinator(ResourceManager<?> resourceManager, HeartbeatManager heartBeatManager) {
         RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
         RedisExecutor redisExecutor = redisManagerFactory.getRedisExecutor();
-        return new RedisCoordinator<>(coordinatorProperty, heartBeatManager, resourceManager, redisExecutor);
+        return new RedisCoordinator<>(coordinatorProperties, heartBeatManager, resourceManager, redisExecutor);
     }
 
 }

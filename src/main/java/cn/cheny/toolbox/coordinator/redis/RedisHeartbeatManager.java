@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.coordinator.redis;
 
-import cn.cheny.toolbox.coordinator.CoordinatorProperty;
+import cn.cheny.toolbox.coordinator.CoordinatorProperties;
 import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,10 +31,10 @@ public class RedisHeartbeatManager implements HeartbeatManager {
 
     private volatile Integer status;
 
-    public RedisHeartbeatManager(CoordinatorProperty coordinatorProperty, String sid, RedisExecutor redisExecutor) {
+    public RedisHeartbeatManager(CoordinatorProperties coordinatorProperties, String sid, RedisExecutor redisExecutor) {
         this.redisExecutor = redisExecutor;
         this.sid = sid;
-        String id = coordinatorProperty.getId();
+        String id = coordinatorProperties.getId();
         this.id = id;
         this.heartbeatKey = buildHeartbeatKey(id, sid);
         this.heartbeatThread = Executors.newSingleThreadScheduledExecutor();

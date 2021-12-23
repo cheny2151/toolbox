@@ -2,7 +2,7 @@ package cn.cheny.toolbox.coordinator;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import static cn.cheny.toolbox.coordinator.CoordinatorProperty.PRE;
+import static cn.cheny.toolbox.coordinator.CoordinatorProperties.PRE;
 
 /**
  * 资源协调器配置
@@ -11,7 +11,7 @@ import static cn.cheny.toolbox.coordinator.CoordinatorProperty.PRE;
  * @date 2021/12/23
  */
 @ConfigurationProperties(PRE)
-public class CoordinatorProperty {
+public class CoordinatorProperties {
 
     public final static String PRE = "toolbox.coordinator";
 

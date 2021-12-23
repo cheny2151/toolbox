@@ -1,7 +1,7 @@
 package cn.cheny.toolbox.coordinator.redis;
 
 import cn.cheny.toolbox.coordinator.BaseResourceCoordinator;
-import cn.cheny.toolbox.coordinator.CoordinatorProperty;
+import cn.cheny.toolbox.coordinator.CoordinatorProperties;
 import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.coordinator.msg.ReBalanceMessage;
 import cn.cheny.toolbox.coordinator.resource.Resource;
@@ -43,10 +43,10 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
 
     private volatile Integer status;
 
-    public RedisCoordinator(CoordinatorProperty coordinatorProperty, HeartbeatManager heartBeatManager,
+    public RedisCoordinator(CoordinatorProperties coordinatorProperties, HeartbeatManager heartBeatManager,
                             ResourceManager<T> resourceManager, RedisExecutor redisExecutor) {
         super(resourceManager);
-        String id = coordinatorProperty.getId();
+        String id = coordinatorProperties.getId();
         this.id = id;
         this.heartBeatManager = heartBeatManager;
         this.redisExecutor = redisExecutor;
