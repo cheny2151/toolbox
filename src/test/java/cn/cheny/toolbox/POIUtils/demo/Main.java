@@ -19,6 +19,9 @@ import java.util.Collections;
 import java.util.Map;
 
 public class Main {
+
+    public static final String FILE = "/Users/chenyi/Downloads/test.xls";
+
     public static void main(String[] args) {
 
         ArrayList<MemberVoPOI> list = new ArrayList<>();
@@ -36,7 +39,7 @@ public class Main {
         }
         HSSFWorkbook workbook = PoiUtils.createSheet(list);
         try {
-            FileOutputStream fileOutputStream = new FileOutputStream("C://360Downloads//test.xls");
+            FileOutputStream fileOutputStream = new FileOutputStream(FILE);
             workbook.write(fileOutputStream);
         } catch (IOException e) {
             e.printStackTrace();
@@ -45,7 +48,7 @@ public class Main {
 
     @Test
     public void test() {
-        File file = new File("C://360Downloads//test.xls");
+        File file = new File(FILE);
         ReadResult<MemberVoPOI> readResult = PoiUtils.readFormFile(file, MemberVoPOI.class);
         for (MemberVoPOI memberVoPOI : readResult.getData()) {
             System.out.println(memberVoPOI);
@@ -87,7 +90,7 @@ public class Main {
         ReadResult<Map<String, Object>> readResult = PoiUtils.readAsMap(file, ExcelReadInfo.withWriteBack(null, 0, null,
                 row -> {
                     Cell cell = row.getCell(0);
-                    return cell.getCellTypeEnum().equals(CellType.STRING) && cell.getStringCellValue().contains("账务明细列表结束");
+                    return cell.getCellType().equals(CellType.STRING) && cell.getStringCellValue().contains("账务明细列表结束");
                 }, Collections.singletonList("回写测试"), HSSFColor.HSSFColorPredefined.RED));
         for (Map<String, Object> data : readResult.getData()) {
             System.out.println(data);

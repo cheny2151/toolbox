@@ -10,7 +10,7 @@ import cn.cheny.toolbox.other.page.ExtremumLimit;
 import cn.cheny.toolbox.other.page.Limit;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.util.*;
 import java.util.concurrent.*;

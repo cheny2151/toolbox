@@ -4,7 +4,7 @@ import cn.cheny.toolbox.POIUtils.entity.SaxReadInfo;
 import cn.cheny.toolbox.POIUtils.sax.SaxReader;
 import cn.cheny.toolbox.POIUtils.utils.CellDealFunction;
 import lombok.SneakyThrows;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.Sheet;

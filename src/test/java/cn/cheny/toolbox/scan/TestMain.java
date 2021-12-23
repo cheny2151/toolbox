@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.scan;
 
+import cn.cheny.toolbox.expression.parse.ExpressionParser;
 import cn.cheny.toolbox.reflect.methodHolder.BaseMethodHolder;
 import cn.cheny.toolbox.scan.filter.ScanFilter;
 
@@ -13,7 +14,7 @@ import java.util.Enumeration;
 import java.util.List;
 
 /**
- * @author cheney
+ * @author cheny
  * @date 2019-12-27
  */
 public class TestMain {
@@ -28,14 +29,15 @@ public class TestMain {
 
     public static void test0() throws ScanException {
         ScanFilter scanFilter = new ScanFilter();
+        scanFilter.setSuperClass(ExpressionParser.class);
         PathScanner pathScan = new PathScanner(scanFilter);
-        List<Class<?>> classes = pathScan.scanClass("cn.cheney.toolbox.expression");
+        List<Class<?>> classes = pathScan.scanClass("cn.cheny.toolbox.expression");
         classes.forEach(clazz -> System.out.println(clazz.getSimpleName()));
     }
 
     public static void test1() throws ScanException {
         PathScanner pathScan = new PathScanner();
-        List<Class<?>> classes = pathScan.scanClass("cn/cheney/toolbox/scan");
+        List<Class<?>> classes = pathScan.scanClass("cn/cheny/toolbox/scan");
         classes.forEach(clazz -> System.out.println(clazz.getSimpleName()));
     }
 
