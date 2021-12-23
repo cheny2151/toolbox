@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.coordinator.redis;
 
+import cn.cheny.toolbox.coordinator.CoordinatorProperty;
 import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,15 +23,20 @@ public class RedisHeartbeatManager implements HeartbeatManager {
     private static final int HEARTBEAT_PERIOD = 1100;
     private static final int HEARTBEAT_THREAD_PERIOD = 500;
 
+    private final String id;
     private final String sid;
+    private final String heartbeatKey;
     private final RedisExecutor redisExecutor;
     private ScheduledExecutorService heartbeatThread;
 
     private volatile Integer status;
 
-    public RedisHeartbeatManager(String sid, RedisExecutor redisExecutor) {
+    public RedisHeartbeatManager(CoordinatorProperty coordinatorProperty, String sid, RedisExecutor redisExecutor) {
         this.redisExecutor = redisExecutor;
         this.sid = sid;
+        String id = coordinatorProperty.getId();
+        this.id = id;
+        this.heartbeatKey = buildHeartbeatKey(id, sid);
         this.heartbeatThread = Executors.newSingleThreadScheduledExecutor();
         this.status = 1;
         this.startHeartbeatThread();
@@ -40,9 +46,7 @@ public class RedisHeartbeatManager implements HeartbeatManager {
     public void close() {
         this.status = 0;
         this.heartbeatThread.shutdownNow();
-        String sid = this.sid;
-        String key = buildHeartbeatKey(sid);
-        redisExecutor.del(key);
+        this.redisExecutor.del(heartbeatKey);
 //        redisExecutor.hdel(RedisCoordinatorConstant.RESOURCES_REGISTER, this.sid);
     }
 
@@ -55,7 +59,7 @@ public class RedisHeartbeatManager implements HeartbeatManager {
     public boolean isActive(String sid) {
         String curSid = this.sid;
         if (!curSid.equals(sid)) {
-            String key = buildHeartbeatKey(sid);
+            String key = buildHeartbeatKey(id, sid);
             return redisExecutor.hasKey(key);
         }
         checkHeartbeat();
@@ -64,14 +68,14 @@ public class RedisHeartbeatManager implements HeartbeatManager {
 
     @Override
     public void checkHeartbeat() {
-        final String key = buildHeartbeatKey(this.sid);
+        final String key = heartbeatKey;
         String val = redisExecutor.get(key);
         if (val != null) {
             return;
         }
         synchronized (this) {
             this.heartbeatThread.shutdown();
-            redisExecutor.set(key, RedisCoordinatorConstant.HEARTBEAT_VAL);
+            this.redisExecutor.set(key, RedisCoordinatorConstant.HEARTBEAT_VAL);
             this.heartbeatThread = Executors.newSingleThreadScheduledExecutor();
             this.startHeartbeatThread();
         }
@@ -81,7 +85,7 @@ public class RedisHeartbeatManager implements HeartbeatManager {
      * 开始心跳线程
      */
     private void startHeartbeatThread() {
-        final String key = buildHeartbeatKey(sid);
+        final String key = this.heartbeatKey;
         heartbeatThread.scheduleAtFixedRate(() -> {
             try {
                 boolean expire = redisExecutor.expire(key, HEARTBEAT_PERIOD, TimeUnit.MILLISECONDS);
@@ -95,8 +99,9 @@ public class RedisHeartbeatManager implements HeartbeatManager {
         }, 0, HEARTBEAT_THREAD_PERIOD, TimeUnit.MILLISECONDS);
     }
 
-    private String buildHeartbeatKey(String sid) {
-        return RedisCoordinatorConstant.HEART_BEAT_KEY_PRE + KEY_SPLIT + sid;
+    private String buildHeartbeatKey(String id, String sid) {
+        String keyPre = RedisCoordinatorConstant.HEART_BEAT_KEY_PRE.buildKey(id);
+        return keyPre + KEY_SPLIT + sid;
     }
 
 }

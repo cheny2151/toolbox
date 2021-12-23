@@ -16,6 +16,7 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -38,7 +39,14 @@ import java.util.stream.Collectors;
 @ConditionalOnBean(value = ResourceManager.class)
 @ConditionalOnMissingBean(value = ResourceCoordinator.class)
 @AutoConfigureAfter({RedisAutoConfiguration.class, SpringToolboxRedisAutoConfig.class})
+@EnableConfigurationProperties(CoordinatorProperty.class)
 public class RedisCoordinatorAutoConfig {
+
+    private final CoordinatorProperty coordinatorProperty;
+
+    public RedisCoordinatorAutoConfig(CoordinatorProperty coordinatorProperty) {
+        this.coordinatorProperty = coordinatorProperty;
+    }
 
     @Bean
     public CoordinatorHolder resourceCoordinator(ObjectProvider<ResourceManager<?>> resourceManagers, HeartbeatManager heartBeatManager) {
@@ -55,12 +63,12 @@ public class RedisCoordinatorAutoConfig {
         String sid = host + RedisCoordinatorConstant.KEY_SPLIT + port;
         RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
         RedisExecutor redisExecutor = redisManagerFactory.getRedisExecutor();
-        return new RedisHeartbeatManager(sid, redisExecutor);
+        return new RedisHeartbeatManager(coordinatorProperty, sid, redisExecutor);
     }
 
     @Bean
     public RedisCoordinatorEventListener redisCoordinatorEventListener(HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
-        return new RedisCoordinatorEventListener(heartBeatManager, coordinatorHolder);
+        return new RedisCoordinatorEventListener(coordinatorProperty, heartBeatManager, coordinatorHolder);
     }
 
     @Bean
@@ -69,7 +77,9 @@ public class RedisCoordinatorAutoConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
         Map<MessageListener, Collection<? extends Topic>> messageListeners = new HashMap<>();
-        messageListeners.put(redisCoordinatorEventListener, Collections.singleton(new ChannelTopic(RedisCoordinatorConstant.REDIS_CHANNEL)));
+        String id = coordinatorProperty.getId();
+        String key = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(id);
+        messageListeners.put(redisCoordinatorEventListener, Collections.singleton(new ChannelTopic(key)));
         container.setMessageListeners(messageListeners);
         return container;
     }
@@ -77,7 +87,7 @@ public class RedisCoordinatorAutoConfig {
     private RedisCoordinator<?> createRedisCoordinator(ResourceManager<?> resourceManager, HeartbeatManager heartBeatManager) {
         RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
         RedisExecutor redisExecutor = redisManagerFactory.getRedisExecutor();
-        return new RedisCoordinator<>(heartBeatManager, resourceManager, redisExecutor);
+        return new RedisCoordinator<>(coordinatorProperty, heartBeatManager, resourceManager, redisExecutor);
     }
 
 }

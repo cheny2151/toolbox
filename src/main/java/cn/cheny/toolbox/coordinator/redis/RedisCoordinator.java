@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.coordinator.redis;
 
 import cn.cheny.toolbox.coordinator.BaseResourceCoordinator;
+import cn.cheny.toolbox.coordinator.CoordinatorProperty;
 import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.coordinator.msg.ReBalanceMessage;
 import cn.cheny.toolbox.coordinator.resource.Resource;
@@ -35,17 +36,26 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     private final HeartbeatManager heartBeatManager;
     private final RedisExecutor redisExecutor;
     private final ScheduledExecutorService checkThread;
+    private final String id;
     private final String resourceKey;
+    private final String lockKey;
+    private final String channelKey;
 
     private volatile Integer status;
 
-    public RedisCoordinator(HeartbeatManager heartBeatManager, ResourceManager<T> resourceManager, RedisExecutor redisExecutor) {
+    public RedisCoordinator(CoordinatorProperty coordinatorProperty, HeartbeatManager heartBeatManager,
+                            ResourceManager<T> resourceManager, RedisExecutor redisExecutor) {
         super(resourceManager);
+        String id = coordinatorProperty.getId();
+        this.id = id;
         this.heartBeatManager = heartBeatManager;
         this.redisExecutor = redisExecutor;
         this.checkThread = Executors.newSingleThreadScheduledExecutor();
         this.status = 1;
-        this.resourceKey = RedisCoordinatorConstant.RESOURCES_REGISTER + RedisCoordinatorConstant.KEY_SPLIT + resourceManager.resourceKey();
+        String keyPre = RedisCoordinatorConstant.RESOURCES_REGISTER.buildKey(id);
+        this.resourceKey = keyPre + RedisCoordinatorConstant.KEY_SPLIT + resourceManager.resourceKey();
+        this.lockKey = RedisCoordinatorConstant.RE_BALANCE_LOCK.buildKey(id);
+        this.channelKey = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(id);
         this.tryRebalanced();
         this.startCheckThread();
     }
@@ -55,7 +65,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         if (status != 1) {
             return;
         }
-        try (RedisLock redisLock = new ReentrantRedisLock(RedisCoordinatorConstant.RE_BALANCE_LOCK)) {
+        try (RedisLock redisLock = new ReentrantRedisLock(lockKey)) {
             if (redisLock.tryLock(0, TimeUnit.SECONDS)) {
                 String sid = this.getSid();
                 ResourceManager<T> resourceManager = getResourceManager();
@@ -313,7 +323,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      */
     private void sendReBalanceRequiredMsg() {
         ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, this.getSid());
-        this.redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
+        this.redisExecutor.publish(channelKey, JSON.toJSONString(message));
     }
 
     /**
@@ -321,7 +331,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      */
     private void sendReBalanced() {
         ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_RE_BALANCE, this.getSid());
-        redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
+        redisExecutor.publish(channelKey, JSON.toJSONString(message));
     }
 
 }

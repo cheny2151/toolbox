@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.coordinator.redis;
 
 import cn.cheny.toolbox.coordinator.CoordinatorHolder;
+import cn.cheny.toolbox.coordinator.CoordinatorProperty;
 import cn.cheny.toolbox.coordinator.HeartbeatManager;
 import cn.cheny.toolbox.coordinator.ResourceCoordinator;
 import cn.cheny.toolbox.coordinator.msg.ReBalanceMessage;
@@ -22,17 +23,19 @@ import java.nio.charset.StandardCharsets;
 public class RedisCoordinatorEventListener implements MessageListener {
 
     private final CoordinatorHolder coordinatorHolder;
+    private final String channelId;
     private final String sid;
 
-    public RedisCoordinatorEventListener(HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
+    public RedisCoordinatorEventListener(CoordinatorProperty coordinatorProperty, HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
         this.coordinatorHolder = coordinatorHolder;
+        this.channelId = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(coordinatorProperty.getId());
         this.sid = heartBeatManager.getSid();
     }
 
     @Override
     public void onMessage(Message message, byte[] bytes) {
         String channel = new String(message.getChannel(), StandardCharsets.UTF_8);
-        if (channel.equals(RedisCoordinatorConstant.REDIS_CHANNEL)) {
+        if (channel.equals(channelId)) {
             String data = new String(message.getBody(), StandardCharsets.UTF_8);
             ReBalanceMessage reBalanceMessage = JSON.parseObject(data, ReBalanceMessage.class);
             String resourceKey = reBalanceMessage.getResourceKey();
