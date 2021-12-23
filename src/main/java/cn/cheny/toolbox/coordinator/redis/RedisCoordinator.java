@@ -135,8 +135,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         // 检查实例curFlag
         Set<String> registerKeys = registerInfo.keySet();
         Set<String> activeKeys = active.keySet();
-        Collection<String> disjunction = CollectionUtils.disjunction(registerKeys, activeKeys);
-        if (disjunction.size() == 0) {
+        if (sameCollection(registerKeys, activeKeys)) {
             // 检查resource
             List<String> flagList = allResources.stream()
                     .map(Resource::flag)
@@ -146,8 +145,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                     .filter(StringUtils::isNotEmpty)
                     .flatMap(info -> Arrays.stream(info.split(VAL_SPLIT)))
                     .collect(Collectors.toList());
-            Collection<String> disjunctionResources = CollectionUtils.disjunction(flagList, flagInRedis);
-            if (disjunctionResources.size() == 0) {
+            if (sameCollection(flagList, flagInRedis)) {
                 // 检查是否平衡
                 List<Integer> resourceLen = registerInfo.values()
                         .stream()
@@ -297,11 +295,28 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                         .collect(Collectors.toList());
     }
 
+    /**
+     * 判断集合1、2是否一样
+     *
+     * @param collection1 集合1
+     * @param collection2 集合2
+     * @return 是否一样
+     */
+    private boolean sameCollection(Collection<String> collection1, Collection<String> collection2) {
+        return collection1.size() == collection2.size() && collection1.containsAll(collection2);
+    }
+
+    /**
+     * 发送重平衡请求广播
+     */
     private void sendReBalanceRequiredMsg() {
         ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, this.getSid());
         this.redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
     }
 
+    /**
+     * 发送已重平衡广播
+     */
     private void sendReBalanced() {
         ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_RE_BALANCE, this.getSid());
         redisExecutor.publish(RedisCoordinatorConstant.REDIS_CHANNEL, JSON.toJSONString(message));
