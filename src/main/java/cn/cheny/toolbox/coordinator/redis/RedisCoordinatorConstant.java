@@ -1,7 +1,5 @@
 package cn.cheny.toolbox.coordinator.redis;
 
-import org.apache.commons.lang3.StringUtils;
-
 /**
  * redis协调器常量/脚本
  *
@@ -18,9 +16,10 @@ public enum RedisCoordinatorConstant {
     public static final String HEARTBEAT_VAL = "1";
     public static final String KEY_SPLIT = ":";
     private static final String ID_CONNECT = "_";
+    private static final String EMPTY = "";
 
-    private String keyBase;
-    private String keyBody;
+    private final String keyBase;
+    private final String keyBody;
 
     RedisCoordinatorConstant(String keyBase, String keyBody) {
         this.keyBase = keyBase;
@@ -28,10 +27,12 @@ public enum RedisCoordinatorConstant {
     }
 
     public String buildKey(String id) {
-        if (StringUtils.isNotEmpty(id)) {
+        if (id == null) {
+            id = EMPTY;
+        } else if (!id.equals(EMPTY)) {
             id = ID_CONNECT + id;
         }
-        String key = String.format(this.keyBase, ID_CONNECT + id);
+        String key = String.format(this.keyBase, id);
         return key + KEY_SPLIT + keyBody;
     }
 
