@@ -47,7 +47,6 @@ public class RedisHeartbeatManager implements HeartbeatManager {
         this.status = 0;
         this.heartbeatThread.shutdownNow();
         this.redisExecutor.del(heartbeatKey);
-//        redisExecutor.hdel(RedisCoordinatorConstant.RESOURCES_REGISTER, this.sid);
     }
 
     @Override
