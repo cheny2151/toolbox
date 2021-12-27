@@ -48,7 +48,7 @@ public class RedisCoordinatorAutoConfig {
         this.coordinatorProperties = coordinatorProperties;
     }
 
-    @Bean
+    @Bean(initMethod="test")
     public CoordinatorHolder resourceCoordinator(ObjectProvider<ResourceManager<?>> resourceManagers, HeartbeatManager heartBeatManager) {
         Map<String, ? extends ResourceCoordinator<?>> coordinatorMap = resourceManagers.stream()
                 .collect(Collectors.toMap(ResourceManager::resourceKey,

@@ -1,21 +1,20 @@
 package cn.cheny.toolbox.scan;
 
+import cn.cheny.toolbox.scan.asm.AnnotationDesc;
+import cn.cheny.toolbox.scan.asm.visitor.ClassFilterVisitor;
+import cn.cheny.toolbox.scan.asm.visitor.MethodAnnotationFilterVisitor;
+import cn.cheny.toolbox.scan.filter.FilterResult;
 import cn.cheny.toolbox.scan.filter.ScanFilter;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.Opcodes;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -35,9 +34,24 @@ import java.util.stream.Collectors;
 public class PathScanner {
 
     /**
+     * 空路径
+     */
+    public final static String EMPTY_PATH = "";
+
+    /**
+     * package分隔符
+     */
+    public final static String PACKAGE_SEPARATE_CHARACTER = ".";
+
+    /**
+     * url分隔符
+     */
+    public final static String URL_SEPARATE_CHARACTER = "/";
+
+    /**
      * class文件拓展名
      */
-    private final static String CLASS_EXTENSION = ".class";
+    public final static String CLASS_EXTENSION = ".class";
 
     /**
      * file
@@ -95,21 +109,6 @@ public class PathScanner {
     private static final int CLASS_END_LEN = 6;
 
     /**
-     * 空路径
-     */
-    private final static String EMPTY_PATH = "";
-
-    /**
-     * package分隔符
-     */
-    private final static String PACKAGE_SEPARATE_CHARACTER = ".";
-
-    /**
-     * url分隔符
-     */
-    private final static String URL_SEPARATE_CHARACTER = "/";
-
-    /**
      * 系统文件分隔符
      */
     private final static String PATH_SEPARATE = System.getProperty("path.separator");
@@ -149,7 +148,7 @@ public class PathScanner {
      * @param scanPath 包路径,以'.'或者'/'为分隔符
      * @return 扫描到的Class
      */
-    public List<Class<?>> scanClass(String scanPath) throws ScanException {
+    public List<ClassResource> scanClassResource(String scanPath) throws ScanException {
         String scanPath0 = PACKAGE_SEPARATE_CHARACTER.equals(scanPath) ? EMPTY_PATH : scanPath;
         String resourcePath = scanPath0.replaceAll("\\.", URL_SEPARATE_CHARACTER);
         if (resourcePath.startsWith(URL_SEPARATE_CHARACTER)) {
@@ -162,7 +161,7 @@ public class PathScanner {
             log.debug("resource path:{},result urls:{}", resourcePath, resources);
         }
 
-        List<Class<?>> results = new ArrayList<>();
+        List<ClassResource> results = new ArrayList<>();
         for (URL resource : resources) {
             String protocol = resource.getProtocol();
             if (log.isDebugEnabled()) {
@@ -180,6 +179,12 @@ public class PathScanner {
         return results;
     }
 
+    public List<Class<?>> scanClass(String scanPath) throws ScanException {
+        return scanClassResource(scanPath).stream()
+                .map(ClassResource::getClazz)
+                .collect(Collectors.toList());
+    }
+
     /**
      * 从本地File中扫描所有类
      *
@@ -187,7 +192,7 @@ public class PathScanner {
      * @param file      文件
      * @param result    扫描结果集
      */
-    private void scanClassInFile(String targetUrl, File file, List<Class<?>> result) throws ScanException {
+    private void scanClassInFile(String targetUrl, File file, List<ClassResource> result) throws ScanException {
         // 结尾补'/'
         String parentUrl = targetUrl;
         if (!StringUtils.isEmpty(parentUrl)) {
@@ -211,7 +216,7 @@ public class PathScanner {
      * @param file      文件
      * @param result    扫描结果集
      */
-    private void loadResourcesInFile(String targetUrl, String parentUrl, File file, List<Class<?>> result) throws ScanException {
+    private void loadResourcesInFile(String targetUrl, String parentUrl, File file, List<ClassResource> result) throws ScanException {
         if (BOOT_INF_URL_PRE.equals(parentUrl) || META_INF_URL_PRE.equals(parentUrl)) {
             return;
         }
@@ -256,7 +261,7 @@ public class PathScanner {
      * @param url       jar包的url资源
      * @param result    扫描结果集
      */
-    private void scanClassInJar(String targetUrl, URL url, List<Class<?>> result)
+    private void scanClassInJar(String targetUrl, URL url, List<ClassResource> result)
             throws ScanException {
         JarUrl jarUrl = extractRealJarUrl(targetUrl, url);
         if (jarUrl.getFirstJar() == null || !loadingJar(jarUrl)
@@ -365,7 +370,7 @@ public class PathScanner {
      * @param result 结果合集
      * @throws IOException IO异常
      */
-    private void loadResourcesInJar(JarUrl jarUrl, List<Class<?>> result)
+    private void loadResourcesInJar(JarUrl jarUrl, List<ClassResource> result)
             throws IOException {
         URL firstJar = jarUrl.getFirstJar();
         try (JarFile jarFile = new JarFile(new File(firstJar.getFile()))) {
@@ -398,7 +403,7 @@ public class PathScanner {
      * @param targetUrl 目标目录
      * @param result    结果集合
      */
-    private void addIfTargetCLass(JarEntry jarEntry, String targetUrl, List<Class<?>> result) {
+    private void addIfTargetCLass(JarEntry jarEntry, String targetUrl, List<ClassResource> result) {
         if (jarEntry.isDirectory()) {
             return;
         }
@@ -424,18 +429,25 @@ public class PathScanner {
      * @param ClassFileUrl class文件url
      * @param result       扫描结果集合
      */
-    private void filterClass(String ClassFileUrl, List<Class<?>> result) {
+    private void filterClass(String ClassFileUrl, List<ClassResource> result) {
         if (ClassFileUrl.endsWith(MODULE_INFO)) {
             return;
         }
         ScanFilter scanFilter = this.scanFilter;
-        if (scanFilter != null && !filterByAsm(ClassFileUrl)) {
+        FilterResult filterResult = null;
+        if (scanFilter != null && !(filterResult = filterByAsm(ClassFileUrl)).isPass()) {
             return;
         }
-        Class<?> target;
+        Class<?> targetClass;
+        ClassResource target;
         try {
-            String fullClassName = replaceUrlToPackage(ClassFileUrl.substring(0, ClassFileUrl.length() - CLASS_END_LEN));
-            target = loadClass(fullClassName);
+            String fullClassName = PackageUtils.replaceUrlToPackage(ClassFileUrl.substring(0, ClassFileUrl.length() - CLASS_END_LEN));
+            targetClass = loadClass(fullClassName);
+            target = new ClassResource(targetClass);
+            if (filterResult != null) {
+                Map<String, List<AnnotationDesc>> annotationDescMap = filterResult.getAnnotationDescMap();
+                target.setAnnotationDesc(annotationDescMap);
+            }
         } catch (NoClassDefFoundError e) {
             if (log.isDebugEnabled()) {
                 log.debug("can not find class def,name:{}", ClassFileUrl);
@@ -450,15 +462,16 @@ public class PathScanner {
             return;
         }
         if (scanFilter != null) {
+            // 二次校验
             Class<?> superClass = scanFilter.getSuperClass();
             if (superClass != null &&
-                    (!superClass.isAssignableFrom(target) ||
-                            superClass.equals(target))) {
+                    (!superClass.isAssignableFrom(targetClass) ||
+                            superClass.equals(targetClass))) {
                 return;
             }
             List<Class<? extends Annotation>> hasAnnotations = scanFilter.getHasAnnotations();
             if (hasAnnotations != null && !hasAnnotations.isEmpty()) {
-                boolean hasAll = hasAnnotations.stream().allMatch(a -> target.getAnnotation(a) != null);
+                boolean hasAll = hasAnnotations.stream().allMatch(a -> targetClass.getAnnotation(a) != null);
                 if (!hasAll) {
                     return;
                 }
@@ -474,13 +487,13 @@ public class PathScanner {
      * @param classFileUrl class文件url
      * @return 是否匹配
      */
-    private boolean filterByAsm(String classFileUrl) {
+    private FilterResult filterByAsm(String classFileUrl) {
         try {
             URL resource = getClassLoader().getResource(classFileUrl);
             if (resource != null) {
-                ClassFilterVisitor classVisitor = new ClassFilterVisitor(this.scanFilter);
+                ClassFilterVisitor classVisitor = getClassVisitor();
                 new ClassReader(resource.openStream()).accept(classVisitor, ClassReader.SKIP_CODE);
-                return classVisitor.isPass();
+                return classVisitor.getFilterResult();
             } else if (log.isDebugEnabled()) {
                 log.debug("can not filter By Asm,name:{},cause:url resource is null", classFileUrl);
             }
@@ -489,7 +502,14 @@ public class PathScanner {
                 log.debug("can not filter By Asm,name:{},cause:{}", classFileUrl, t.getClass().getName());
             }
         }
-        return false;
+        return new FilterResult(false);
+    }
+
+    private ClassFilterVisitor getClassVisitor() {
+        ScanFilter scanFilter = this.scanFilter;
+        return CollectionUtils.isNotEmpty(scanFilter.getExistMethodAnnotations()) ?
+                new MethodAnnotationFilterVisitor(scanFilter) :
+                new ClassFilterVisitor(scanFilter);
     }
 
     /**
@@ -617,14 +637,6 @@ public class PathScanner {
         return false;
     }
 
-    private static String replaceUrlToPackage(String url) {
-        return url.replaceAll(URL_SEPARATE_CHARACTER, PACKAGE_SEPARATE_CHARACTER);
-    }
-
-    private static String replacePackageToUrl(String url) {
-        return url.replaceAll("\\.", URL_SEPARATE_CHARACTER);
-    }
-
     public boolean isScanAllJar() {
         return scanAllJar;
     }
@@ -659,76 +671,6 @@ public class PathScanner {
 
         public JarUrl(URL origin) {
             this.origin = origin;
-        }
-    }
-
-    /**
-     * asm ClassVisitor实现类，根据字节码文件过滤类，避免直接Load Class
-     */
-    public static class ClassFilterVisitor extends ClassVisitor {
-
-        /**
-         * 字节码类描述符前缀: 'L'
-         */
-        private final static String CLASS_SIGNATURE_PRE = "L";
-
-        /**
-         * 字节码类描述符后缀: ';'
-         */
-        private final static String CLASS_SIGNATURE_TAIL = ";";
-
-        private boolean passVisit;
-
-        private int passVisitAnnotation;
-
-        private String superClass;
-
-        private List<String> annotations;
-
-        public ClassFilterVisitor(ScanFilter filter) {
-            super(Opcodes.ASM5);
-            this.passVisit = false;
-            this.passVisitAnnotation = 0;
-            List<Class<? extends Annotation>> hasAnnotations = filter.getHasAnnotations();
-            if (CollectionUtils.isNotEmpty(hasAnnotations)) {
-                this.annotations = hasAnnotations.stream()
-                        .map(annotation -> CLASS_SIGNATURE_PRE + replacePackageToUrl(annotation.getName()) + CLASS_SIGNATURE_TAIL)
-                        .collect(Collectors.toList());
-            } else {
-                this.annotations = Collections.emptyList();
-            }
-            Class<?> superClass = filter.getSuperClass();
-            if (superClass != null) {
-                this.superClass = superClass.getName();
-            }
-        }
-
-        @Override
-        public void visit(int i, int access, String className, String signature, String superClass, String[] interfaces) {
-            boolean accessPass = Modifier.isPublic(access);
-            boolean superClassFilter = this.superClass == null;
-            if (!superClassFilter) {
-                String superClassUrl = replacePackageToUrl(this.superClass);
-                if (superClass != null &&
-                        superClass.equals(superClassUrl)) {
-                    superClassFilter = true;
-                } else if (interfaces.length > 0 && ArrayUtils.contains(interfaces, superClassUrl)) {
-                    superClassFilter = true;
-                }
-            }
-            this.passVisit = accessPass && superClassFilter;
-        }
-
-        @Override
-        public AnnotationVisitor visitAnnotation(String annotationName, boolean b) {
-            if (annotations.contains(annotationName)) {
-                this.passVisitAnnotation++;
-            }
-            return null;
-        }
-
-        public boolean isPass() {
-            return passVisit && passVisitAnnotation == annotations.size();
         }
     }
 

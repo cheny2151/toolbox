@@ -3,6 +3,9 @@ package cn.cheny.toolbox.scan;
 import cn.cheny.toolbox.expression.parse.ExpressionParser;
 import cn.cheny.toolbox.reflect.methodHolder.BaseMethodHolder;
 import cn.cheny.toolbox.scan.filter.ScanFilter;
+import com.joyy.shopline.badcase.handle.BadCase;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,11 +23,12 @@ import java.util.List;
 public class TestMain {
 
     public static void main(String[] args) throws ScanException {
-        test0();
+        /*test0();
         System.out.println("--------------");
         test1();
         System.out.println("--------------");
-        test2();
+        test2();*/
+        test4();
     }
 
     public static void test0() throws ScanException {
@@ -60,6 +64,14 @@ public class TestMain {
                 System.out.println(line);
             }
         }
+    }
+
+    public static void test4() throws ScanException {
+        ScanFilter scanFilter = new ScanFilter();
+        scanFilter.existMethodAnnotations(Bean.class);
+        PathScanner pathScan = new PathScanner(scanFilter);
+        List<ClassResource> classResources = pathScan.scanClassResource("");
+        classResources.forEach(clazz -> System.out.println(clazz.getClazz() + ":" + clazz.getAnnotationDesc().values()));
     }
 
 }
