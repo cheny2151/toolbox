@@ -267,7 +267,7 @@ public class PathScanner {
         if (jarUrl.getFirstJar() == null || !loadingJar(jarUrl)
                 || shouldNotScan(targetUrl, jarUrl)) {
             return;
-        } else if (!isJar(jarUrl.getFirstJar())) {
+        } else if (!PackageUtils.isJar(jarUrl.getFirstJar())) {
             if (log.isDebugEnabled()) {
                 log.debug("url:{} not a jar", url);
             }
@@ -599,43 +599,6 @@ public class PathScanner {
         }
     }
 
-    /**
-     * jar文件的magic头
-     */
-    private static final byte[] JAR_MAGIC = {'P', 'K', 3, 4};
-
-    /**
-     * 判断url所对应的资源是否为jar包
-     */
-    protected boolean isJar(URL url) {
-        return isJar(url, new byte[JAR_MAGIC.length]);
-    }
-
-    protected boolean isJar(URL url, byte[] buffer) {
-        InputStream is = null;
-        try {
-            is = url.openStream();
-            is.read(buffer, 0, JAR_MAGIC.length);
-            if (Arrays.equals(buffer, JAR_MAGIC)) {
-                if (log.isDebugEnabled()) {
-                    log.debug("Found JAR: " + url);
-                }
-                return true;
-            }
-        } catch (Exception e) {
-            // Failure to read the stream means this is not a JAR
-        } finally {
-            if (is != null) {
-                try {
-                    is.close();
-                } catch (Exception e) {
-                    // Ignore
-                }
-            }
-        }
-
-        return false;
-    }
 
     public boolean isScanAllJar() {
         return scanAllJar;
