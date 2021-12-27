@@ -1,6 +1,5 @@
 package cn.cheny.toolbox.coordinator;
 
-import com.joyy.shopline.badcase.handle.BadCase;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Closeable;
@@ -27,7 +26,6 @@ public class CoordinatorHolder implements Closeable {
     }
 
     @Override
-    @BadCase(code = "test")
     public void close() throws IOException {
         log.info("[Coordinator] 释放资源");
         for (ResourceCoordinator<?> resourceCoordinator : coordinatorMap.values()) {
