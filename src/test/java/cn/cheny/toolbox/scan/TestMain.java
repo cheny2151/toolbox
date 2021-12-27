@@ -3,8 +3,6 @@ package cn.cheny.toolbox.scan;
 import cn.cheny.toolbox.expression.parse.ExpressionParser;
 import cn.cheny.toolbox.reflect.methodHolder.BaseMethodHolder;
 import cn.cheny.toolbox.scan.filter.ScanFilter;
-import com.joyy.shopline.badcase.handle.BadCase;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
 import java.io.BufferedReader;
