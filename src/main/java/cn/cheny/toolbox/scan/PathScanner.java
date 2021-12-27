@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.scan;
 
 import cn.cheny.toolbox.scan.asm.AnnotationDesc;
+import cn.cheny.toolbox.scan.asm.MethodDesc;
 import cn.cheny.toolbox.scan.asm.visitor.ClassFilterVisitor;
 import cn.cheny.toolbox.scan.asm.visitor.MethodAnnotationFilterVisitor;
 import cn.cheny.toolbox.scan.filter.FilterResult;
@@ -445,7 +446,7 @@ public class PathScanner {
             targetClass = loadClass(fullClassName);
             target = new ClassResource(targetClass);
             if (filterResult != null) {
-                Map<String, List<AnnotationDesc>> annotationDescMap = filterResult.getAnnotationDescMap();
+                Map<MethodDesc, List<AnnotationDesc>> annotationDescMap = filterResult.getAnnotationDescMap();
                 target.setAnnotationDesc(annotationDescMap);
             }
         } catch (NoClassDefFoundError e) {

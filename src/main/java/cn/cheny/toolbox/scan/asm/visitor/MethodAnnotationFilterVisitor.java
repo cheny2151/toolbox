@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.scan.asm.visitor;
 
 import cn.cheny.toolbox.scan.asm.AnnotationDesc;
+import cn.cheny.toolbox.scan.asm.MethodDesc;
 import cn.cheny.toolbox.scan.filter.FilterResult;
 import cn.cheny.toolbox.scan.filter.ScanFilter;
 import org.objectweb.asm.AnnotationVisitor;
@@ -20,7 +21,7 @@ import java.util.stream.Collectors;
 public class MethodAnnotationFilterVisitor extends ClassFilterVisitor {
 
     private final Map<String, Class<?>> methodAnnotations;
-    private Map<String, List<AnnotationDesc>> methodAnnotationDesc;
+    private Map<MethodDesc, List<AnnotationDesc>> methodAnnotationDesc;
 
     public MethodAnnotationFilterVisitor(ScanFilter filter) {
         super(filter);
@@ -52,18 +53,18 @@ public class MethodAnnotationFilterVisitor extends ClassFilterVisitor {
                     List<AnnotationDesc> descs = annotationValuesVisitors.stream()
                             .map(AnnotationValuesVisitor::getTargetAnnotationDesc)
                             .collect(Collectors.toList());
-                    Map<String, List<AnnotationDesc>> methodAnnotationDesc = MethodAnnotationFilterVisitor.this.methodAnnotationDesc;
+                    Map<MethodDesc, List<AnnotationDesc>> methodAnnotationDesc = MethodAnnotationFilterVisitor.this.methodAnnotationDesc;
                     if (methodAnnotationDesc == null) {
                         methodAnnotationDesc = new HashMap<>();
                         MethodAnnotationFilterVisitor.this.methodAnnotationDesc = methodAnnotationDesc;
                     }
-                    methodAnnotationDesc.put(descriptor, descs);
+                    methodAnnotationDesc.put(new MethodDesc(name, descriptor), descs);
                 }
             }
         };
     }
 
-    public Map<String, List<AnnotationDesc>> getMethodAnnotationDesc() {
+    public Map<MethodDesc, List<AnnotationDesc>> getMethodAnnotationDesc() {
         return methodAnnotationDesc;
     }
 
@@ -71,7 +72,7 @@ public class MethodAnnotationFilterVisitor extends ClassFilterVisitor {
     public FilterResult getFilterResult() {
         FilterResult filterResult = super.getFilterResult();
         if (filterResult.isPass()) {
-            Map<String, List<AnnotationDesc>> methodAnnotationDesc = getMethodAnnotationDesc();
+            Map<MethodDesc, List<AnnotationDesc>> methodAnnotationDesc = getMethodAnnotationDesc();
             if (methodAnnotationDesc != null) {
                 filterResult.setAnnotationDescMap(methodAnnotationDesc);
             } else {

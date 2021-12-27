@@ -69,7 +69,7 @@ public class TestMain {
         scanFilter.existMethodAnnotations(Bean.class);
         PathScanner pathScan = new PathScanner(scanFilter);
         List<ClassResource> classResources = pathScan.scanClassResource("");
-        classResources.forEach(clazz -> System.out.println(clazz.getClazz() + ":" + clazz.getAnnotationDesc().values()));
+        classResources.forEach(clazz -> System.out.println(clazz.getClazz() + ":" + clazz.getAnnotationDesc()));
     }
 
 }

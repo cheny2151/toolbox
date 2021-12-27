@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.scan;
 
 import cn.cheny.toolbox.scan.asm.AnnotationDesc;
+import cn.cheny.toolbox.scan.asm.MethodDesc;
 import lombok.Data;
 import lombok.ToString;
 
@@ -17,13 +18,13 @@ public class ClassResource {
 
     private Class<?> clazz;
 
-    private Map<String, List<AnnotationDesc>> annotationDesc;
+    private Map<MethodDesc, List<AnnotationDesc>> annotationDesc;
 
     public ClassResource(Class<?> clazz) {
         this.clazz = clazz;
     }
 
-    public ClassResource(Class<?> clazz, Map<String, List<AnnotationDesc>> annotationDesc) {
+    public ClassResource(Class<?> clazz, Map<MethodDesc, List<AnnotationDesc>> annotationDesc) {
         this.clazz = clazz;
         this.annotationDesc = annotationDesc;
     }

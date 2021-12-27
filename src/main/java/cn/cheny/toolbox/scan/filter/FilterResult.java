@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.scan.filter;
 
 import cn.cheny.toolbox.scan.asm.AnnotationDesc;
+import cn.cheny.toolbox.scan.asm.MethodDesc;
 import lombok.Data;
 
 import java.util.List;
@@ -13,7 +14,7 @@ import java.util.Map;
 @Data
 public class FilterResult {
     private boolean pass;
-    private Map<String, List<AnnotationDesc>> annotationDescMap;
+    private Map<MethodDesc, List<AnnotationDesc>> annotationDescMap;
 
     public FilterResult(boolean pass) {
         this.pass = pass;
