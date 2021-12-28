@@ -77,7 +77,7 @@ public class MethodRetryProxy implements InvocationHandler {
                     break;
                 }
             }
-        } while (!timeout(firstTime) && c++ < maximumTry);
+        } while (!timeout(firstTime) && tryAgain(c++));
         if (throwable instanceof InvocationTargetException) {
             throwable = ((InvocationTargetException) throwable).getTargetException();
         }
@@ -88,18 +88,22 @@ public class MethodRetryProxy implements InvocationHandler {
         throw throwable;
     }
 
-    private boolean isTargetMethod(Method method) {
+    protected boolean tryAgain(int tryTime) {
+        return tryTime < maximumTry;
+    }
+
+    protected boolean isTargetMethod(Method method) {
         return proxyMethods == ALL_METHODS || ArrayUtils.contains(proxyMethods, method.getName());
     }
 
-    private boolean isStopError(Throwable error) {
+    protected boolean isStopError(Throwable error) {
         Throwable error0 = error instanceof InvocationTargetException ?
                 ((InvocationTargetException) error).getTargetException() : error;
         return error0 != null && stopErrors != null &&
                 stopErrors.stream().anyMatch(ero -> ero.isAssignableFrom(error0.getClass()));
     }
 
-    private boolean timeout(long firstTime) {
+    protected boolean timeout(long firstTime) {
         if (timeout == null) {
             return false;
         }
