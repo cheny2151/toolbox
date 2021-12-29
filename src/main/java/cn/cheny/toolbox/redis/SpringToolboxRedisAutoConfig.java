@@ -49,6 +49,7 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 @Configuration
 @AutoConfigureAfter({SpringToolAutoConfig.class, RedisAutoConfiguration.class})
 @ConditionalOnClass({RedisTemplate.class})
+@ConditionalOnBean({RedisConnectionFactory.class})
 public class SpringToolboxRedisAutoConfig {
 
     @Bean
