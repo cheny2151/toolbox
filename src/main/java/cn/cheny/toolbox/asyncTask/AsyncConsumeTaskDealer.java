@@ -73,7 +73,7 @@ public class AsyncConsumeTaskDealer {
     /**
      * 结束标识
      */
-    protected volatile boolean finish;
+    protected volatile boolean finishCreated;
 
     /**
      * 中断标识
@@ -108,7 +108,7 @@ public class AsyncConsumeTaskDealer {
     }
 
     public AsyncConsumeTaskDealer(int threadNum, boolean mainHelpTask, boolean continueWhenSliceTaskError) {
-        this.finish = true;
+        this.finishCreated = true;
         this.mainHelpTask = mainHelpTask;
         this.continueWhenSliceTaskError = continueWhenSliceTaskError;
         this.threadName = DEFAULT_THREAD_NAME;
@@ -301,12 +301,12 @@ public class AsyncConsumeTaskDealer {
     private <T> void startTask(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                AsyncTask<T> asyncTask) {
         // 初始化线程池，阻塞队列
-        ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
+        ExecutorService executorService = createExecutorService();
         this.startTask(mainTask, queue, asyncTask, executorService);
     }
 
     /**
-     * 开始任务，新建线程池并由主线程生产数据，线程池多线程执行消费数据
+     * 开始任务，创建线程池并由主线程生产数据，线程池多线程执行消费数据
      *
      * @param mainTask        主线程任务
      * @param queue           队列
@@ -337,7 +337,7 @@ public class AsyncConsumeTaskDealer {
             }
         }
         // 关闭线程池
-        executorService.shutdown();
+        afterTask(executorService);
         if (interrupted) {
             throw new TaskInterruptedException("任务运行异常终止" + interruptedCause.getMessage(), interruptedCause);
         }
@@ -354,7 +354,7 @@ public class AsyncConsumeTaskDealer {
     private <T, R> FutureResult<R> startTaskWithResult(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                                        AsyncTaskWithResult<T, R> asyncTaskWithResult) {
         // 初始化线程池，阻塞队列
-        ExecutorService executorService = Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
+        ExecutorService executorService = createExecutorService();
         return startTaskWithResult(mainTask, queue, asyncTaskWithResult, executorService);
     }
 
@@ -394,7 +394,7 @@ public class AsyncConsumeTaskDealer {
             }
         }
         // 关闭线程池
-        executorService.shutdown();
+        afterTask(executorService);
         if (interrupted) {
             throw new TaskInterruptedException("任务运行异常终止:" + interruptedCause.getMessage(), interruptedCause);
         }
@@ -420,8 +420,17 @@ public class AsyncConsumeTaskDealer {
             } catch (InterruptedException e) {
                 // do thing
             }
-            finish = true;
+            finishCreated = true;
         }
+    }
+
+    /**
+     * 创建/获取线程池，当非一次性时缓存线程池
+     *
+     * @return 线程池
+     */
+    protected ExecutorService createExecutorService() {
+        return Executors.newFixedThreadPool(this.threadNum, new NamePrefixThreadFactory(this.threadName));
     }
 
     /**
@@ -436,7 +445,7 @@ public class AsyncConsumeTaskDealer {
         return () -> {
             try {
                 TaskPackage<List<T>> taskPackage;
-                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !finishCreated) {
                     if (interrupted) {
                         continue;
                     }
@@ -474,7 +483,7 @@ public class AsyncConsumeTaskDealer {
             List<TaskPackage<List<R>>> rs = new ArrayList<>();
             TaskPackage<List<T>> taskPackage;
             try {
-                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !finishCreated) {
                     if (interrupted) {
                         continue;
                     }
@@ -542,7 +551,7 @@ public class AsyncConsumeTaskDealer {
         } finally {
             // 保证消费者获取到数据后才退出
             Thread.sleep(2);
-            finish = true;
+            finishCreated = true;
         }
     }
 
@@ -582,7 +591,7 @@ public class AsyncConsumeTaskDealer {
         } finally {
             // 保证消费者获取到数据后才退出
             Thread.sleep(2);
-            finish = true;
+            finishCreated = true;
         }
     }
 
@@ -601,14 +610,18 @@ public class AsyncConsumeTaskDealer {
     /**
      * 任务并发安全检查
      */
-    public synchronized void beforeTask() {
-        if (!finish) {
+    protected synchronized void beforeTask() {
+        if (!finishCreated) {
             // 一个实例无法并发进行任务
             throw new ConcurrentTaskException();
         }
-        finish = false;
+        finishCreated = false;
         interrupted = false;
         interruptedCause = null;
+    }
+
+    protected void afterTask(ExecutorService executorService) {
+        executorService.shutdown();
     }
 
     public Throwable getInterruptedCause() {
@@ -695,13 +708,13 @@ public class AsyncConsumeTaskDealer {
          */
         public List<R> getResults() {
             return futures == null ? Collections.emptyList() : futures.stream().flatMap(e -> {
-                try {
-                    // 获取taskPackage的stream
-                    return e.get().stream();
-                } catch (Exception ex) {
-                    throw new ToolboxRuntimeException("Fail to do Future#get()", ex);
-                }
-            }).sorted(Comparator.comparingInt(TaskPackage::getIndex))
+                        try {
+                            // 获取taskPackage的stream
+                            return e.get().stream();
+                        } catch (Exception ex) {
+                            throw new ToolboxRuntimeException("Fail to do Future#get()", ex);
+                        }
+                    }).sorted(Comparator.comparingInt(TaskPackage::getIndex))
                     .flatMap(taskPackage -> {
                         if (taskPackage.isInterrupted()) {
                             Throwable error = taskPackage.getError();

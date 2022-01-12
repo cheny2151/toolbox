@@ -71,7 +71,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         return () -> {
             TaskPackage<List<T>> taskPackage;
             try {
-                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finish) {
+                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finishCreated) {
                     if (interrupted) {
                         continue;
                     }
