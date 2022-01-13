@@ -5,6 +5,7 @@ import cn.cheny.toolbox.asyncTask.function.AsyncTaskWithResult;
 import cn.cheny.toolbox.asyncTask.function.Producer;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.NamePrefixThreadFactory;
+import cn.cheny.toolbox.other.order.Orders;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
@@ -45,7 +46,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
      * @param <T>      数据类型
      */
     public <T, R> TaskDealerPublisher<T> publisher(Producer<T> producer) {
-        TaskState taskState = beforeTask();
+        TaskStateTree taskState = beforeTask();
         // 新建阻塞队列
         ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(getQueueNum());
         TaskPublish<T> taskPublish = new TaskPublish<>(queue, taskState);
@@ -69,7 +70,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
     private <T, R> Runnable createTaskPushToQueue(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                                   AsyncTaskWithResult<T, R> asyncTaskWithResult,
                                                   ArrayBlockingQueue<TaskPackage<List<R>>> resultQueue,
-                                                  TaskState taskState) {
+                                                  TaskStateTree taskState) {
         return () -> {
             TaskPackage<List<T>> taskPackage;
             try {
@@ -99,6 +100,11 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         };
     }
 
+    @Override
+    protected TaskStateTree beforeTask() {
+        return new TaskStateTree(getOrderType(), null);
+    }
+
     public class TaskDealerPublisher<T> {
 
         private final MainTask mainTask;
@@ -115,9 +121,9 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
 
         private int innerQueueNum;
 
-        private final TaskState taskState;
+        private final TaskStateTree taskState;
 
-        public TaskDealerPublisher(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue, TaskState taskState) {
+        public TaskDealerPublisher(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue, TaskStateTree taskState) {
             this.mainTask = mainTask;
             this.fromQueue = fromQueue;
             // 线程、队列参数继承于AsyncConsumeTaskDealer
@@ -130,8 +136,8 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         public TaskDealerPublisher(TaskDealerPublisher<?> from,
                                    MainTask mainTask, Runnable task,
                                    ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue) {
-            // 继承上游任务状态
-            this(mainTask, fromQueue, from.getTaskState());
+            // 关联上游任务状态
+            this(mainTask, fromQueue, new TaskStateTree(from.getTaskState().getOrderType(), from.getTaskState()));
             this.task = task;
             this.from = from;
         }
@@ -276,8 +282,34 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
             return this;
         }
 
-        public TaskState getTaskState() {
+        public TaskStateTree getTaskState() {
             return taskState;
+        }
+    }
+
+    static class TaskStateTree extends TaskState {
+
+        private final TaskStateTree parent;
+
+        public TaskStateTree(Orders.OrderType orderType, TaskStateTree parent) {
+            super(orderType);
+            this.parent = parent;
+        }
+
+        @Override
+        public boolean isInterrupted() {
+            TaskStateTree cur = this;
+            do {
+                boolean interrupted = cur.interrupted;
+                if (interrupted) {
+                    return true;
+                }
+            } while ((cur = cur.getParent()) != null);
+            return false;
+        }
+
+        public TaskStateTree getParent() {
+            return parent;
         }
     }
 

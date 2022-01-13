@@ -101,7 +101,7 @@ public class AsyncConsumeTaskDealer {
         /**
          * 中断标识
          */
-        private volatile boolean interrupted;
+        protected volatile boolean interrupted;
 
         /**
          * 中断原因
@@ -695,6 +695,10 @@ public class AsyncConsumeTaskDealer {
     public AsyncConsumeTaskDealer orderType(Orders.OrderType type) {
         this.orderType = type;
         return this;
+    }
+
+    public Orders.OrderType getOrderType() {
+        return orderType;
     }
 
     private void setDefaultQueueNum() {
