@@ -106,7 +106,7 @@ public class AsyncConsumeTaskDealer {
         /**
          * 中断原因
          */
-        private Throwable interruptedCause;
+        protected Throwable interruptedCause;
 
         public TaskState(Orders.OrderType orderType) {
             this.orderType = orderType;
@@ -445,6 +445,12 @@ public class AsyncConsumeTaskDealer {
             producer.produce(taskPublish);
         } catch (InterruptedException e) {
             // do nothing
+        } catch (Exception e) {
+            if (continueWhenSliceTaskError) {
+                log.error("执行生产任务异常,任务继续", e);
+            } else {
+                taskState.setInterruptedCause(e);
+            }
         } finally {
             try {
                 // 保证消费者获取到数据后才退出

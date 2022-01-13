@@ -64,18 +64,19 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
      * @param queue               输入队列
      * @param asyncTaskWithResult 任务体
      * @param resultQueue         输出队列
-     * @param taskState           任务状态
+     * @param parentTaskState     上游任务状态
+     * @param taskState           当前任务装
      * @return callback任务
      */
     private <T, R> Runnable createTaskPushToQueue(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                                   AsyncTaskWithResult<T, R> asyncTaskWithResult,
                                                   ArrayBlockingQueue<TaskPackage<List<R>>> resultQueue,
-                                                  TaskStateTree taskState) {
+                                                  TaskStateTree parentTaskState, TaskStateTree taskState) {
         return () -> {
             TaskPackage<List<T>> taskPackage;
             try {
-                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !taskState.isFinishCreated()) {
-                    if (taskState.isInterrupted()) {
+                while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !parentTaskState.isFinishCreated()) {
+                    if (parentTaskState.isInterrupted()) {
                         continue;
                     }
                     try {
@@ -96,6 +97,8 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                 }
             } catch (InterruptedException e) {
                 throw new ToolboxRuntimeException("队列poll数据异常", e);
+            } finally {
+                taskState.setFinishCreated(true);
             }
         };
     }
@@ -103,6 +106,36 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
     @Override
     protected TaskStateTree beforeTask() {
         return new TaskStateTree(getOrderType(), null);
+    }
+
+    public AsyncConsumeTaskPublisher threadName(String threadName) {
+        super.threadName(threadName);
+        return this;
+    }
+
+    public AsyncConsumeTaskPublisher threadNum(int threadNum) {
+        super.threadNum(threadNum);
+        return this;
+    }
+
+    public AsyncConsumeTaskPublisher queueNum(int queueNum) {
+        super.queueNum(queueNum);
+        return this;
+    }
+
+    public AsyncConsumeTaskPublisher mainHelpTask(boolean mainHelpTask) {
+        super.mainHelpTask(mainHelpTask);
+        return this;
+    }
+
+    public AsyncConsumeTaskPublisher continueWhenSliceTaskError(boolean continueWhenSliceTaskError) {
+        super.continueWhenSliceTaskError(continueWhenSliceTaskError);
+        return this;
+    }
+
+    public AsyncConsumeTaskPublisher orderType(Orders.OrderType type) {
+        super.orderType(type);
+        return this;
     }
 
     public class TaskDealerPublisher<T> {
@@ -135,9 +168,10 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
 
         public TaskDealerPublisher(TaskDealerPublisher<?> from,
                                    MainTask mainTask, Runnable task,
-                                   ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue) {
+                                   ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue,
+                                   TaskStateTree taskState) {
             // 关联上游任务状态
-            this(mainTask, fromQueue, new TaskStateTree(from.getTaskState().getOrderType(), from.getTaskState()));
+            this(mainTask, fromQueue, taskState);
             this.task = task;
             this.from = from;
         }
@@ -172,7 +206,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
          */
         public void subscribe(AsyncTask<T> asyncTask, int threadNum, String threadNme) {
             ExecutorService executorService = newExecutorService(threadNum, threadNme);
-            subscribe(asyncTask, executorService);
+            subscribe(asyncTask, executorService, threadNum);
         }
 
         /**
@@ -184,7 +218,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
          */
         public <R> FutureResult<R> subscribe(AsyncTaskWithResult<T, R> asyncTaskWithResult, int threadNum, String threadNme) {
             ExecutorService executorService = newExecutorService(threadNum, threadNme);
-            return subscribe(asyncTaskWithResult, executorService);
+            return subscribe(asyncTaskWithResult, executorService, threadNum);
         }
 
         /**
@@ -192,9 +226,12 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
          *
          * @param asyncTask       异步任务
          * @param executorService 线程池
+         * @param useThreadNum    使用线程数
          */
-        public void subscribe(AsyncTask<T> asyncTask, ExecutorService executorService) {
+        public void subscribe(AsyncTask<T> asyncTask, ExecutorService executorService,
+                              int useThreadNum) {
             doSubscribe();
+            taskState.setThreadNum(useThreadNum);
             // 最终通过AsyncConsumeTaskDealer的函数开始任务
             startTask(mainTask, fromQueue, asyncTask, executorService, taskState);
         }
@@ -204,9 +241,12 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
          *
          * @param asyncTaskWithResult 异步任务（返回结果）
          * @param executorService     线程池
+         * @param useThreadNum        使用线程数
          */
-        public <R> FutureResult<R> subscribe(AsyncTaskWithResult<T, R> asyncTaskWithResult, ExecutorService executorService) {
+        public <R> FutureResult<R> subscribe(AsyncTaskWithResult<T, R> asyncTaskWithResult, ExecutorService executorService,
+                                             int useThreadNum) {
             doSubscribe();
+            taskState.setThreadNum(useThreadNum);
             // 最终通过AsyncConsumeTaskDealer的函数开始任务
             return startTaskWithResult(mainTask, fromQueue, asyncTaskWithResult, executorService, taskState);
         }
@@ -220,8 +260,10 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
          */
         public <R> TaskDealerPublisher<R> then(AsyncTaskWithResult<T, R> asyncTaskWithResult) {
             ArrayBlockingQueue<TaskPackage<List<R>>> resultQueue = new ArrayBlockingQueue<>(innerQueueNum);
-            Runnable taskPushToQueue = createTaskPushToQueue(this.fromQueue, asyncTaskWithResult, resultQueue, this.taskState);
-            return new TaskDealerPublisher<>(this, mainTask, taskPushToQueue, resultQueue);
+            TaskStateTree taskState = this.getTaskState();
+            TaskStateTree nextTaskState = new TaskStateTree(taskState.getOrderType(), taskState);
+            Runnable taskPushToQueue = createTaskPushToQueue(this.fromQueue, asyncTaskWithResult, resultQueue, this.taskState, nextTaskState);
+            return new TaskDealerPublisher<>(this, mainTask, taskPushToQueue, resultQueue, nextTaskState);
         }
 
         private void doSubscribe() {
@@ -229,9 +271,10 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                 from.doSubscribe();
             }
             if (task != null) {
-                ExecutorService executorService = newExecutorService(this.innerThreadNum, this.innerThreadName);
+                int innerThreadNum = this.getInnerThreadNum();
+                ExecutorService executorService = newExecutorService(innerThreadNum, this.innerThreadName);
                 // 异步订阅任务
-                for (int i = 0; i < this.innerThreadNum; i++) {
+                for (int i = 0; i < innerThreadNum; i++) {
                     executorService.submit(task);
                 }
                 executorService.shutdown();
@@ -306,6 +349,18 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                 }
             } while ((cur = cur.getParent()) != null);
             return false;
+        }
+
+        @Override
+        public Throwable getInterruptedCause() {
+            TaskStateTree cur = this;
+            do {
+                boolean interrupted = cur.interrupted;
+                if (interrupted) {
+                    return cur.interruptedCause;
+                }
+            } while ((cur = cur.getParent()) != null);
+            return null;
         }
 
         public TaskStateTree getParent() {

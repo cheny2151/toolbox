@@ -15,8 +15,8 @@ public class ArrayBlockTaskPublisherDemo {
     }
 
     public static void demo1() throws InterruptedException {
-        AsyncConsumeTaskPublisher taskDealer = new AsyncConsumeTaskPublisher(8, true);
-        taskDealer.publisher((Producer<Integer>) publish -> {
+        AsyncConsumeTaskPublisher taskDealer = new AsyncConsumeTaskPublisher(8, true).continueWhenSliceTaskError(false);
+        AsyncConsumeTaskDealer.FutureResult<String> result = taskDealer.publisher((Producer<Integer>) publish -> {
             for (int i = 0; i < 100; i++) {
                 System.out.println(Thread.currentThread().getName() + ":0");
                 publish.push(i);
@@ -29,7 +29,9 @@ public class ArrayBlockTaskPublisherDemo {
             return Collections.singletonList(ints.size());
         }).innerThreadName("B").subscribe(ints -> {
             System.out.println(Thread.currentThread().getName() + ":3");
+            return Collections.singletonList("true");
         }, 2, "C");
+        System.out.println(result.getResults().size());
     }
 
 
