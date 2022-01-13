@@ -45,34 +45,36 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
      * @param <T>      数据类型
      */
     public <T, R> TaskDealerPublisher<T> publisher(Producer<T> producer) {
-        beforeTask();
+        TaskState taskState = beforeTask();
         // 新建阻塞队列
         ArrayBlockingQueue<TaskPackage<List<T>>> queue = new ArrayBlockingQueue<>(getQueueNum());
-        TaskPublish<T> taskPublish = new TaskPublish<>(queue);
+        TaskPublish<T> taskPublish = new TaskPublish<>(queue, taskState);
         // 主线程同步获取数据传递至方法内
-        MainTask mainTask = () -> doProduce(producer, taskPublish);
+        MainTask mainTask = () -> doProduce(producer, taskPublish, taskState);
 
-        return new TaskDealerPublisher<>(mainTask, queue);
+        return new TaskDealerPublisher<>(mainTask, queue, taskState);
     }
 
     /**
      * 创建通过队列传递数据的任务
      *
+     * @param <T>                 泛型：输入数据类型
+     * @param <R>                 泛型：输出数据类型
      * @param queue               输入队列
      * @param asyncTaskWithResult 任务体
      * @param resultQueue         输出队列
-     * @param <T>                 泛型：输入数据类型
-     * @param <R>                 泛型：输出数据类型
+     * @param taskState           任务状态
      * @return callback任务
      */
     private <T, R> Runnable createTaskPushToQueue(ArrayBlockingQueue<TaskPackage<List<T>>> queue,
                                                   AsyncTaskWithResult<T, R> asyncTaskWithResult,
-                                                  ArrayBlockingQueue<TaskPackage<List<R>>> resultQueue) {
+                                                  ArrayBlockingQueue<TaskPackage<List<R>>> resultQueue,
+                                                  TaskState taskState) {
         return () -> {
             TaskPackage<List<T>> taskPackage;
             try {
-                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !finishCreated) {
-                    if (interrupted) {
+                while ((taskPackage = queue.poll(1, TimeUnit.SECONDS)) != null || !taskState.isFinishCreated()) {
+                    if (taskState.isInterrupted()) {
                         continue;
                     }
                     try {
@@ -86,8 +88,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
                         if (continueWhenSliceTaskError) {
                             log.error("执行任务分片异常", e);
                         } else {
-                            this.interrupted = true;
-                            this.interruptedCause = e;
+                            taskState.setInterruptedCause(e);
                         }
                         resultQueue.put(new TaskPackage<>(null, taskPackage.getIndex(), !continueWhenSliceTaskError, e));
                     }
@@ -114,25 +115,25 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
 
         private int innerQueueNum;
 
-        public TaskDealerPublisher(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue) {
+        private final TaskState taskState;
+
+        public TaskDealerPublisher(MainTask mainTask, ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue, TaskState taskState) {
             this.mainTask = mainTask;
             this.fromQueue = fromQueue;
             // 线程、队列参数继承于AsyncConsumeTaskDealer
             this.innerThreadNum = getThreadNum();
             this.innerQueueNum = getQueueNum();
             this.innerThreadName = getThreadName();
+            this.taskState = taskState;
         }
 
         public TaskDealerPublisher(TaskDealerPublisher<?> from,
                                    MainTask mainTask, Runnable task,
                                    ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue) {
-            this(mainTask, task, fromQueue);
-            this.from = from;
-        }
-
-        public TaskDealerPublisher(MainTask mainTask, Runnable task, ArrayBlockingQueue<TaskPackage<List<T>>> fromQueue) {
-            this(mainTask, fromQueue);
+            // 继承上游任务状态
+            this(mainTask, fromQueue, from.getTaskState());
             this.task = task;
+            this.from = from;
         }
 
         /**
@@ -189,7 +190,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         public void subscribe(AsyncTask<T> asyncTask, ExecutorService executorService) {
             doSubscribe();
             // 最终通过AsyncConsumeTaskDealer的函数开始任务
-            startTask(mainTask, fromQueue, asyncTask, executorService);
+            startTask(mainTask, fromQueue, asyncTask, executorService, taskState);
         }
 
         /**
@@ -201,7 +202,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         public <R> FutureResult<R> subscribe(AsyncTaskWithResult<T, R> asyncTaskWithResult, ExecutorService executorService) {
             doSubscribe();
             // 最终通过AsyncConsumeTaskDealer的函数开始任务
-            return startTaskWithResult(mainTask, fromQueue, asyncTaskWithResult, executorService);
+            return startTaskWithResult(mainTask, fromQueue, asyncTaskWithResult, executorService, taskState);
         }
 
         /**
@@ -213,7 +214,7 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
          */
         public <R> TaskDealerPublisher<R> then(AsyncTaskWithResult<T, R> asyncTaskWithResult) {
             ArrayBlockingQueue<TaskPackage<List<R>>> resultQueue = new ArrayBlockingQueue<>(innerQueueNum);
-            Runnable taskPushToQueue = createTaskPushToQueue(this.fromQueue, asyncTaskWithResult, resultQueue);
+            Runnable taskPushToQueue = createTaskPushToQueue(this.fromQueue, asyncTaskWithResult, resultQueue, this.taskState);
             return new TaskDealerPublisher<>(this, mainTask, taskPushToQueue, resultQueue);
         }
 
@@ -273,6 +274,10 @@ public class AsyncConsumeTaskPublisher extends AsyncConsumeTaskDealer {
         public TaskDealerPublisher<T> innerQueueNum(int innerQueueNum) {
             this.setInnerQueueNum(innerQueueNum);
             return this;
+        }
+
+        public TaskState getTaskState() {
+            return taskState;
         }
     }
 
