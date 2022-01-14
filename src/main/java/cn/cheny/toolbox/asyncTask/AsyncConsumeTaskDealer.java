@@ -81,7 +81,7 @@ public class AsyncConsumeTaskDealer {
     private Orders.OrderType orderType;
 
     @Data
-    static class TaskState {
+    protected static class TaskState {
 
         /**
          * 任务排序
@@ -354,6 +354,8 @@ public class AsyncConsumeTaskDealer {
             mainTask.run();
         } catch (InterruptedException e) {
             throw new TaskInterruptedException("主线程任务获取中断", e);
+        } finally {
+            afterMainRun();
         }
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
@@ -364,7 +366,7 @@ public class AsyncConsumeTaskDealer {
             }
         }
         // 关闭线程池
-        afterTask(executorService);
+        afterTaskStarting(executorService);
         if (taskState.isInterrupted()) {
             Throwable interruptedCause = taskState.getInterruptedCause();
             throw new TaskInterruptedException("任务运行异常终止" + interruptedCause.getMessage(), interruptedCause);
@@ -414,6 +416,8 @@ public class AsyncConsumeTaskDealer {
             mainTask.run();
         } catch (InterruptedException e) {
             throw new TaskInterruptedException("主线程任务获取中断", e);
+        } finally {
+            afterMainRun();
         }
         // 查看主线程帮助执行任务
         if (mainHelpTask) {
@@ -425,7 +429,7 @@ public class AsyncConsumeTaskDealer {
             }
         }
         // 关闭线程池
-        afterTask(executorService);
+        afterTaskStarting(executorService);
         if (taskState.isInterrupted()) {
             Throwable interruptedCause = taskState.getInterruptedCause();
             throw new TaskInterruptedException("任务运行异常终止:" + interruptedCause.getMessage(), interruptedCause);
@@ -483,6 +487,7 @@ public class AsyncConsumeTaskDealer {
                                     AsyncTask<T> asyncTask, TaskState taskState) {
         return () -> {
             try {
+                beforeAsyncRun();
                 TaskPackage<List<T>> taskPackage;
                 while ((taskPackage = queue.poll(2, TimeUnit.MILLISECONDS)) != null || !taskState.isFinishCreated()) {
                     if (taskState.isInterrupted()) {
@@ -502,6 +507,8 @@ public class AsyncConsumeTaskDealer {
                 }
             } catch (InterruptedException e) {
                 throw new ToolboxRuntimeException("队列poll数据异常", e);
+            } finally {
+                afterAsyncRun(taskState);
             }
         };
     }
@@ -520,6 +527,7 @@ public class AsyncConsumeTaskDealer {
                                                                              AsyncTaskWithResult<T, R> asyncTaskWithResult,
                                                                              TaskState taskState) {
         return () -> {
+            beforeAsyncRun();
             List<TaskPackage<List<R>>> rs = new ArrayList<>();
             TaskPackage<List<T>> taskPackage;
             try {
@@ -545,9 +553,29 @@ public class AsyncConsumeTaskDealer {
                 }
             } catch (InterruptedException e) {
                 throw new ToolboxRuntimeException("队列poll数据异常", e);
+            } finally {
+                afterAsyncRun(taskState);
             }
             return rs;
         };
+    }
+
+    /**
+     * 结束主线程任务后执行的钩子
+     */
+    protected void afterMainRun() {
+    }
+
+    /**
+     * 异步线程执行前钩子
+     */
+    protected void beforeAsyncRun() {
+    }
+
+    /**
+     * 异步线程执行后钩子
+     */
+    protected void afterAsyncRun(TaskState taskState) {
     }
 
     /**
@@ -652,7 +680,7 @@ public class AsyncConsumeTaskDealer {
         return new TaskState(this.orderType);
     }
 
-    protected void afterTask(ExecutorService executorService) {
+    protected void afterTaskStarting(ExecutorService executorService) {
         executorService.shutdown();
     }
 

@@ -1,7 +1,10 @@
 package cn.cheny.toolbox.asyncTask;
 
 import cn.cheny.toolbox.asyncTask.function.Producer;
+import cn.cheny.toolbox.asyncTask.pool2.AsyncConsumeTaskDealerPool;
+import cn.cheny.toolbox.asyncTask.pool2.AsyncConsumeTaskDealerPooled;
 import cn.cheny.toolbox.other.order.Orders;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -160,6 +163,35 @@ public class ArrayBlockTaskDealerDemo {
         results.forEach(System.out::println);
         System.out.println(results.size());
     }
+
+    @Test
+    public void testPool() throws Exception {
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < 2001; i++) {
+            list.add("test" + i);
+        }
+        AsyncConsumeTaskDealerPool pool = AsyncConsumeTaskDealerPool.builder().threadNum(8).build();
+        for (int i = 0; i < 9; i++) {
+            if (i > 0){
+                Thread.sleep(5000);
+            }
+            try (AsyncConsumeTaskDealerPooled pooled = pool.borrowObject()){
+                AsyncConsumeTaskDealer.FutureResult<String> futureResult = pooled.continueWhenSliceTaskError(false)
+                        .orderType(Orders.OrderType.asc)
+                        .map(list, 100, e -> {
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException interruptedException) {
+                                interruptedException.printStackTrace();
+                            }
+                            return e;
+                        });
+                List<String> results = futureResult.getResults();
+                System.out.println(i + ":" + results.size());
+            }
+        }
+    }
+
 
     private static class TestEntity implements ExtremumField<Integer> {
 
