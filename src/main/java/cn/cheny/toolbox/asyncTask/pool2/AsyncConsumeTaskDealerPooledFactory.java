@@ -28,7 +28,7 @@ public class AsyncConsumeTaskDealerPooledFactory implements PooledObjectFactory<
     private final Orders.OrderType orderType;
 
     AsyncConsumeTaskDealerPooledFactory(Integer threadNum, Integer queueNum, String threadName, Boolean mainHelpTask,
-                                               Boolean continueWhenSliceTaskError, Orders.OrderType orderType) {
+                                        Boolean continueWhenSliceTaskError, Orders.OrderType orderType) {
         this.threadNum = threadNum;
         this.queueNum = queueNum;
         this.threadName = threadName;
@@ -39,17 +39,19 @@ public class AsyncConsumeTaskDealerPooledFactory implements PooledObjectFactory<
 
     @Override
     public void activateObject(PooledObject<AsyncConsumeTaskDealerPooled> pooledObject) throws Exception {
-        pooledObject.getObject().updateState(AsyncConsumeTaskDealerPooled.ACTIVATION);
+        pooledObject.getObject().updateState(State.ACTIVATION.getVal());
     }
 
     @Override
     public void passivateObject(PooledObject<AsyncConsumeTaskDealerPooled> pooledObject) throws Exception {
-        pooledObject.getObject().updateState(AsyncConsumeTaskDealerPooled.INACTIVATION);
+        pooledObject.getObject().updateState(State.INACTIVATION.getVal());
     }
 
     @Override
     public void destroyObject(PooledObject<AsyncConsumeTaskDealerPooled> pooledObject) throws Exception {
-        pooledObject.getObject().destroy();
+        AsyncConsumeTaskDealerPooled pooled = pooledObject.getObject();
+        pooled.destroy();
+        pooled.updateState(State.CLOSED.getVal());
     }
 
     @Override
@@ -73,7 +75,7 @@ public class AsyncConsumeTaskDealerPooledFactory implements PooledObjectFactory<
         if (orderType != null) {
             pooled.orderType(orderType);
         }
-         return new DefaultPooledObject<>(pooled);
+        return new DefaultPooledObject<>(pooled);
     }
 
     @Override

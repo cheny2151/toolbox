@@ -20,13 +20,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class AsyncConsumeTaskDealerPooled extends AsyncConsumeTaskDealer implements Closeable {
 
-    // 失活
-    static final int INACTIVATION = 0;
-    // 激活
-    static final int ACTIVATION = 1;
-    // 归还中
-    static final int RETURNING = 2;
-
     private final AsyncConsumeTaskDealerPool belongPool;
     private final AtomicInteger state;
     private final AtomicInteger runningCount;
@@ -38,7 +31,7 @@ public class AsyncConsumeTaskDealerPooled extends AsyncConsumeTaskDealer impleme
     public AsyncConsumeTaskDealerPooled(AsyncConsumeTaskDealerPool belongPool) {
         super();
         this.belongPool = belongPool;
-        this.state = new AtomicInteger(INACTIVATION);
+        this.state = new AtomicInteger(State.INACTIVATION.getVal());
         this.runningCount = new AtomicInteger(0);
     }
 
@@ -72,8 +65,8 @@ public class AsyncConsumeTaskDealerPooled extends AsyncConsumeTaskDealer impleme
 
     private void checkActive() {
         int state = this.state.get();
-        if (state != ACTIVATION) {
-            throw new ToolboxRuntimeException("Can not start task,abnormal state:" + state);
+        if (state != State.ACTIVATION.getVal()) {
+            throw new ToolboxRuntimeException("Can not start task, abnormal state: " + State.valueOf(state).name());
         }
     }
 
@@ -108,7 +101,7 @@ public class AsyncConsumeTaskDealerPooled extends AsyncConsumeTaskDealer impleme
 
     @Override
     public void close() throws IOException {
-        updateState(RETURNING);
+        updateState(State.RETURNING.getVal());
         belongPool.returnObject(this);
     }
 

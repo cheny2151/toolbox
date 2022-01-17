@@ -172,10 +172,10 @@ public class ArrayBlockTaskDealerDemo {
         }
         AsyncConsumeTaskDealerPool pool = AsyncConsumeTaskDealerPool.builder().threadNum(8).build();
         for (int i = 0; i < 9; i++) {
-            if (i > 0){
+            if (i > 0) {
                 Thread.sleep(5000);
             }
-            try (AsyncConsumeTaskDealerPooled pooled = pool.borrowObject()){
+            try (AsyncConsumeTaskDealerPooled pooled = pool.borrowObject()) {
                 AsyncConsumeTaskDealer.FutureResult<String> futureResult = pooled.continueWhenSliceTaskError(false)
                         .orderType(Orders.OrderType.asc)
                         .map(list, 100, e -> {
@@ -190,6 +190,28 @@ public class ArrayBlockTaskDealerDemo {
                 System.out.println(i + ":" + results.size());
             }
         }
+    }
+
+    @Test
+    public void testPoolState() throws Exception {
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < 2001; i++) {
+            list.add("test" + i);
+        }
+        AsyncConsumeTaskDealerPool pool = AsyncConsumeTaskDealerPool.builder().threadNum(8).build();
+        AsyncConsumeTaskDealerPooled pooled = pool.borrowObject();
+        AsyncConsumeTaskDealer.FutureResult<String> futureResult = pooled.continueWhenSliceTaskError(false)
+                .orderType(Orders.OrderType.asc)
+                .map(list, 100, e -> {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException interruptedException) {
+                        interruptedException.printStackTrace();
+                    }
+                    return e;
+                });
+        pooled.close();
+        Thread.sleep(100000);
     }
 
 
