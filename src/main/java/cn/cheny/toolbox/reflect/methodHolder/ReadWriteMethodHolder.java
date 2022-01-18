@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -35,11 +36,11 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
                 .stream().map(method -> {
                     String property = ReflectUtils.extractPropertyName(method);
                     cacheMethod(property, method);
-                    Class<?> type;
+                    Type type;
                     if (method.getParameterCount() == 0) {
-                        type = method.getReturnType();
+                        type = method.getGenericReturnType();
                     } else {
-                        type = method.getParameterTypes()[0];
+                        type = method.getGenericParameterTypes()[0];
                     }
                     return new PropertySignature(property, type);
                 }).collect(Collectors.toList());
@@ -139,7 +140,7 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
 
         private String name;
 
-        private Class<?> type;
+        private Type type;
 
     }
 
