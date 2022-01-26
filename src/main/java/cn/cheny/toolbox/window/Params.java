@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.window;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+import cn.cheny.toolbox.reflect.TypeUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 
 import java.lang.reflect.Method;
@@ -20,10 +21,10 @@ public class Params {
 
     public Params(Object[] args, BatchConfiguration batchConfiguration) {
         Method method = batchConfiguration.getBatchMethod().getMethod();
-        checkArgs(args, method);
-        int length = args.length;
         int batchArgIndex = batchConfiguration.getBatchArgIndex();
-        if (length > 0) {
+        checkArgs(args, method, batchArgIndex);
+        int length = args.length;
+        if (length > 1) {
             Object[] argsTemplate = new Object[length];
             System.arraycopy(args, 0, argsTemplate, 0, length);
             argsTemplate[batchArgIndex] = null;
@@ -58,15 +59,22 @@ public class Params {
         return args;
     }
 
-    private void checkArgs(Object[] args, Method method) {
+    private void checkArgs(Object[] args, Method method, int batchArgIndex) {
         if (args.length != method.getParameterCount()) {
             throw new ToolboxRuntimeException("Args length neq with method parameter count");
         }
         Class<?>[] parameterTypes = method.getParameterTypes();
         for (int i = 0; i < parameterTypes.length; i++) {
+            if (i == batchArgIndex) {
+                continue;
+            }
             Object arg = args[i];
-            if (arg != null && !parameterTypes[i].isAssignableFrom(arg.getClass())) {
-                throw new ToolboxRuntimeException("Parameters collectedMethod and batchMethod cannot be matched");
+            if (arg != null) {
+                Class<?> parameterType = TypeUtils.ifPrimitiveToWrapClass(parameterTypes[i]);
+                Class<?> argClass = arg.getClass();
+                if (!parameterType.isAssignableFrom(argClass)) {
+                    throw new ToolboxRuntimeException("Parameters collectedMethod and batchMethod cannot be matched");
+                }
             }
         }
     }

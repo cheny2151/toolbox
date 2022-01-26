@@ -6,6 +6,6 @@ package cn.cheny.toolbox.window.factory;
  */
 public interface WindowProxyFactory {
 
-    Object createProxy(Object target);
+    <T> T createProxy(T target);
 
 }

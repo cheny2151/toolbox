@@ -36,7 +36,7 @@ public class WindowCoordinator {
         this.batchConfiguration = batchConfiguration;
         this.units = new ConcurrentHashMap<>();
         this.status = new AtomicInteger(0);
-        this.workers = Executors.newFixedThreadPool(batchConfiguration.getThreadPoolSize(), new NamePrefixThreadFactory("Model-Inference"));
+        this.workers = Executors.newFixedThreadPool(batchConfiguration.getThreadPoolSize(), new NamePrefixThreadFactory("BatchHandler"));
     }
 
     public WindowElement addElement(Object[] args) {

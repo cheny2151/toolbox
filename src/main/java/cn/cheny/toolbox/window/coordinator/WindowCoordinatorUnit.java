@@ -30,6 +30,7 @@ public class WindowCoordinatorUnit {
     private Object target;
     private ConcurrentHashMap<Integer, WindowElement> content;
     private final ExecutorService workers;
+    private final AtomicInteger lock;
 
     public WindowCoordinatorUnit(Params params, BatchConfiguration batchConfiguration, Object target, ExecutorService workers) {
         this.params = params;
@@ -40,6 +41,7 @@ public class WindowCoordinatorUnit {
         this.cursize = new AtomicInteger(0);
         this.content = new ConcurrentHashMap<>(threshold);
         this.workers = workers;
+        this.lock = new AtomicInteger(0);
     }
 
     public WindowElement addElement(Object[] args) {
@@ -61,38 +63,53 @@ public class WindowCoordinatorUnit {
     }
 
     public void startWork() {
-        workers.execute(this::doWindow);
+        if (tryLock()) {
+            workers.execute(this::doWindow);
+        }
+    }
+
+    private boolean tryLock() {
+        return lock.compareAndSet(0, 1);
+    }
+
+    private void unlock() {
+        lock.compareAndSet(1, 0);
     }
 
     private void doWindow() {
         int curSize;
-        if ((curSize = this.cursize.get()) > 0 && this.cursize.compareAndSet(curSize, -1)) {
-            ConcurrentHashMap<Integer, WindowElement> curContent = this.content;
-            this.content = new ConcurrentHashMap<>(threshold);
-            this.cursize.set(0);
-            assert curContent.values().size() == curSize;
-            List<WindowElement> elements = new ArrayList<>(curContent.values());
-            List<Object> inputs = new ArrayList<>();
-            elements.forEach(e -> e.collectInput(inputs));
-            long l = System.currentTimeMillis();
-            Object outputs;
-            try {
-                outputs = doBatch(inputs);
-                curContent.clear();
-            } catch (Exception e) {
-                elements.forEach(element -> element.setError(e));
-                return;
-            }
-            if (log.isDebugEnabled()) {
-                log.debug("[{}]size:{},use time:{}", Thread.currentThread().getName(), inputs.size(), System.currentTimeMillis() - l);
-            }
-            for (int i = 0; i < elements.size(); i++) {
-                WindowElement element = elements.get(i);
-                Object output = splitter.split(outputs, element, i);
-                element.setOutput(output);
+        while ((curSize = this.cursize.get()) > 0) {
+            if (this.cursize.compareAndSet(curSize, -1)) {
+                ConcurrentHashMap<Integer, WindowElement> curContent = this.content;
+                this.content = new ConcurrentHashMap<>(threshold);
+                this.cursize.set(0);
+                unlock();
+                List<WindowElement> elements = new ArrayList<>(curContent.values());
+                List<Object> inputs = new ArrayList<>();
+                elements.forEach(e -> e.collectInput(inputs));
+                long l = System.currentTimeMillis();
+                Object outputs;
+                try {
+                    outputs = doBatch(inputs);
+                    curContent.clear();
+                } catch (Exception e) {
+                    elements.forEach(element -> element.setError(e));
+                    return;
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("[{}]size:{},use time:{}", Thread.currentThread().getName(), inputs.size(), System.currentTimeMillis() - l);
+                }
+                for (int i = 0; i < elements.size(); i++) {
+                    WindowElement element = elements.get(i);
+                    Object output = splitter.split(outputs, element, i);
+                    element.setOutput(output);
+                }
+                break;
             }
         }
-
+        if (curSize == 0) {
+            unlock();
+        }
     }
 
     private Object doBatch(List<Object> inputs) {

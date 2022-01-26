@@ -21,10 +21,11 @@ import java.util.stream.Collectors;
  */
 public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object createProxy(Object target) {
+    public <T> T createProxy(T target) {
         ProxyFactory proxyFactory = new ProxyFactory();
-        proxyFactory.setInterfaces(new Class[]{target.getClass()});
+        proxyFactory.setSuperclass(target.getClass());
         WindowInferenceHandler handler = new WindowInferenceHandler(target);
         Map<Method, BatchConfiguration> batchConfigMap = scanBatchConfiguration(target);
         if (batchConfigMap.size() > 0) {
@@ -33,7 +34,7 @@ public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
             handler.putAll(coordinatorMap);
         }
         try {
-            return proxyFactory.create(new Class[0], new Object[0], handler);
+            return (T) proxyFactory.create(new Class[0], new Object[0], handler);
         } catch (Exception e) {
             throw new ToolboxRuntimeException("创建代理失败", e);
         }
