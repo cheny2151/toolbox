@@ -229,8 +229,8 @@ public class ReflectUtils {
      * @param annotationClass 注解类
      * @return k:方法名,v:方法
      */
-    public static Map<String, Method> getAllMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        HashMap<String, Method> result = new HashMap<>();
+    public static Set<Method> getAllMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
+        HashSet<Method> result = new HashSet<>();
         Class<?> currentClass = clazz;
         while (!Object.class.equals(currentClass)) {
             Method[] declaredMethods = currentClass.getDeclaredMethods();
@@ -238,7 +238,7 @@ public class ReflectUtils {
                 Annotation declaredAnnotation = method.getDeclaredAnnotation(annotationClass);
                 if (declaredAnnotation != null) {
                     method.setAccessible(true);
-                    result.put(method.getName(), method);
+                    result.add(method);
                 }
             }
             currentClass = currentClass.getSuperclass();
@@ -255,15 +255,14 @@ public class ReflectUtils {
      * @return
      */
     public static Map<String, Method> getAllWriteMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        Map<String, Method> methodMap = getAllMethodHasAnnotation(clazz, annotationClass);
+        Set<Method> methods = getAllMethodHasAnnotation(clazz, annotationClass);
         HashMap<String, Method> result = new HashMap<>();
-        for (Map.Entry<String, Method> methodEntry : methodMap.entrySet()) {
-            Method method = methodEntry.getValue();
+        for (Method method : methods) {
             if (isWriteMethod(method)) {
                 result.put(extractPropertyName(method), method);
             }
         }
-        methodMap.clear();
+        methods.clear();
         return result;
     }
 
@@ -275,15 +274,14 @@ public class ReflectUtils {
      * @return
      */
     public static Map<String, Method> getAllReadMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        Map<String, Method> methodMap = getAllMethodHasAnnotation(clazz, annotationClass);
+        Set<Method> methods = getAllMethodHasAnnotation(clazz, annotationClass);
         HashMap<String, Method> result = new HashMap<>();
-        for (Map.Entry<String, Method> methodEntry : methodMap.entrySet()) {
-            Method method = methodEntry.getValue();
+        for (Method method : methods) {
             if (isReadMethod(method)) {
                 result.put(extractPropertyName(method), method);
             }
         }
-        methodMap.clear();
+        methods.clear();
         return result;
     }
 
