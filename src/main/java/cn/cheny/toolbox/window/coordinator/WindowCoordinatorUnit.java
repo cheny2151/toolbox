@@ -97,7 +97,7 @@ public class WindowCoordinatorUnit {
                     return;
                 }
                 if (log.isDebugEnabled()) {
-                    log.debug("[{}]size:{},use time:{}", Thread.currentThread().getName(), inputs.size(), System.currentTimeMillis() - l);
+                    log.debug("size:{},use time:{}", inputs.size(), System.currentTimeMillis() - l);
                 }
                 for (int i = 0; i < elements.size(); i++) {
                     WindowElement element = elements.get(i);
