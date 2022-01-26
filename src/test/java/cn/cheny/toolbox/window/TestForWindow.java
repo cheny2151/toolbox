@@ -26,8 +26,20 @@ public class TestForWindow {
         return test;
     }
 
+    @Collected(group = "printMulti2")
+    public String print2(int i, List<String> test) {
+        return test.get(0);
+    }
+
     @Batch(group = "printMulti", threadPoolSize = 3, batchArgIndex = 1)
     public List<String> print(int i, List<String> tests) throws InterruptedException {
+        Thread.sleep(100);
+        System.out.println(tests.size());
+        return tests;
+    }
+
+    @Batch(threadPoolSize = 3, batchArgIndex = 1)
+    public List<String> printSelf(int i, List<String> tests) throws InterruptedException {
         Thread.sleep(100);
         System.out.println(tests.size());
         return tests;

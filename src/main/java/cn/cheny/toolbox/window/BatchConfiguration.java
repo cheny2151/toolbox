@@ -5,8 +5,6 @@ import cn.cheny.toolbox.spring.SpringUtils;
 import cn.cheny.toolbox.window.output.BatchResultSplitter;
 import org.apache.commons.lang3.StringUtils;
 
-import java.lang.reflect.Method;
-
 /**
  * 批处理配置
  *
@@ -25,15 +23,16 @@ public class BatchConfiguration {
 
     private int threadPoolSize;
 
-    private boolean argIsCollection;
-
     private Class<? extends BatchResultSplitter> splitterClass;
 
     private String splitterName;
 
-    private BatchMethod batchMethod;
+    private final BatchMethod batchMethod;
 
-    public BatchConfiguration(Batch batch, Method batchMethod, Collected collected) {
+    private final CollectedMethod collectedMethod;
+
+    public BatchConfiguration(BatchMethod batchMethod, CollectedMethod collectedMethod) {
+        Batch batch = batchMethod.getBatch();
         this.group = batch.group();
         this.batchArgIndex = batch.batchArgIndex();
         this.winTime = batch.winTime();
@@ -41,15 +40,11 @@ public class BatchConfiguration {
         this.threadPoolSize = batch.threadPoolSize();
         this.splitterClass = batch.splitter();
         this.splitterName = batch.splitterName();
-        if (collected != null) {
-            this.argIsCollection = collected.argIsCollection();
-        } else {
-            this.argIsCollection = true;
-        }
-        this.batchMethod = new BatchMethod(batchMethod);
+        this.batchMethod = batchMethod;
+        this.collectedMethod = collectedMethod;
     }
 
-    public Params buildParams(Object[] args) {
+    public synchronized Params buildParams(Object[] args) {
         return new Params(args, this);
     }
 
@@ -73,12 +68,12 @@ public class BatchConfiguration {
         return threadPoolSize;
     }
 
-    public boolean isArgIsCollection() {
-        return argIsCollection;
-    }
-
     public BatchMethod getBatchMethod() {
         return batchMethod;
+    }
+
+    public CollectedMethod getCollectedMethod() {
+        return collectedMethod;
     }
 
     public BatchResultSplitter getBatchResultSplitter() {

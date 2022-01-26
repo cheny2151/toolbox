@@ -1,9 +1,7 @@
 package cn.cheny.toolbox.window.factory;
 
 import cn.cheny.toolbox.reflect.ReflectUtils;
-import cn.cheny.toolbox.window.Batch;
-import cn.cheny.toolbox.window.BatchConfiguration;
-import cn.cheny.toolbox.window.Collected;
+import cn.cheny.toolbox.window.*;
 
 import java.lang.reflect.Method;
 import java.util.HashMap;
@@ -28,35 +26,24 @@ public abstract class BaseWindowProxyFactory implements WindowProxyFactory {
     protected Map<Method, BatchConfiguration> scanBatchConfiguration(Object target) {
         Set<Method> batchMethods = ReflectUtils.getAllMethodHasAnnotation(target.getClass(), Batch.class);
         Set<Method> collectedMethods = ReflectUtils.getAllMethodHasAnnotation(target.getClass(), Collected.class);
-        Map<String, collectedMethod> collectGroup = collectedMethods.stream().map(m -> {
+        Map<String, CollectedMethod> collectGroup = collectedMethods.stream().map(m -> {
             Collected collected = m.getDeclaredAnnotation(Collected.class);
-            return new collectedMethod(m, collected);
-        }).collect(Collectors.toMap(cm -> cm.collected.group(), cm -> cm));
+            return new CollectedMethod(m, collected);
+        }).collect(Collectors.toMap(cm -> cm.getCollected().group(), cm -> cm));
         Map<Method, BatchConfiguration> results = new HashMap<>();
-        for (Method batchMethod : batchMethods) {
-            Method key = batchMethod;
-            Batch batch = batchMethod.getDeclaredAnnotation(Batch.class);
+        for (Method bm : batchMethods) {
+            Method key = bm;
+            Batch batch = bm.getDeclaredAnnotation(Batch.class);
+            BatchMethod batchMethod = new BatchMethod(bm, batch);
             String group = batch.group();
-            collectedMethod collectedMethod = collectGroup.get(group);
-            Collected collected = null;
+            CollectedMethod collectedMethod = collectGroup.get(group);
             if (collectedMethod != null) {
-                key = collectedMethod.method;
-                collected = collectedMethod.collected;
+                key = collectedMethod.getMethod();
             }
-            BatchConfiguration value = new BatchConfiguration(batch, batchMethod, collected);
+            BatchConfiguration value = new BatchConfiguration(batchMethod, collectedMethod);
             results.put(key, value);
         }
         return results;
-    }
-
-    private static class collectedMethod {
-        private final Method method;
-        private final Collected collected;
-
-        public collectedMethod(Method method, Collected collected) {
-            this.method = method;
-            this.collected = collected;
-        }
     }
 
 }

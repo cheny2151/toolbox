@@ -12,10 +12,13 @@ import java.lang.reflect.Method;
  */
 public class BatchMethod {
 
-    private Method method;
+    private final Method method;
 
-    public BatchMethod(Method method) {
+    private final Batch batch;
+
+    public BatchMethod(Method method, Batch batch) {
         this.method = method;
+        this.batch = batch;
     }
 
     public Object doBatch(Object target, Object[] args) {
@@ -28,5 +31,9 @@ public class BatchMethod {
 
     public Method getMethod() {
         return method;
+    }
+
+    public Batch getBatch() {
+        return batch;
     }
 }

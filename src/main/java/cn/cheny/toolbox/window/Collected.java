@@ -15,5 +15,4 @@ public @interface Collected {
 
     String group();
 
-    boolean argIsCollection() default false;
 }

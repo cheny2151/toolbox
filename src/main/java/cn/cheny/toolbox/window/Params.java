@@ -16,13 +16,14 @@ public class Params {
     private final Method method;
     private final int argsCount;
     private final int batchArgIndex;
-    private final boolean argIsCollection;
+    private boolean argIsCollection;
     private final Object[] argsTemplate;
 
     public Params(Object[] args, BatchConfiguration batchConfiguration) {
         Method method = batchConfiguration.getBatchMethod().getMethod();
         int batchArgIndex = batchConfiguration.getBatchArgIndex();
-        checkArgs(args, method, batchArgIndex);
+        CollectedMethod collectedMethod = batchConfiguration.getCollectedMethod();
+        checkArgs(args, method, batchArgIndex, collectedMethod);
         int length = args.length;
         if (length > 1) {
             Object[] argsTemplate = new Object[length];
@@ -35,7 +36,6 @@ public class Params {
         this.method = method;
         this.argsCount = length;
         this.batchArgIndex = batchArgIndex;
-        this.argIsCollection = batchConfiguration.isArgIsCollection();
     }
 
     public WindowElement buildElement(Object[] inputs) {
@@ -59,13 +59,17 @@ public class Params {
         return args;
     }
 
-    private void checkArgs(Object[] args, Method method, int batchArgIndex) {
+    private void checkArgs(Object[] args, Method method, int batchArgIndex, CollectedMethod collectedMethod) {
         if (args.length != method.getParameterCount()) {
             throw new ToolboxRuntimeException("Args length neq with method parameter count");
         }
         Class<?>[] parameterTypes = method.getParameterTypes();
         for (int i = 0; i < parameterTypes.length; i++) {
             if (i == batchArgIndex) {
+                if (collectedMethod != null) {
+                    Class<?> collectedParamType = collectedMethod.getMethod().getParameterTypes()[i];
+                    this.argIsCollection = List.class.isAssignableFrom(collectedParamType);
+                }
                 continue;
             }
             Object arg = args[i];

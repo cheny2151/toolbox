@@ -6,6 +6,7 @@ import cn.cheny.toolbox.window.Params;
 import cn.cheny.toolbox.window.WindowElement;
 import lombok.extern.slf4j.Slf4j;
 
+import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,7 +30,7 @@ public class WindowCoordinator {
 
     private final BatchConfiguration batchConfiguration;
 
-    private ConcurrentHashMap<Params, WindowCoordinatorUnit> units;
+    private ConcurrentHashMap<Method, WindowCoordinatorUnit> units;
 
     public WindowCoordinator(Object target, BatchConfiguration batchConfiguration) {
         this.target = target;
@@ -43,8 +44,9 @@ public class WindowCoordinator {
         if (status.get() == 0) {
             this.start();
         }
-        Params params = batchConfiguration.buildParams(args);
-        WindowCoordinatorUnit unit = units.computeIfAbsent(params, k -> new WindowCoordinatorUnit(params, batchConfiguration, target, workers));
+        Method method = batchConfiguration.getBatchMethod().getMethod();
+        WindowCoordinatorUnit unit = units.computeIfAbsent(method,
+                k -> new WindowCoordinatorUnit(batchConfiguration.buildParams(args), batchConfiguration, target, workers));
         return unit.addElement(args);
     }
 
