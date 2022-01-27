@@ -1,11 +1,7 @@
 package cn.cheny.toolbox.window.output;
 
-import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.window.WindowElement;
-import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.List;
 
 /**
  * 默认批处理结果分割器
