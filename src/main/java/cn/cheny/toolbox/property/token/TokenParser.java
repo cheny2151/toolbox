@@ -5,8 +5,8 @@ import java.util.List;
 /**
  * 字符串规则提取
  *
- * @date 2021/2/8
  * @author by chenyi
+ * @date 2021/2/8
  */
 public class TokenParser {
 
@@ -31,7 +31,9 @@ public class TokenParser {
             this.property = token;
         }
         List<String> collectionIdx = collectionExtractor.extract(property);
-        if (isCollection = collectionIdx.size() > 0) {
+        boolean isCollection = collectionIdx.size() > 0;
+        this.isCollection = isCollection;
+        if (isCollection) {
             collectionIndexes = collectionIdx.stream().map(Integer::parseInt).toArray(Integer[]::new);
             property = property.substring(0, property.indexOf("["));
         }
