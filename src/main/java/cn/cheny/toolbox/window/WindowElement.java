@@ -1,7 +1,5 @@
 package cn.cheny.toolbox.window;
 
-import cn.cheny.toolbox.exception.ToolboxRuntimeException;
-
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
@@ -46,7 +44,7 @@ public class WindowElement {
     public Object getOutput() throws Throwable {
         this.countDownLatch.await();
         if (error != null) {
-            throw new ToolboxRuntimeException(error);
+            throw error;
         }
         return output;
     }
