@@ -120,7 +120,7 @@ public class WindowCoordinatorUnit {
         }
     }
 
-    private Object doBatch(List<Object> inputs) {
+    private Object doBatch(List<Object> inputs) throws Exception {
         Object[] args = params.buildArgs(inputs);
         return batchMethod.doBatch(target, args);
     }

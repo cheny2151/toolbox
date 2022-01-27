@@ -1,7 +1,5 @@
 package cn.cheny.toolbox.window;
 
-import cn.cheny.toolbox.exception.ToolboxRuntimeException;
-
 import java.lang.reflect.Method;
 
 /**
@@ -21,12 +19,8 @@ public class BatchMethod {
         this.batch = batch;
     }
 
-    public Object doBatch(Object target, Object[] args) {
-        try {
-            return method.invoke(target, args);
-        } catch (Exception e) {
-            throw new ToolboxRuntimeException(e);
-        }
+    public Object doBatch(Object target, Object[] args) throws Exception {
+        return method.invoke(target, args);
     }
 
     public Method getMethod() {
