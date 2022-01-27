@@ -8,4 +8,6 @@ public interface WindowProxyFactory {
 
     <T> T createProxy(T target);
 
+    <T> T createProxy(T target, Class<?>[] classes, Object[] args);
+
 }

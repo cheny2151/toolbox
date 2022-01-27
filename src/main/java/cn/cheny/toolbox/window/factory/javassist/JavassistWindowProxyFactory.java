@@ -1,10 +1,10 @@
 package cn.cheny.toolbox.window.factory.javassist;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
-import cn.cheny.toolbox.window.factory.BaseWindowProxyFactory;
 import cn.cheny.toolbox.window.BatchConfiguration;
-import cn.cheny.toolbox.window.coordinator.WindowCoordinator;
 import cn.cheny.toolbox.window.WindowElement;
+import cn.cheny.toolbox.window.coordinator.WindowCoordinator;
+import cn.cheny.toolbox.window.factory.BaseWindowProxyFactory;
 import javassist.util.proxy.MethodHandler;
 import javassist.util.proxy.ProxyFactory;
 
@@ -24,6 +24,12 @@ public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T createProxy(T target) {
+        return createProxy(target, new Class[0], new Object[0]);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T createProxy(T target, Class<?>[] classes, Object[] args) {
         ProxyFactory proxyFactory = new ProxyFactory();
         proxyFactory.setSuperclass(target.getClass());
         WindowInferenceHandler handler = new WindowInferenceHandler(target);
@@ -34,7 +40,7 @@ public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
             handler.putAll(coordinatorMap);
         }
         try {
-            return (T) proxyFactory.create(new Class[0], new Object[0], handler);
+            return (T) proxyFactory.create(classes, args, handler);
         } catch (Exception e) {
             throw new ToolboxRuntimeException("创建代理失败", e);
         }
