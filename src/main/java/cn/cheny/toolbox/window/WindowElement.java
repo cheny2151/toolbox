@@ -64,4 +64,9 @@ public class WindowElement {
         return 1;
     }
 
+    public boolean isMulti() {
+        return false;
+    }
+
+
 }

@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.window.coordinator;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.BatchMethod;
 import cn.cheny.toolbox.window.Params;
@@ -82,7 +83,7 @@ public class WindowCoordinatorUnit {
             if (this.cursize.compareAndSet(curSize, -1)) {
                 ConcurrentHashMap<Integer, WindowElement> curContent;
                 // 自旋等待put element
-                while ((curContent = this.content).size() != curSize) {
+                while (getContentSize(curContent = this.content) != curSize) {
                     if (log.isDebugEnabled()) {
                         log.debug("wait put element");
                     }
@@ -105,9 +106,10 @@ public class WindowCoordinatorUnit {
                 if (log.isDebugEnabled()) {
                     log.debug("size:{},use time:{}", inputs.size(), System.currentTimeMillis() - l);
                 }
-                for (int i = 0; i < elements.size(); i++) {
+                for (int i = 0, index = 0; i < elements.size(); i++) {
                     WindowElement element = elements.get(i);
-                    Object output = splitter.split(outputs, element, i);
+                    Object output = splitter.split(outputs, element, index);
+                    index += element.size();
                     element.setOutput(output);
                 }
                 break;
@@ -123,6 +125,11 @@ public class WindowCoordinatorUnit {
         return batchMethod.doBatch(target, args);
     }
 
+    private int getContentSize(ConcurrentHashMap<Integer, WindowElement> content) {
+        return content.values().stream().map(WindowElement::size)
+                .reduce(Integer::sum)
+                .orElseThrow(ToolboxRuntimeException::new);
+    }
 
     public Object getTarget() {
         return target;

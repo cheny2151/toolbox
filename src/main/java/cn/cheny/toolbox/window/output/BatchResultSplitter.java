@@ -10,6 +10,6 @@ import cn.cheny.toolbox.window.WindowElement;
  */
 public interface BatchResultSplitter {
 
-    Object split(Object outputs, WindowElement element, int index);
+    Object split(Object output, WindowElement element, int index);
 
 }

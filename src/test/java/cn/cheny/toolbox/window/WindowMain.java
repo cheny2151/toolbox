@@ -39,12 +39,13 @@ public class WindowMain {
             Thread thread = new Thread(() -> {
                 String str = "test" + finalI;
                 List<String> test = null;
+                List<String> tests = Arrays.asList(str, str + 2);
                 try {
-                    test = proxy.printSelf(finalI, Arrays.asList(str));
+                    test = proxy.printSelf(finalI, tests);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                if (!test.get(0).equals(str)) {
+                if (!test.equals(tests)) {
                     System.out.println("error");
                 }
             });

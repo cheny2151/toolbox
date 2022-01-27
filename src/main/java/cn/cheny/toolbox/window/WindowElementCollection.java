@@ -25,4 +25,8 @@ public class WindowElementCollection extends WindowElement {
         return size;
     }
 
+    public boolean isMulti() {
+        return true;
+    }
+
 }

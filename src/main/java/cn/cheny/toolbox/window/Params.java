@@ -69,6 +69,8 @@ public class Params {
                 if (collectedMethod != null) {
                     Class<?> collectedParamType = collectedMethod.getMethod().getParameterTypes()[i];
                     this.argIsCollection = List.class.isAssignableFrom(collectedParamType);
+                } else {
+                    this.argIsCollection = true;
                 }
                 continue;
             }

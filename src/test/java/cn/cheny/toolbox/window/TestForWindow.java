@@ -1,5 +1,9 @@
 package cn.cheny.toolbox.window;
 
+import cn.cheny.toolbox.window.output.BatchResultSplitter;
+import lombok.Data;
+
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -39,10 +43,33 @@ public class TestForWindow {
     }
 
     @Batch(threadPoolSize = 3, batchArgIndex = 1)
-    public List<String> printSelf(int i, List<String> tests) throws InterruptedException {
+    public LinkedList<String> printSelf(int i, List<String> tests) throws InterruptedException {
+        Thread.sleep(100);
+        System.out.println(tests.size());
+        return new LinkedList<>(tests);
+    }
+
+    @Batch(threadPoolSize = 3, batchArgIndex = 1)
+    public List<String> printSelfReturnCustomer(int i, List<String> tests) throws InterruptedException {
         Thread.sleep(100);
         System.out.println(tests.size());
         return tests;
     }
+
+    @Data
+    public static class TestResult {
+        private List<String> rs;
+        private int i;
+    }
+
+    public static class TestSplitter implements BatchResultSplitter {
+
+        @Override
+        public Object split(Object output, WindowElement element, int index) {
+            TestResult testResult = (TestResult) output;
+            return testResult;
+        }
+    }
+
 
 }
