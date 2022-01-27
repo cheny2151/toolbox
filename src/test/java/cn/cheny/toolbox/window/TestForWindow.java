@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.window;
 
 import cn.cheny.toolbox.reflect.BeanUtils;
+import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.window.output.DefaultBatchResultSplitter;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -79,7 +80,8 @@ public class TestForWindow {
         @Override
         public Object split(Object output, WindowElement element, int index) {
             TestResult testResult = (TestResult) output;
-            List<String> list = multiGetList(testResult.getRs(), index, element.size(), List.class);
+             List<String> list = multiGetList(testResult.getRs(), index, element.size(), new TypeReference<List<String>>() {
+                        });
             TestResult result = new TestResult();
             BeanUtils.copyProperties(result, testResult, "rs");
             result.setRs(list);

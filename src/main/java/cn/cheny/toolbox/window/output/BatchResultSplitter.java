@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.window.output;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.window.WindowElement;
 import org.apache.commons.lang3.ArrayUtils;
@@ -68,20 +69,19 @@ public interface BatchResultSplitter {
     /**
      * 获取List集合目标index开始size个元素
      *
-     * @param output 目标对象
-     * @param index  目标位置
-     * @param size   数量
-     * @param r      集合类型
-     * @param <R>    集合类型
+     * @param output        目标对象
+     * @param index         目标位置
+     * @param size          数量
+     * @param typeReference 集合类型
+     * @param <R>           集合类型
      * @return 集合
      */
-    @SuppressWarnings("unchecked")
-    default <R extends Collection<?>> R multiGetList(R output, int index, int size, Class<R> r) {
+    default <R extends Collection<?>> R multiGetList(R output, int index, int size, TypeReference<R> typeReference) {
         Object[] arrayResult = new Object[size];
         for (int i = 0; i < size; i++) {
             arrayResult[i] = get(true, false, output, index + i);
         }
-        return (R) TypeUtils.arrayToCollection(arrayResult, r, Object.class);
+        return TypeUtils.caseToObject(arrayResult, typeReference);
     }
 
     /**
