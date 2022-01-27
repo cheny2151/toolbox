@@ -48,6 +48,19 @@ public class TypeUtils {
     }
 
     /**
+     * object转换为类型指引类对应的类型
+     *
+     * @param obj           数据
+     * @param typeReference 类型指引类
+     * @param <T>           泛型
+     * @return 转换后结果
+     */
+    public static <T> T caseToObject(Object obj, TypeReference<T> typeReference) {
+        Type actualType = typeReference.getActualType();
+        return caseToObject(obj, actualType);
+    }
+
+    /**
      * map转换为object对象
      *
      * @param map     map实例

@@ -7,7 +7,6 @@ import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.reflect.TypeUtils;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,8 +41,7 @@ public class EasyMap extends HashMap<String, Object> {
     }
 
     public <T> T toObject(TypeReference<T> typeReference) {
-        Type actualType = typeReference.getActualType();
-        return TypeUtils.caseToObject(this, actualType);
+        return TypeUtils.caseToObject(this, typeReference);
     }
 
     public String getString(String key) {
@@ -155,8 +153,7 @@ public class EasyMap extends HashMap<String, Object> {
 
     public <T> T getObject(String key, TypeReference<T> typeReference) {
         Object object = getObject(key);
-        Type actualType = typeReference.getActualType();
-        return TypeUtils.caseToObject(object, actualType);
+        return TypeUtils.caseToObject(object, typeReference);
     }
 
     /**
