@@ -1,5 +1,7 @@
 package cn.cheny.toolbox.spring;
 
+import cn.cheny.toolbox.other.parsing.GenericTokenParser;
+import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.scan.PathImplementationClassBuilder;
 import cn.cheny.toolbox.scan.ScanException;
 import cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties;
@@ -24,6 +26,11 @@ import java.util.List;
 @Slf4j
 public class SpringUtils implements ApplicationContextAware {
 
+    public static final String OPEN_TOKEN = "${";
+    public static final String CLOSE_TOKEN = "}";
+
+    private static final GenericTokenParser TOKEN_PARSER = new GenericTokenParser(OPEN_TOKEN, CLOSE_TOKEN);
+
     private static ApplicationContext applicationContext;
 
     private static Environment env;
@@ -31,6 +38,7 @@ public class SpringUtils implements ApplicationContextAware {
     private static boolean inSpring = false;
 
     private final ToolboxDefaultProperties toolboxDefaultProperties;
+
 
     public SpringUtils(ToolboxDefaultProperties toolboxDefaultProperties) {
         this.toolboxDefaultProperties = toolboxDefaultProperties;
@@ -76,6 +84,19 @@ public class SpringUtils implements ApplicationContextAware {
     public static Environment getEnvironment() {
         checkInSpring();
         return env;
+    }
+
+    public static <T> T getProperty(String key, Class<T> type) {
+        String property = getProperty(key);
+        return TypeUtils.caseToObject(property, type);
+    }
+
+    public static String getProperty(String key) {
+        checkInSpring();
+        if (key.startsWith(OPEN_TOKEN) && key.endsWith(CLOSE_TOKEN)) {
+            key = TOKEN_PARSER.parse(key);
+        }
+        return env.getProperty(key);
     }
 
     public static boolean isInSpring() {
