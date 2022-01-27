@@ -31,7 +31,7 @@ public class WindowMain {
     }
 
     @Test
-    public void test2() throws InterruptedException {
+    public void printSelf() throws InterruptedException {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
         for (int i = 0; i < 1000; i++) {
@@ -47,6 +47,52 @@ public class WindowMain {
                 }
                 if (!test.equals(tests)) {
                     System.out.println("error");
+                }
+            });
+            thread.start();
+        }
+        Thread.sleep(10000);
+    }
+
+    @Test
+    public void printSelfReturnCustomer() throws InterruptedException {
+        TestForWindow testForWindow = new TestForWindow();
+        TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            Thread thread = new Thread(() -> {
+                String str = "test" + finalI;
+                List<String> tests = Arrays.asList(str, str + 2, str + 3);
+                try {
+                    TestForWindow.TestResult testResult = proxy.printSelfReturnCustomer(finalI, tests);
+                    if (!testResult.getRs().equals(tests)) {
+                        System.out.println("error");
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+            thread.start();
+        }
+        Thread.sleep(10000);
+    }
+
+    @Test
+    public void printSelfReturnCustomerArray() throws InterruptedException {
+        TestForWindow testForWindow = new TestForWindow();
+        TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
+        for (int i = 0; i < 1000; i++) {
+            int finalI = i;
+            Thread thread = new Thread(() -> {
+                String str = "test" + finalI;
+                List<String> tests = Arrays.asList(str, str + 2, str + 3);
+                try {
+                    TestForWindow.TestResultArray testResult = proxy.printSelfReturnCustomerArray(finalI, tests);
+                    if (!Arrays.asList(testResult.getRs()).equals(tests)) {
+                        System.out.println("error");
+                    }
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             });
             thread.start();

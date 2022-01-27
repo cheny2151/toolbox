@@ -1,7 +1,10 @@
 package cn.cheny.toolbox.window;
 
-import cn.cheny.toolbox.window.output.BatchResultSplitter;
+import cn.cheny.toolbox.reflect.BeanUtils;
+import cn.cheny.toolbox.window.output.DefaultBatchResultSplitter;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -49,25 +52,59 @@ public class TestForWindow {
         return new LinkedList<>(tests);
     }
 
-    @Batch(threadPoolSize = 3, batchArgIndex = 1)
-    public List<String> printSelfReturnCustomer(int i, List<String> tests) throws InterruptedException {
+    @Batch(threadPoolSize = 3, batchArgIndex = 1, splitter = TestSplitter.class)
+    public TestResult printSelfReturnCustomer(int i, List<String> tests) throws InterruptedException {
         Thread.sleep(100);
         System.out.println(tests.size());
-        return tests;
+        return new TestResult(i, tests);
+    }
+
+    @Batch(threadPoolSize = 3, batchArgIndex = 1, splitter = TestArraySplitter.class)
+    public TestResultArray printSelfReturnCustomerArray(int i, List<String> tests) throws InterruptedException {
+        Thread.sleep(100);
+        System.out.println(tests.size());
+        return new TestResultArray(i, tests.toArray(new String[1]));
     }
 
     @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     public static class TestResult {
-        private List<String> rs;
         private int i;
+        private List<String> rs;
     }
 
-    public static class TestSplitter implements BatchResultSplitter {
+    public static class TestSplitter extends DefaultBatchResultSplitter {
 
         @Override
         public Object split(Object output, WindowElement element, int index) {
             TestResult testResult = (TestResult) output;
-            return testResult;
+            List<String> list = multiGetList(testResult.getRs(), index, element.size(), List.class);
+            TestResult result = new TestResult();
+            BeanUtils.copyProperties(result, testResult, "rs");
+            result.setRs(list);
+            return result;
+        }
+    }
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class TestResultArray {
+        private int i;
+        private String[] rs;
+    }
+
+    public static class TestArraySplitter extends DefaultBatchResultSplitter {
+
+        @Override
+        public Object split(Object output, WindowElement element, int index) {
+            TestResultArray testResult = (TestResultArray) output;
+            String[] strings = multiGetArray(testResult.getRs(), index, element.size(), String.class);
+            TestResultArray result = new TestResultArray();
+            BeanUtils.copyProperties(result, testResult, "rs");
+            result.setRs(strings);
+            return result;
         }
     }
 

@@ -18,10 +18,10 @@ public class DefaultBatchResultSplitter implements BatchResultSplitter {
 
     @Override
     public Object split(Object output, WindowElement element, int index) {
-        Class<?> outputsClass = output.getClass();
+        Class<?> outputClass = output.getClass();
         boolean multi = element.isMulti();
-        boolean isList = List.class.isAssignableFrom(outputsClass);
-        boolean isArray = outputsClass.isArray();
+        boolean isList = isList(outputClass);
+        boolean isArray = isArray(outputClass);
         if (!multi) {
             return get(isList, isArray, output, index);
         } else {
@@ -30,16 +30,8 @@ public class DefaultBatchResultSplitter implements BatchResultSplitter {
             for (int i = 0; i < size; i++) {
                 arrayResult[i] = get(isList, isArray, output, index + i);
             }
-            return isArray ? arrayResult : TypeUtils.arrayToCollection(arrayResult, outputsClass, Object.class);
+            return isArray ? arrayResult : TypeUtils.arrayToCollection(arrayResult, outputClass, Object.class);
         }
     }
 
-    private Object get(boolean isList, boolean isArray, Object output, int index) {
-        if (isList) {
-            return ((List<?>) output).get(index);
-        } else if (isArray) {
-            return ArrayUtils.get((Object[]) output, index);
-        }
-        throw new ToolboxRuntimeException("Can not use DefaultOutputSplit to split outputs,outputs class is not List/Array");
-    }
 }
