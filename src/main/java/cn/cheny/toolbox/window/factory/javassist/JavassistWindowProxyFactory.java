@@ -21,7 +21,6 @@ import java.util.stream.Collectors;
  */
 public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
 
-    @SuppressWarnings("unchecked")
     @Override
     public <T> T createProxy(T target) {
         return createProxy(target, new Class[0], new Object[0]);
