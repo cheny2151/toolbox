@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.window.factory.javassist;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+import cn.cheny.toolbox.proxy.ToolboxAopContext;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.WindowElement;
 import cn.cheny.toolbox.window.coordinator.WindowCoordinator;
@@ -58,13 +59,19 @@ public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
 
         @Override
         public Object invoke(Object proxy, Method method, Method methodProxy, Object[] args) throws Throwable {
-            WindowCoordinator windowCoordinator = windowCoordinatorMap.get(method);
-            if (windowCoordinator != null) {
-                // 收集窗口进行批量推理
-                WindowElement element = windowCoordinator.addElement(args);
-                return element.getOutput();
+            Object old = null;
+            try {
+                old = ToolboxAopContext.setCurrentProxy(proxy);
+                WindowCoordinator windowCoordinator = windowCoordinatorMap.get(method);
+                if (windowCoordinator != null) {
+                    // 收集窗口进行批量推理
+                    WindowElement element = windowCoordinator.addElement(args);
+                    return element.getOutput();
+                }
+                return method.invoke(target, args);
+            } finally {
+                ToolboxAopContext.setCurrentProxy(old);
             }
-            return method.invoke(target, args);
         }
 
         public void put(Method method, WindowCoordinator coordinator) {

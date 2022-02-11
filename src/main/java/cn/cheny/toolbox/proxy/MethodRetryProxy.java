@@ -56,36 +56,42 @@ public class MethodRetryProxy implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (!isTargetMethod(method)) {
-            try {
-                return method.invoke(actual, args);
-            } catch (InvocationTargetException e) {
-                throw e.getTargetException();
-            }
-        }
-        // 代理重试机制
-        long firstTime = System.currentTimeMillis();
-        int c = 0;
-        Throwable throwable;
-        do {
-            try {
-                return method.invoke(actual, args);
-            } catch (Throwable t) {
-                // 出现指定异常直接抛出，不做重试
-                throwable = t;
-                if (isStopError(throwable)) {
-                    break;
+        Object old = null;
+        try {
+            old = ToolboxAopContext.setCurrentProxy(proxy);
+            if (!isTargetMethod(method)) {
+                try {
+                    return method.invoke(actual, args);
+                } catch (InvocationTargetException e) {
+                    throw e.getTargetException();
                 }
             }
-        } while (!timeout(firstTime) && tryAgain(c++));
-        if (throwable instanceof InvocationTargetException) {
-            throwable = ((InvocationTargetException) throwable).getTargetException();
+            // 代理重试机制
+            long firstTime = System.currentTimeMillis();
+            int c = 0;
+            Throwable throwable;
+            do {
+                try {
+                    return method.invoke(actual, args);
+                } catch (Throwable t) {
+                    // 出现指定异常直接抛出，不做重试
+                    throwable = t;
+                    if (isStopError(throwable)) {
+                        break;
+                    }
+                }
+            } while (!timeout(firstTime) && tryAgain(c++));
+            if (throwable instanceof InvocationTargetException) {
+                throwable = ((InvocationTargetException) throwable).getTargetException();
+            }
+            if (c > 0) {
+                log.error("translation service:{} retry fail,try time：{},error msg:{}",
+                        actual.getClass().getSimpleName(), c, throwable.getMessage());
+            }
+            throw throwable;
+        } finally {
+            ToolboxAopContext.setCurrentProxy(old);
         }
-        if (c > 0) {
-            log.error("translation service:{} retry fail,try time：{},error msg:{}",
-                    actual.getClass().getSimpleName(), c, throwable.getMessage());
-        }
-        throw throwable;
     }
 
     protected boolean tryAgain(int tryTime) {
