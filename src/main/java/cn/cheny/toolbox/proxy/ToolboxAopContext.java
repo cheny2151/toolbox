@@ -22,8 +22,7 @@ public final class ToolboxAopContext {
     public static  <T> T requiredProxy() throws IllegalStateException {
         T proxy = (T) currentProxy.get();
         if (proxy == null) {
-            throw new IllegalStateException("Cannot find current proxy: Set 'exposeProxy' property on Advised to 'true' to make it available," +
-                    " and ensure that AopContext.currentProxy() is invoked in the same thread as the AOP invocation context.");
+            throw new IllegalStateException("Cannot find current proxy.");
         }
         return proxy;
     }
