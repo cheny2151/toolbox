@@ -41,7 +41,8 @@ public class WindowMain {
                 List<String> test = null;
                 List<String> tests = Arrays.asList(str, str + 2);
                 try {
-                    test = proxy.printSelf(finalI, tests);
+//                    test = proxy.printSelf(finalI, tests);
+                    test = proxy.testCallMethod(finalI, tests);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.window;
 
+import cn.cheny.toolbox.proxy.ToolboxAopContext;
 import cn.cheny.toolbox.reflect.BeanUtils;
 import cn.cheny.toolbox.reflect.TypeReference;
 import cn.cheny.toolbox.window.output.DefaultBatchResultSplitter;
@@ -51,6 +52,11 @@ public class TestForWindow {
         Thread.sleep(100);
         System.out.println(tests.size());
         return new LinkedList<>(tests);
+    }
+
+    public LinkedList<String> testCallMethod(int i, List<String> tests) throws InterruptedException {
+        System.out.println((Object) ToolboxAopContext.currentProxy());
+        return ((TestForWindow)ToolboxAopContext.currentProxy()).printSelf(i, tests);
     }
 
     @Batch(threadPoolSize = 3, batchArgIndex = 1, splitter = TestSplitter.class)
