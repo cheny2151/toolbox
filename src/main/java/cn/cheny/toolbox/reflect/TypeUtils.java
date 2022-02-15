@@ -225,7 +225,16 @@ public class TypeUtils {
             } else if (targetClass.equals(float.class) || targetClass.equals(Float.class)) {
                 return (T) Float.valueOf(obj.toString());
             } else if (targetClass.equals(boolean.class) || targetClass.equals(Boolean.class)) {
-                return (T) Boolean.valueOf(obj.toString());
+                if (obj instanceof Integer || obj instanceof Long) {
+                    int ObjAsInt = Integer.parseInt(obj.toString());
+                    if (ObjAsInt == 1) {
+                        return (T) Boolean.TRUE;
+                    } else if (ObjAsInt == 0) {
+                        return (T) Boolean.FALSE;
+                    }
+                } else {
+                    return (T) Boolean.valueOf(obj.toString());
+                }
             } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
                 return (T) Long.valueOf(obj.toString());
             } else if (targetClass.equals(byte.class) || targetClass.equals(Byte.class)) {
