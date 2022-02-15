@@ -69,6 +69,18 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
     }
 
     /**
+     * 对象写入值，自动转换类型
+     *
+     * @param obj       写入的对象
+     * @param signature 属性签名
+     * @param value     写入的值
+     */
+    public void write(Object obj, PropertySignature signature, Object value) {
+        value = TypeUtils.caseToObject(value, signature.getType());
+        invoke(signature.getName(), obj, value);
+    }
+
+    /**
      * 返回所有属性名称
      *
      * @return 属性名称集合
