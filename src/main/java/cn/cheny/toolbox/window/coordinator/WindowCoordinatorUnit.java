@@ -1,6 +1,5 @@
 package cn.cheny.toolbox.window.coordinator;
 
-import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.BatchMethod;
 import cn.cheny.toolbox.window.Params;
@@ -128,7 +127,7 @@ public class WindowCoordinatorUnit {
     private int getContentSize(ConcurrentHashMap<Integer, WindowElement> content) {
         return content.values().stream().map(WindowElement::size)
                 .reduce(Integer::sum)
-                .orElseThrow(ToolboxRuntimeException::new);
+                .orElse(0);
     }
 
     public Object getTarget() {
