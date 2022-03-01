@@ -2,11 +2,10 @@ package cn.cheny.toolbox.window.coordinator;
 
 import cn.cheny.toolbox.other.NamePrefixThreadFactory;
 import cn.cheny.toolbox.window.BatchConfiguration;
-import cn.cheny.toolbox.window.Params;
+import cn.cheny.toolbox.window.CollectedStaticParams;
 import cn.cheny.toolbox.window.WindowElement;
 import lombok.extern.slf4j.Slf4j;
 
-import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -30,7 +29,7 @@ public class WindowCoordinator {
 
     private final BatchConfiguration batchConfiguration;
 
-    private ConcurrentHashMap<Method, WindowCoordinatorUnit> units;
+    private final ConcurrentHashMap<CollectedStaticParams, WindowCoordinatorUnit> units;
 
     public WindowCoordinator(Object target, BatchConfiguration batchConfiguration) {
         this.target = target;
@@ -44,8 +43,8 @@ public class WindowCoordinator {
         if (status.get() == 0) {
             this.start();
         }
-        Method method = batchConfiguration.getBatchMethod().getMethod();
-        WindowCoordinatorUnit unit = units.computeIfAbsent(method,
+        CollectedStaticParams staticParams = batchConfiguration.buildStaticParams(args, batchConfiguration);
+        WindowCoordinatorUnit unit = units.computeIfAbsent(staticParams,
                 k -> new WindowCoordinatorUnit(batchConfiguration.buildParams(args), batchConfiguration, target, workers));
         return unit.addElement(args);
     }
@@ -57,11 +56,7 @@ public class WindowCoordinator {
     }
 
     private void startWork() {
-        workers.execute(this::doWindow);
-    }
-
-    private void doWindow() {
-        units.values().forEach(WindowCoordinatorUnit::startWork);
+        units.values().forEach(unit -> workers.execute(unit::startWork));
     }
 
     public Object getTarget() {

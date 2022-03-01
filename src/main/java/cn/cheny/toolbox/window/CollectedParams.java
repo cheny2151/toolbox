@@ -8,10 +8,12 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
+ * 窗口收集方法的参数实例
+ *
  * @author by chenyi
  * @date 2022/1/24
  */
-public class Params {
+public class CollectedParams {
 
     private final Method method;
     private final int argsCount;
@@ -19,7 +21,7 @@ public class Params {
     private boolean argIsCollection;
     private final Object[] argsTemplate;
 
-    public Params(Object[] args, BatchConfiguration batchConfiguration) {
+    public CollectedParams(Object[] args, BatchConfiguration batchConfiguration) {
         Method method = batchConfiguration.getBatchMethod().getMethod();
         int batchArgIndex = batchConfiguration.getBatchArgIndex();
         CollectedMethod collectedMethod = batchConfiguration.getCollectedMethod();
@@ -91,9 +93,9 @@ public class Params {
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        Params params = (Params) o;
+        CollectedParams collectedParams = (CollectedParams) o;
 
-        return new EqualsBuilder().append(method, params.method).isEquals();
+        return new EqualsBuilder().append(method, collectedParams.method).isEquals();
     }
 
     @Override

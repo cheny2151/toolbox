@@ -2,7 +2,7 @@ package cn.cheny.toolbox.window.coordinator;
 
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.BatchMethod;
-import cn.cheny.toolbox.window.Params;
+import cn.cheny.toolbox.window.CollectedParams;
 import cn.cheny.toolbox.window.WindowElement;
 import cn.cheny.toolbox.window.output.BatchResultSplitter;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class WindowCoordinatorUnit {
 
-    private final Params params;
+    private final CollectedParams collectedParams;
     private final BatchMethod batchMethod;
     private final BatchResultSplitter splitter;
     private final int threshold;
@@ -32,8 +32,8 @@ public class WindowCoordinatorUnit {
     private final ExecutorService workers;
     private final AtomicInteger lock;
 
-    public WindowCoordinatorUnit(Params params, BatchConfiguration batchConfiguration, Object target, ExecutorService workers) {
-        this.params = params;
+    public WindowCoordinatorUnit(CollectedParams collectedParams, BatchConfiguration batchConfiguration, Object target, ExecutorService workers) {
+        this.collectedParams = collectedParams;
         this.batchMethod = batchConfiguration.getBatchMethod();
         this.splitter = batchConfiguration.getBatchResultSplitter();
         this.threshold = batchConfiguration.getThreshold();
@@ -46,7 +46,7 @@ public class WindowCoordinatorUnit {
 
     public WindowElement addElement(Object[] args) {
         int curSize;
-        WindowElement element = params.buildElement(args);
+        WindowElement element = collectedParams.buildElement(args);
         int size = element.size();
         while (true) {
             curSize = cursize.get();
@@ -120,7 +120,7 @@ public class WindowCoordinatorUnit {
     }
 
     private Object doBatch(List<Object> inputs) throws Exception {
-        Object[] args = params.buildArgs(inputs);
+        Object[] args = collectedParams.buildArgs(inputs);
         return batchMethod.doBatch(target, args);
     }
 

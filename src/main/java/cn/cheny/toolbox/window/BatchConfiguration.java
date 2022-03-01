@@ -44,8 +44,8 @@ public class BatchConfiguration {
         this.collectedMethod = collectedMethod;
     }
 
-    public synchronized Params buildParams(Object[] args) {
-        return new Params(args, this);
+    public synchronized CollectedParams buildParams(Object[] args) {
+        return new CollectedParams(args, this);
     }
 
     public String getGroup() {
@@ -83,4 +83,9 @@ public class BatchConfiguration {
             return ReflectUtils.newObject(splitterClass, null, null);
         }
     }
+
+    public CollectedStaticParams buildStaticParams(Object[] args, BatchConfiguration batchConfiguration) {
+        return new CollectedStaticParams(args, batchConfiguration);
+    }
+
 }
