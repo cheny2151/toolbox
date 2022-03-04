@@ -85,7 +85,7 @@ public class MethodRetryProxy implements InvocationHandler {
                 throwable = ((InvocationTargetException) throwable).getTargetException();
             }
             if (c > 0) {
-                log.error("translation service:{} retry fail,try time：{},error msg:{}",
+                log.error("Service:{} retry fail,try time：{},error msg:{}",
                         actual.getClass().getSimpleName(), c, throwable.getMessage());
             }
             throw throwable;
