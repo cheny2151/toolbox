@@ -48,11 +48,11 @@ public class RedisCoordinatorEventListener implements MessageListener {
                 String type = reBalanceMessage.getType();
                 if (StringUtils.isNotEmpty(type)) {
                     switch (type) {
-                        case ReBalanceMessage.TYPE_RE_BALANCE: {
+                        case ReBalanceMessage.TYPE_REBALANCED: {
                             coordinator.refreshCurrentResources();
                             break;
                         }
-                        case ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE: {
+                        case ReBalanceMessage.TYPE_NEED_TO_REBALANCE: {
                             coordinator.tryRebalanced();
                             break;
                         }

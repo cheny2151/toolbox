@@ -11,8 +11,14 @@ import lombok.Data;
 @Data
 public class ReBalanceMessage {
 
-    public final static String TYPE_RE_BALANCE = "1";
-    public final static String TYPE_REQUIRED_RE_BALANCE = "2";
+    /**
+     * 已重平衡
+     */
+    public final static String TYPE_REBALANCED = "1";
+    /**
+     * 需要执行重平衡
+     */
+    public final static String TYPE_NEED_TO_REBALANCE = "2";
 
     private String type;
     private String sender;

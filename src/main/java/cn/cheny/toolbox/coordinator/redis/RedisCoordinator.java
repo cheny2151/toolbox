@@ -322,7 +322,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      * 发送重平衡请求广播
      */
     private void sendReBalanceRequiredMsg() {
-        ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_REQUIRED_RE_BALANCE, this.getSid());
+        ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_NEED_TO_REBALANCE, this.getSid());
         this.redisExecutor.publish(channelKey, JSON.toJSONString(message));
     }
 
@@ -330,7 +330,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      * 发送已重平衡广播
      */
     private void sendReBalanced() {
-        ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_RE_BALANCE, this.getSid());
+        ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_REBALANCED, this.getSid());
         redisExecutor.publish(channelKey, JSON.toJSONString(message));
     }
 
