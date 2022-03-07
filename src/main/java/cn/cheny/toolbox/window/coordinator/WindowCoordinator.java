@@ -6,10 +6,9 @@ import cn.cheny.toolbox.window.CollectedStaticParams;
 import cn.cheny.toolbox.window.WindowElement;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.io.Closeable;
+import java.io.IOException;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -19,11 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2021/9/22
  */
 @Slf4j
-public class WindowCoordinator {
+public class WindowCoordinator implements Closeable {
 
     private final AtomicInteger status;
 
     private final ExecutorService workers;
+
+    private ScheduledExecutorService scheduled;
 
     private final Object target;
 
@@ -51,16 +52,23 @@ public class WindowCoordinator {
 
     private void start() {
         if (status.compareAndSet(0, 1)) {
-            Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(this::startWork, 0, batchConfiguration.getWinTime(), TimeUnit.MILLISECONDS);
+            ScheduledExecutorService scheduled = Executors.newSingleThreadScheduledExecutor();
+            this.scheduled = scheduled;
+            scheduled.scheduleAtFixedRate(this::startWork, 0, batchConfiguration.getWinTime(), TimeUnit.MILLISECONDS);
         }
     }
 
     private void startWork() {
-        units.values().forEach(unit -> workers.execute(unit::startWork));
+        units.values().forEach(WindowCoordinatorUnit::startWork);
     }
 
     public Object getTarget() {
         return target;
     }
 
+    @Override
+    public void close() throws IOException {
+        this.scheduled.shutdown();
+        this.workers.shutdown();
+    }
 }
