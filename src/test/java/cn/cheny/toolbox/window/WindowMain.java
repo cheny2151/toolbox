@@ -107,8 +107,8 @@ public class WindowMain {
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
         try {
             List<String> tests = Arrays.asList("1", "2", "3");
-            proxy.printSelfReturnCustomerArray(3, tests);
-            proxy.printSelfReturnCustomerArray(3, tests);
+            proxy.printSelfReturnCustomerArray(1, tests);
+            proxy.printSelfReturnCustomerArray(2, tests);
             proxy.printSelfReturnCustomerArray(3, tests);
         } catch (InterruptedException e) {
             e.printStackTrace();
