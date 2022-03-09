@@ -77,7 +77,7 @@ public class RedisCoordinatorAutoConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
         Map<MessageListener, Collection<? extends Topic>> messageListeners = new HashMap<>();
-        String id = coordinatorProperties.getId();
+        String id = coordinatorProperties.getKey();
         String key = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(id);
         messageListeners.put(redisCoordinatorEventListener, Collections.singleton(new ChannelTopic(key)));
         container.setMessageListeners(messageListeners);

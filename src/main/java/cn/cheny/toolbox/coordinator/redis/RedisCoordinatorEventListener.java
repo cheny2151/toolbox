@@ -28,7 +28,7 @@ public class RedisCoordinatorEventListener implements MessageListener {
 
     public RedisCoordinatorEventListener(CoordinatorProperties coordinatorProperties, HeartbeatManager heartBeatManager, CoordinatorHolder coordinatorHolder) {
         this.coordinatorHolder = coordinatorHolder;
-        this.channelId = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(coordinatorProperties.getId());
+        this.channelId = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(coordinatorProperties.getKey());
         this.sid = heartBeatManager.getSid();
     }
 

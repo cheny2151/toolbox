@@ -34,9 +34,9 @@ public class RedisHeartbeatManager implements HeartbeatManager {
     public RedisHeartbeatManager(CoordinatorProperties coordinatorProperties, String sid, RedisExecutor redisExecutor) {
         this.redisExecutor = redisExecutor;
         this.sid = sid;
-        String id = coordinatorProperties.getId();
-        this.id = id;
-        this.heartbeatKey = buildHeartbeatKey(id, sid);
+        String key = coordinatorProperties.getKey();
+        this.id = key;
+        this.heartbeatKey = buildHeartbeatKey(key, sid);
         this.heartbeatThread = Executors.newSingleThreadScheduledExecutor();
         this.status = 1;
         this.startHeartbeatThread();

@@ -36,7 +36,6 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     private final HeartbeatManager heartBeatManager;
     private final RedisExecutor redisExecutor;
     private final ScheduledExecutorService checkThread;
-    private final String id;
     private final String resourceKey;
     private final String lockKey;
     private final String channelKey;
@@ -46,16 +45,15 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     public RedisCoordinator(CoordinatorProperties coordinatorProperties, HeartbeatManager heartBeatManager,
                             ResourceManager<T> resourceManager, RedisExecutor redisExecutor) {
         super(resourceManager);
-        String id = coordinatorProperties.getId();
-        this.id = id;
+        String key = coordinatorProperties.getKey();
         this.heartBeatManager = heartBeatManager;
         this.redisExecutor = redisExecutor;
         this.checkThread = Executors.newSingleThreadScheduledExecutor();
         this.status = 1;
-        String keyPre = RedisCoordinatorConstant.RESOURCES_REGISTER.buildKey(id);
-        this.resourceKey = keyPre + RedisCoordinatorConstant.KEY_SPLIT + resourceManager.resourceKey();
-        this.lockKey = RedisCoordinatorConstant.RE_BALANCE_LOCK.buildKey(id);
-        this.channelKey = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(id);
+        String resourceKeyPre = RedisCoordinatorConstant.RESOURCES_REGISTER.buildKey(key);
+        this.resourceKey = resourceKeyPre + RedisCoordinatorConstant.KEY_SPLIT + resourceManager.resourceKey();
+        this.lockKey = RedisCoordinatorConstant.RE_BALANCE_LOCK.buildKey(key);
+        this.channelKey = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(key);
         this.tryRebalanced();
         this.startCheckThread();
     }
@@ -132,7 +130,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
 
     /**
      * 检查是否需要重平衡
-     * 1.注册curFlag与存活curFlag一致
+     * 1.注册sid与存活sid一致
      * 2.注册resource与现有一致
      * 3.注册节点资源数平衡
      *
@@ -142,7 +140,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      * @return 是否需要重平衡
      */
     private boolean checkShouldReBalance(Map<String, String> registerInfo, Map<String, String> active, Set<T> allResources) {
-        // 检查实例curFlag
+        // 检查实例sid
         Set<String> registerKeys = registerInfo.keySet();
         Set<String> activeKeys = active.keySet();
         if (sameCollection(registerKeys, activeKeys)) {
