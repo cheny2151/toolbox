@@ -40,7 +40,7 @@ public class CoordinatorProperties {
         if (StringUtils.isEmpty(namespace)) {
             return id;
         } else {
-            return id + ":" + namespace;
+            return id + "_" + namespace;
         }
     }
 }
