@@ -107,9 +107,12 @@ public class WindowCoordinatorUnit {
                 }
                 for (int i = 0, index = 0; i < elements.size(); i++) {
                     WindowElement element = elements.get(i);
-                    Object output = splitter.split(outputs, element, index);
-                    index += element.size();
+                    Object output = null;
+                    if (outputs != null) {
+                        output = splitter.split(outputs, element, index);
+                    }
                     element.setOutput(output);
+                    index += element.size();
                 }
                 break;
             }
