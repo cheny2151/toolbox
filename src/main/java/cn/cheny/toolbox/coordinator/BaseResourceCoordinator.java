@@ -28,11 +28,11 @@ public abstract class BaseResourceCoordinator<T extends Resource> implements Res
     }
 
     /**
-     * 设置当前实例收集到的新资源
+     * 设置当前实例收集到的资源
      *
      * @param allocated 收集到的资源列表
      */
-    protected void allocateNewResources(Collection<T> allocated) {
+    protected void allocatedResources(Collection<T> allocated) {
         Collection<T> origin = resourceManager.getHoldResources();
         if (origin == null || !CollectionUtils.isEqualCollection(allocated, origin)) {
             log.info("[Coordinator] 当前实例分配新资源\"{}\"：{}", resourceManager.resourceKey(), allocated);

@@ -54,6 +54,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         this.resourceKey = resourceKeyPre + RedisCoordinatorConstant.KEY_SPLIT + resourceManager.resourceKey();
         this.lockKey = RedisCoordinatorConstant.RE_BALANCE_LOCK.buildKey(key);
         this.channelKey = RedisCoordinatorConstant.REDIS_CHANNEL.buildKey(key);
+        this.initCurrent();
         this.tryRebalanced();
         this.startCheckThread();
     }
@@ -78,23 +79,20 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
                 if (!active.containsKey(sid)) {
                     active.put(sid, "");
                 }
-                if (!checkShouldReBalance(registerInfo, active, allResources)) {
-                    return;
+                if (checkShouldRebalanced(registerInfo, active, allResources)) {
+                    // 执行reBalance
+                    reBalanceResources(active, allResources);
+                    redisExecutor.del(resourceKey);
+                    redisExecutor.hmset(resourceKey, active);
+                    log.info("[Coordinator] 完成重平衡,资源分配结果为:{}", active);
+                    sendReBalanced();
                 }
-                // 执行reBalance
-                List<T> allocated = new ArrayList<>();
-                reBalanceResources(active, allResources);
-                redisExecutor.del(resourceKey);
-                redisExecutor.hmset(resourceKey, active);
 
-                String flags = active.get(sid);
-                if (StringUtils.isNotEmpty(flags)) {
-                    List<T> curResources = buildByFlags(flags);
-                    allocated.addAll(curResources);
-                }
-                log.info("[Coordinator] 完成重平衡,资源分配结果为:{}", active);
-                allocateNewResources(allocated);
-                sendReBalanced();
+                String resourceFlag = active.get(sid);
+                List<T> allocated = buildByFlags(resourceFlag);
+                allocatedResources(allocated);
+            } else {
+                refreshCurrentResources();
             }
         }
     }
@@ -104,14 +102,14 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
         if (status != 1) {
             return;
         }
-        String flags = redisExecutor.hget(resourceKey, this.getSid());
-        if (flags == null) {
-            log.info("[Coordinator] 当前实例未分配资源,执行reBalance");
-            this.heartBeatManager.checkHeartbeat();
-            this.tryRebalanced();
+        String resourceFlag = redisExecutor.hget(resourceKey, getSid());
+        if (resourceFlag == null) {
+            log.warn("当前节点未初始化资源");
+            heartBeatManager.checkHeartbeat();
+            initCurrent();
         } else {
-            List<T> curResources = buildByFlags(flags);
-            allocateNewResources(curResources);
+            List<T> curResources = buildByFlags(resourceFlag);
+            allocatedResources(curResources);
         }
     }
 
@@ -139,7 +137,7 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
      * @param allResources 当前所有资源
      * @return 是否需要重平衡
      */
-    private boolean checkShouldReBalance(Map<String, String> registerInfo, Map<String, String> active, Set<T> allResources) {
+    private boolean checkShouldRebalanced(Map<String, String> registerInfo, Map<String, String> active, Set<T> allResources) {
         // 检查实例sid
         Set<String> registerKeys = registerInfo.keySet();
         Set<String> activeKeys = active.keySet();
@@ -330,6 +328,13 @@ public class RedisCoordinator<T extends Resource> extends BaseResourceCoordinato
     private void sendReBalanced() {
         ReBalanceMessage message = new ReBalanceMessage(resourceKey, ReBalanceMessage.TYPE_REBALANCED, this.getSid());
         redisExecutor.publish(channelKey, JSON.toJSONString(message));
+    }
+
+    /**
+     * 初始化为空资源
+     */
+    private void initCurrent() {
+        redisExecutor.hset(resourceKey, getSid(), "");
     }
 
 }
