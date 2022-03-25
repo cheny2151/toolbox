@@ -2,6 +2,7 @@ package cn.cheny.toolbox.POIUtils.worker;
 
 import cn.cheny.toolbox.POIUtils.annotation.ExcelCell;
 import cn.cheny.toolbox.POIUtils.annotation.ExcelHead;
+import cn.cheny.toolbox.reflect.ReflectUtils;
 import org.apache.poi.hssf.usermodel.*;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
@@ -9,7 +10,6 @@ import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellRangeAddressList;
 import org.apache.poi.ss.util.RegionUtil;
-import cn.cheny.toolbox.reflect.ReflectUtils;
 
 import java.lang.reflect.Field;
 import java.util.LinkedHashMap;
@@ -19,8 +19,7 @@ import java.util.Map;
 /**
  * excel表创建者
  *
- * @apiNote   test on 2018/5/9 1w数据量导入mysql,用时12秒
- *
+ * @apiNote test on 2018/5/9 1w数据量导入mysql,用时12秒
  */
 public class HSSFWorkbookBuilder {
 
@@ -36,7 +35,9 @@ public class HSSFWorkbookBuilder {
      */
     public HSSFWorkbook createHead(Class<?> targetClass) {
         HSSFWorkbook workbook = new HSSFWorkbook();
-        createHead(workbook, targetClass);
+        ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
+        HSSFSheet sheet = workbook.createSheet(excelHead != null ? excelHead.sheetName() : "sheet");
+        createHead(workbook, targetClass, excelHead, sheet);
         return workbook;
     }
 
@@ -47,14 +48,51 @@ public class HSSFWorkbookBuilder {
      * @return
      */
     public HSSFWorkbook createSheet(List<?> data) {
-
         if (data == null || data.get(0) == null) {
             return null;
         }
-        Class<?> entityType = data.get(0).getClass();
+        Class<?> targetClass = data.get(0).getClass();
+        ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
+        String sheetName = excelHead != null ? excelHead.sheetName() : "sheet";
+        return createSheet(data, sheetName);
+
+    }
+
+    /**
+     * 导出表格
+     *
+     * @param data
+     * @return
+     */
+    public HSSFWorkbook createSheet(List<?> data, String sheetName) {
+        if (data == null || data.get(0) == null) {
+            return null;
+        }
+        Class<?> targetClass = data.get(0).getClass();
         HSSFWorkbook workbook = new HSSFWorkbook();
-        Map<String, Object> head = createHead(workbook, entityType);
-        createContext(workbook, data, head);
+        ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
+        HSSFSheet sheet = workbook.createSheet(sheetName);
+        Map<String, Object> head = createHead(workbook, targetClass, excelHead, sheet);
+        createContext(workbook, data, head, sheet);
+        return workbook;
+
+    }
+
+    /**
+     * 导出表格
+     *
+     * @param data
+     * @return
+     */
+    public HSSFWorkbook createSheet(HSSFWorkbook workbook, List<?> data, String sheetName) {
+        if (data == null || data.get(0) == null) {
+            return null;
+        }
+        Class<?> targetClass = data.get(0).getClass();
+        ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
+        HSSFSheet sheet = workbook.createSheet(sheetName);
+        Map<String, Object> head = createHead(workbook, targetClass, excelHead, sheet);
+        createContext(workbook, data, head, sheet);
         return workbook;
 
     }
@@ -62,10 +100,8 @@ public class HSSFWorkbookBuilder {
     /**
      * 设置表头
      */
-    private Map<String, Object> createHead(HSSFWorkbook workbook, Class<?> targetClass) {
+    private Map<String, Object> createHead(HSSFWorkbook workbook, Class<?> targetClass, ExcelHead excelHead, HSSFSheet sheet) {
 
-        ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
-        workbook.createSheet(excelHead != null ? excelHead.sheetName() : "sheet");
         //若有标题则第一行用于放标题
         String title = null;
         int startRowNumber = 0;
@@ -74,7 +110,6 @@ public class HSSFWorkbookBuilder {
             startRowNumber++;
         }
 
-        HSSFSheet sheet = workbook.getSheetAt(0);
         int column = 0;
         Map<String, Object> headInfo = new LinkedHashMap<>();
         headInfo.put(LIST_FIELD, null);
@@ -132,10 +167,9 @@ public class HSSFWorkbookBuilder {
     /**
      * 设置表内容
      */
-    @SuppressWarnings({"unchecked", "ConstantConditions"})
-    private void createContext(HSSFWorkbook workbook, List<?> data, Map<String, Object> headInfo) {
+    @SuppressWarnings({"unchecked"})
+    private void createContext(HSSFWorkbook workbook, List<?> data, Map<String, Object> headInfo, HSSFSheet sheet) {
 
-        HSSFSheet sheet = workbook.getSheetAt(0);
         String listField = (String) headInfo.remove(LIST_FIELD);
         int row = 1;
         if (headInfo.remove(TITLE) != null) {

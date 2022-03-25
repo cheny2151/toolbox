@@ -64,6 +64,27 @@ public class PoiUtils {
     }
 
     /**
+     * 创建一张含有数据的表
+     *
+     * @param data
+     * @return
+     */
+    public static HSSFWorkbook createSheet(List<?> data, String sheetName) {
+        return getHSSFWorkbookBuilder().createSheet(data, sheetName);
+    }
+
+    /**
+     * 创建一张含有数据的表
+     *
+     * @param data
+     * @return
+     */
+    public static void createSheet(HSSFWorkbook workbook, List<?> data, String sheetName) {
+        getHSSFWorkbookBuilder().createSheet(workbook, data, sheetName);
+
+    }
+
+    /**
      * 读取数据
      *
      * @param file        文件
