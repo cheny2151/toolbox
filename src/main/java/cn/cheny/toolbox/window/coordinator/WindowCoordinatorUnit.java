@@ -28,7 +28,7 @@ public class WindowCoordinatorUnit {
     private final int threshold;
     private final AtomicInteger cursize;
     private Object target;
-    private ConcurrentHashMap<Integer, WindowElement> content;
+    private volatile ConcurrentHashMap<Integer, WindowElement> content;
     private final ExecutorService workers;
     private final AtomicInteger lock;
 
