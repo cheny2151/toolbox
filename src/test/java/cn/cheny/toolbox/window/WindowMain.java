@@ -3,6 +3,7 @@ package cn.cheny.toolbox.window;
 import cn.cheny.toolbox.window.factory.javassist.JavassistWindowProxyFactory;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,17 +17,19 @@ public class WindowMain {
     public void test() throws InterruptedException {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
+        ArrayList<Thread> threads = new ArrayList<>();
         for (int i = 0; i < 1000; i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
                 String str = "test" + finalI;
-                String test = proxy.print(finalI, str);
+                String test = proxy.print(1, str);
                 if (!test.equals(str)) {
                     System.out.println("error");
                 }
             });
-            thread.start();
+            threads.add(thread);
         }
+        threads.forEach(Thread::start);
         Thread.sleep(10000);
     }
 
@@ -41,8 +44,8 @@ public class WindowMain {
                 List<String> test = null;
                 List<String> tests = Arrays.asList(str, str + 2);
                 try {
-//                    test = proxy.printSelf(finalI, tests);
-                    test = proxy.testCallMethod(finalI, tests);
+//                    test = proxy.printSelf(0, tests);
+                    test = proxy.testCallMethod(0, tests);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -65,7 +68,7 @@ public class WindowMain {
                 String str = "test" + finalI;
                 List<String> tests = Arrays.asList(str, str + 2, str + 3);
                 try {
-                    TestForWindow.TestResult testResult = proxy.printSelfReturnCustomer(finalI, tests);
+                    TestForWindow.TestResult testResult = proxy.printSelfReturnCustomer(0, tests);
                     if (!testResult.getRs().equals(tests)) {
                         System.out.println("error");
                     }
@@ -88,7 +91,7 @@ public class WindowMain {
                 String str = "test" + finalI;
                 List<String> tests = Arrays.asList(str, str + 2, str + 3);
                 try {
-                    TestForWindow.TestResultArray testResult = proxy.printSelfReturnCustomerArray(finalI, tests);
+                    TestForWindow.TestResultArray testResult = proxy.printSelfReturnCustomerArray(0, tests);
                     if (!Arrays.asList(testResult.getRs()).equals(tests)) {
                         System.out.println("error");
                     }
