@@ -139,7 +139,7 @@ public class ReadWriteMethodHolder extends BaseMethodHolder {
             for (int i = 0; i < types.length; i++) {
                 Class<?> type = types[i];
                 if (TypeUtils.isBaseClass(type)) {
-                    args0[i] = TypeUtils.tryCoverBase(args0[i], type);
+                    args0[i] = TypeUtils.tryConvertBase(args0[i], type);
                 }
             }
         }

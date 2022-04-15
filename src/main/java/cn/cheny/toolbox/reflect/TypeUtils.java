@@ -43,7 +43,7 @@ public class TypeUtils {
         } else if (objType instanceof WildcardType) {
             return caseToObject(obj, (WildcardType) objType);
         } else {
-            throw new ParseTokenException(obj.getClass() + " can not cover to " + objType);
+            throw new ParseTokenException(obj.getClass() + " can not convert to " + objType);
         }
     }
 
@@ -208,7 +208,7 @@ public class TypeUtils {
      * @return 转换结果
      */
     @SuppressWarnings("unchecked")
-    public static <T> T tryCoverBase(Object obj, Class<T> targetClass) {
+    public static <T> T tryConvertBase(Object obj, Class<T> targetClass) {
         if (obj == null) {
             return null;
         }
@@ -251,7 +251,7 @@ public class TypeUtils {
         } catch (Exception e) {
             // do nothing
         }
-        throw new ParseTokenException(obj.getClass() + " can not cover to " + targetClass);
+        throw new ParseTokenException(obj.getClass() + " can not convert to " + targetClass);
     }
 
     /**
@@ -398,16 +398,16 @@ public class TypeUtils {
         if (objType.isAssignableFrom(class0)) {
             return (T) obj;
         } else if (TypeUtils.isBaseClass(class0) && TypeUtils.isBaseClass(objType)) {
-            return tryCoverBase(obj, objType);
+            return tryConvertBase(obj, objType);
         } else if (obj instanceof Map) {
             if (Map.class.isAssignableFrom(objType)) {
-                return (T) coverMapInstance((Map<Object, Object>) obj, (Class<? extends Map<Object, Object>>) objType);
+                return (T) convertMapInstance((Map<Object, Object>) obj, (Class<? extends Map<Object, Object>>) objType);
             } else if (!objType.isArray() &&
                     !Collection.class.isAssignableFrom(objType) &&
                     !TypeUtils.isBaseClass(objType)) {
                 return mapToObject((Map<String, Object>) obj, objType);
             }
-            throw new ParseTokenException(class0 + " can not cover to " + objType);
+            throw new ParseTokenException(class0 + " can not convert to " + objType);
         } else if (Map.class.isAssignableFrom(objType) &&
                 !class0.isArray() &&
                 !Collection.class.isAssignableFrom(class0) &&
@@ -418,7 +418,7 @@ public class TypeUtils {
         } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
             return (T) arrayToCollection(obj, objType, class0.getComponentType());
         }
-        throw new ParseTokenException(class0 + " can not cover to " + objType);
+        throw new ParseTokenException(class0 + " can not convert to " + objType);
     }
 
     /**
@@ -497,7 +497,7 @@ public class TypeUtils {
      * 转换Map实现类
      */
     @SuppressWarnings("unchecked")
-    private static <T extends Map<Object, Object>> T coverMapInstance(Map<Object, Object> obj, Class<T> objType) {
+    private static <T extends Map<Object, Object>> T convertMapInstance(Map<Object, Object> obj, Class<T> objType) {
         Map<Object, Object> newMap = newMap(objType);
         newMap.putAll(obj);
         return (T) newMap;

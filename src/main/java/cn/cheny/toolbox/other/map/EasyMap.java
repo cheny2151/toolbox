@@ -50,47 +50,47 @@ public class EasyMap extends HashMap<String, Object> {
 
     public Integer getInteger(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Integer.class);
+        return tryConvertBase(key, val, Integer.class);
     }
 
     public Long getLong(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Long.class);
+        return tryConvertBase(key, val, Long.class);
     }
 
     public Float getFloat(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Float.class);
+        return tryConvertBase(key, val, Float.class);
     }
 
     public Double getDouble(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Double.class);
+        return tryConvertBase(key, val, Double.class);
     }
 
     public Boolean getBoolean(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Boolean.class);
+        return tryConvertBase(key, val, Boolean.class);
     }
 
     public Short getShort(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Short.class);
+        return tryConvertBase(key, val, Short.class);
     }
 
     public Character getCharacter(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Character.class);
+        return tryConvertBase(key, val, Character.class);
     }
 
     public BigDecimal getBigDecimal(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, BigDecimal.class);
+        return tryConvertBase(key, val, BigDecimal.class);
     }
 
     public Date getDate(String key) {
         Object val = getObject(key);
-        return tryCoverBase(key, val, Date.class);
+        return tryConvertBase(key, val, Date.class);
     }
 
     public <T> T[] getArray(String key, Class<T> tClass) {
@@ -202,9 +202,9 @@ public class EasyMap extends HashMap<String, Object> {
      * @param <T>         对应泛型
      * @return 转换结果
      */
-    private static <T> T tryCoverBase(String property, Object obj, Class<T> targetClass) {
+    private static <T> T tryConvertBase(String property, Object obj, Class<T> targetClass) {
         try {
-            return TypeUtils.tryCoverBase(obj, targetClass);
+            return TypeUtils.tryConvertBase(obj, targetClass);
         } catch (ParseTokenException e) {
             throw new ParseTokenException("property '" + property + "' is " + obj.getClass() + " ,expect " + targetClass);
         }
