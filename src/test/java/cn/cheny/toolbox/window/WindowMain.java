@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author by chenyi
@@ -39,6 +40,7 @@ public class WindowMain {
     public void printSelf() throws InterruptedException {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
+        AtomicInteger atomicInteger = new AtomicInteger(0);
         for (int i = 0; i < 1000; i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
@@ -48,6 +50,7 @@ public class WindowMain {
                 try {
 //                    test = proxy.printSelf(0, tests);
                     test = proxy.testCallMethod(0, tests);
+                    atomicInteger.incrementAndGet();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -58,6 +61,7 @@ public class WindowMain {
             thread.start();
         }
         Thread.sleep(10000);
+        System.out.println(atomicInteger.get());
     }
 
     @Test
@@ -93,9 +97,6 @@ public class WindowMain {
             executorService.execute(() -> {
                 String str = "test" + finalI;
                 List<String> tests = Arrays.asList(str, str + 2, str + 3);
-                if (finalI > 10 && finalI < 103){
-                    tests = new ArrayList<>();
-                }
                 try {
                     TestForWindow.TestResultArray testResult = proxy.printSelfReturnCustomerArray(0, tests);
                     if (!Arrays.asList(testResult.getRs()).equals(tests)) {

@@ -85,15 +85,15 @@ public class WindowCoordinatorUnit {
         while ((curSize = this.cursize.get()) > 0) {
             if (this.cursize.compareAndSet(curSize, -1)) {
                 ConcurrentHashMap<Integer, WindowElement> curContent = this.content;
-                this.content = new ConcurrentHashMap<>(threshold);
-                this.cursize.set(0);
-                unlock();
                 // 自旋等待put element
                 while (getContentSize(curContent) != curSize) {
                     if (log.isDebugEnabled()) {
                         log.debug("wait put element");
                     }
                 }
+                this.content = new ConcurrentHashMap<>(threshold);
+                this.cursize.set(0);
+                unlock();
                 List<WindowElement> elements = new ArrayList<>(curContent.values());
                 List<Object> inputs = new ArrayList<>();
                 elements.forEach(e -> e.collectInput(inputs));
