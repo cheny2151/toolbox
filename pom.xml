@@ -30,7 +30,7 @@
 
     <groupId>io.github.cheny2151</groupId>
     <artifactId>toolbox</artifactId>
-    <version>2.2.21-jdk8</version>
+    <version>2.2.22-jdk8</version>
 
     <properties>
         <java.version>1.8</java.version>
