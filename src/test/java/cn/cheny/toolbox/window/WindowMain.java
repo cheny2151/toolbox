@@ -6,6 +6,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * @author by chenyi
@@ -18,7 +20,7 @@ public class WindowMain {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
         ArrayList<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 2000; i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
                 String str = "test" + finalI;
@@ -30,7 +32,7 @@ public class WindowMain {
             threads.add(thread);
         }
         threads.forEach(Thread::start);
-        Thread.sleep(10000);
+        Thread.sleep(100000);
     }
 
     @Test
@@ -85,23 +87,27 @@ public class WindowMain {
     public void printSelfReturnCustomerArray() throws InterruptedException {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
-        for (int i = 0; i < 1000; i++) {
+        ExecutorService executorService = Executors.newFixedThreadPool(30);
+        for (int i = 0; i < 1000000; i++) {
             int finalI = i;
-            Thread thread = new Thread(() -> {
+            executorService.execute(() -> {
                 String str = "test" + finalI;
                 List<String> tests = Arrays.asList(str, str + 2, str + 3);
+                if (finalI > 10 && finalI < 103){
+                    tests = new ArrayList<>();
+                }
                 try {
                     TestForWindow.TestResultArray testResult = proxy.printSelfReturnCustomerArray(0, tests);
                     if (!Arrays.asList(testResult.getRs()).equals(tests)) {
+                        System.out.println(testResult+":"+tests);
                         System.out.println("error");
                     }
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             });
-            thread.start();
         }
-        Thread.sleep(10000);
+        Thread.sleep(1000000);
     }
 
     @Test

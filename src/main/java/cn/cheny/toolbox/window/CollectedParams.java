@@ -5,6 +5,7 @@ import cn.cheny.toolbox.reflect.TypeUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 
 import java.lang.reflect.Method;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -46,7 +47,8 @@ public class CollectedParams {
             if (!(input instanceof List)) {
                 throw new ToolboxRuntimeException("Batch method target args must be List");
             }
-            return new WindowElementCollection((List<?>) input);
+            List<?> inputList = Collections.unmodifiableList((List<?>) input);
+            return new WindowElementCollection(inputList);
         } else {
             return new WindowElement(input);
         }

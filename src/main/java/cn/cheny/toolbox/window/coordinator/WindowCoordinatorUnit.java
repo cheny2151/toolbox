@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.window.coordinator;
 
+import cn.cheny.toolbox.exception.WindowElementEmptyException;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.BatchMethod;
 import cn.cheny.toolbox.window.CollectedParams;
@@ -44,10 +45,13 @@ public class WindowCoordinatorUnit {
         this.lock = new AtomicInteger(0);
     }
 
-    public WindowElement addElement(Object[] args) {
+    public WindowElement addElement(Object[] args) throws WindowElementEmptyException {
         int curSize;
         WindowElement element = collectedParams.buildElement(args);
         int size = element.size();
+        if (size == 0) {
+            throw new WindowElementEmptyException();
+        }
         while (true) {
             curSize = cursize.get();
             if (curSize == -1 || curSize >= threshold) {

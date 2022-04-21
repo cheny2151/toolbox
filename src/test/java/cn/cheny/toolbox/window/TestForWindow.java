@@ -56,7 +56,7 @@ public class TestForWindow {
 
     public LinkedList<String> testCallMethod(int i, List<String> tests) throws InterruptedException {
         System.out.println((Object) ToolboxAopContext.currentProxy());
-        return ((TestForWindow)ToolboxAopContext.currentProxy()).printSelf(i, tests);
+        return ((TestForWindow) ToolboxAopContext.currentProxy()).printSelf(i, tests);
     }
 
     @Batch(threadPoolSize = 3, batchArgIndex = 1, splitter = TestSplitter.class)
@@ -66,11 +66,15 @@ public class TestForWindow {
         return new TestResult(i, tests);
     }
 
-    @Batch(threadPoolSize = 3, batchArgIndex = 1, splitter = TestArraySplitter.class)
+    @Batch(threadPoolSize = 3, batchArgIndex = 1, winTime = 100, splitter = TestArraySplitter.class)
     public TestResultArray printSelfReturnCustomerArray(int i, List<String> tests) throws InterruptedException {
         Thread.sleep(100);
-        System.out.println(i);
-        return new TestResultArray(i, tests.toArray(new String[1]));
+        System.out.println(tests.size());
+        if (tests.size() == 0) {
+            return new TestResultArray(i, new String[]{});
+        } else {
+            return new TestResultArray(i, tests.toArray(new String[1]));
+        }
     }
 
     @Data
@@ -86,8 +90,8 @@ public class TestForWindow {
         @Override
         public Object split(Object output, WindowElement element, int index) {
             TestResult testResult = (TestResult) output;
-             List<String> list = multiGetList(testResult.getRs(), index, element.size(), new TypeReference<List<String>>() {
-                        });
+            List<String> list = multiGetList(testResult.getRs(), index, element.size(), new TypeReference<List<String>>() {
+            });
             TestResult result = new TestResult();
             BeanUtils.copyProperties(result, testResult, "rs");
             result.setRs(list);

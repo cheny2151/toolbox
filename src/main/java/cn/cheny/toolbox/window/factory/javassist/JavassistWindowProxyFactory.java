@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.window.factory.javassist;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+import cn.cheny.toolbox.exception.WindowElementEmptyException;
 import cn.cheny.toolbox.proxy.ToolboxAopContext;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.WindowElement;
@@ -68,6 +69,9 @@ public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
                     WindowElement element = windowCoordinator.addElement(args);
                     return element.getOutput();
                 }
+                return method.invoke(target, args);
+            } catch (WindowElementEmptyException e) {
+                // batch size为0，执行原方法
                 return method.invoke(target, args);
             } finally {
                 ToolboxAopContext.setCurrentProxy(old);

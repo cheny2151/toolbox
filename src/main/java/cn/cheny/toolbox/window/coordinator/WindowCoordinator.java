@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.window.coordinator;
 
+import cn.cheny.toolbox.exception.WindowElementEmptyException;
 import cn.cheny.toolbox.other.NamePrefixThreadFactory;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.CollectedStaticParams;
@@ -40,7 +41,7 @@ public class WindowCoordinator implements Closeable {
         this.workers = Executors.newFixedThreadPool(batchConfiguration.getThreadPoolSize(), new NamePrefixThreadFactory("BatchHandler"));
     }
 
-    public WindowElement addElement(Object[] args) {
+    public WindowElement addElement(Object[] args) throws WindowElementEmptyException {
         if (status.get() == 0) {
             this.start();
         }
