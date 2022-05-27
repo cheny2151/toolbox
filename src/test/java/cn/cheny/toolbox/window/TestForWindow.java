@@ -47,7 +47,7 @@ public class TestForWindow {
         return tests;
     }
 
-    @Batch(threadPoolSize = 3, batchArgIndex = 1)
+    @Batch(threadPoolSize = 3, batchArgIndex = 1,threshold = 100)
     public LinkedList<String> printSelf(int i, List<String> tests) throws InterruptedException {
         Thread.sleep(100);
         System.out.println(tests.size());
