@@ -66,6 +66,16 @@ public class SpringUtils implements ApplicationContextAware {
         }, "springUtils-init").start();
     }
 
+    public static ApplicationContext getSpringApplicationContext() {
+        checkInSpring();
+        return applicationContext;
+    }
+
+    public static <T> T getBean(Class<T> tClass) {
+        checkInSpring();
+        return applicationContext.getBean(tClass);
+    }
+
     public static <T> T getBean(String name, Class<T> tClass) {
         checkInSpring();
         return applicationContext.getBean(name, tClass);
