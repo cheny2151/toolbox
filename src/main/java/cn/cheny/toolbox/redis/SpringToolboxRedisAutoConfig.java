@@ -21,6 +21,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -52,6 +53,7 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 @AutoConfigureAfter({SpringToolAutoConfig.class, RedisAutoConfiguration.class})
 @ConditionalOnClass({RedisTemplate.class})
 @ConditionalOnBean({RedisConnectionFactory.class})
+@Conditional(ConditionalOnToolBoxRedisEnable.class)
 public class SpringToolboxRedisAutoConfig {
 
     @Bean
@@ -83,12 +85,12 @@ public class SpringToolboxRedisAutoConfig {
     }
 
     @Bean
-    public JdkRedisClient jdkRedisClient(@Qualifier("toolbox:jdkRedisTemplate") RedisTemplate<String, Object> redisTemplate) {
+    public JdkRedisClient<?> jdkRedisClient(@Qualifier("toolbox:jdkRedisTemplate") RedisTemplate<String, Object> redisTemplate) {
         return new JdkRedisClient<>(redisTemplate);
     }
 
     @Bean
-    public JsonRedisClient jsonRedisClient(@Qualifier("toolbox:jsonRedisTemplate") RedisTemplate<String, Object> redisTemplate) {
+    public JsonRedisClient<?> jsonRedisClient(@Qualifier("toolbox:jsonRedisTemplate") RedisTemplate<String, Object> redisTemplate) {
         return new JsonRedisClient<>(redisTemplate);
     }
 

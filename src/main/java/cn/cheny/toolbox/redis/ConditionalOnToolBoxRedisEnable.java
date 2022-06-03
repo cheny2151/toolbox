@@ -1,6 +1,5 @@
 package cn.cheny.toolbox.redis;
 
-import cn.cheny.toolbox.entityCache.spring.EntityBufferProperties;
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
 import org.springframework.core.env.Environment;
@@ -15,11 +14,13 @@ import org.springframework.core.type.AnnotatedTypeMetadata;
  */
 public class ConditionalOnToolBoxRedisEnable implements Condition {
 
+    public static final String CACHE_PREFIX = "toolbox.redis.enable";
+
     @Override
     public boolean matches(ConditionContext conditionContext, AnnotatedTypeMetadata annotatedTypeMetadata) {
         Environment env = conditionContext.getEnvironment();
-        Boolean property = env.getProperty(EntityBufferProperties.CACHE_PREFIX + ".enable", Boolean.class);
-        return property != null && property;
+        // 默认开启
+        return env.getProperty(CACHE_PREFIX, Boolean.class, true);
     }
 
 }
