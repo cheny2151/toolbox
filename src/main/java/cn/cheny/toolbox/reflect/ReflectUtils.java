@@ -1,11 +1,14 @@
 package cn.cheny.toolbox.reflect;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.fun.FilterFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
+import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -525,6 +528,40 @@ public class ReflectUtils {
             return true;
         } catch (ClassNotFoundException e) {
             return false;
+        }
+    }
+
+    /**
+     * 通过对象方法函数获取字段名
+     * 以{@value GET_PRE,IS_PRE,SET_PRE}开头，则去掉对应pre并首单词转小写；
+     * 否则直接返回
+     *
+     * @param fieldGetter 字段方法函数
+     * @param <T>         泛型
+     * @return 字段名
+     */
+    public static <T> String fieldName(FieldGetter<T> fieldGetter) {
+        SerializedLambda serializedLambda = getSerializedLambda(fieldGetter);
+        String implMethodName = serializedLambda.getImplMethodName();
+        String fieldName;
+        if (implMethodName.startsWith(GET_PRE) || implMethodName.startsWith(SET_PRE)) {
+            fieldName = implMethodName.substring(GET_PRE.length());
+        } else if (implMethodName.startsWith(IS_PRE)) {
+            fieldName = implMethodName.substring(IS_PRE.length());
+        } else {
+            return implMethodName;
+        }
+        return toLowerFirstLetter(fieldName);
+    }
+
+    private static <T> SerializedLambda getSerializedLambda(Serializable serializable) {
+        try {
+            Class<?> getterClass = serializable.getClass();
+            Method writeReplace = getterClass.getDeclaredMethod("writeReplace");
+            writeReplace.setAccessible(true);
+            return (SerializedLambda) writeReplace.invoke(serializable);
+        } catch (Exception e) {
+            throw new ToolboxRuntimeException("Failed to get SerializedLambda", e);
         }
     }
 
