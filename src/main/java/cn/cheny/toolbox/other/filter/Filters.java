@@ -1,15 +1,17 @@
 package cn.cheny.toolbox.other.filter;
 
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * 属性过滤实体
  */
-public class Filters extends ArrayList<Filter> {
+public class Filters {
 
     public enum Operator {
 
@@ -21,21 +23,25 @@ public class Filters extends ArrayList<Filter> {
 
         LT("<"),
 
-        GE(">="),
+        GTE(">="),
 
-        LE("<="),
+        LTE("<="),
 
         LIKE("like"),
 
-        NO_LIKE("not like"),
+        NOT_LIKE("not like"),
 
         IN("in"),
 
         IS_NULL("is null"),
 
-        IS_NOT_NULL("is not null");
+        IS_NOT_NULL("is not null"),
 
-        private String script;
+        AND("and"),
+
+        OR("or");
+
+        private final String script;
 
         Operator(String script) {
             this.script = script;
@@ -46,21 +52,45 @@ public class Filters extends ArrayList<Filter> {
         }
     }
 
+    private Integer skip;
+
+    private Integer limit;
+
+    private List<FilterSegment> filters;
+
     /**
      * 存储以map为载体的其他过滤参数
      */
     private Map<String, Object> otherParams;
 
     public Filters() {
+        this.filters = new ArrayList<>();
     }
 
     public Filters(Filter filter) {
-        super();
-        add(filter);
+        this();
+        andFilter(filter);
     }
 
-    public Filters addFilter(Filter filter) {
-        this.add(filter);
+    public Filters andFilter(Filter filter) {
+        this.filters.add(new FilterSegment(filter, Operator.AND.getScript()));
+        return this;
+    }
+
+    public Filters orFilter(Filter filter) {
+        this.filters.add(new FilterSegment(filter, Operator.OR.getScript()));
+        return this;
+    }
+
+    public Filters andFilter(Filter filter, String tableName) {
+        concatTableName(filter, tableName);
+        this.filters.add(new FilterSegment(filter, Operator.AND.getScript()));
+        return this;
+    }
+
+    public Filters orFilter(Filter filter, String tableName) {
+        concatTableName(filter, tableName);
+        this.filters.add(new FilterSegment(filter, Operator.OR.getScript()));
         return this;
     }
 
@@ -81,7 +111,11 @@ public class Filters extends ArrayList<Filter> {
     }
 
     public void clearOtherParams() {
-        this.otherParams.clear();
+        this.otherParams = new HashMap<>();
+    }
+
+    public void setOtherParams(Map<String, Object> otherParams) {
+        this.otherParams = otherParams;
     }
 
     public Map<String, Object> getOtherParams() {
@@ -90,67 +124,102 @@ public class Filters extends ArrayList<Filter> {
 
     public boolean isHasOtherParams() {
         Map<String, Object> otherParams = this.otherParams;
-        return otherParams == null || otherParams.size() == 0;
+        return otherParams != null && otherParams.size() > 0;
     }
 
-    public static Filter eq(String property, Object value) {
-        return new EqualFilter(property, value);
+    public void setFilters(List<FilterSegment> filters) {
+        this.filters = filters;
     }
 
-    public static Filter notEq(String property, Object value) {
-        return new NotEqualFilter(property, value);
+    public List<FilterSegment> getFilters() {
+        return filters;
     }
 
-    public static Filter gt(String property, Object value) {
-        return new GreaterThanFilter(property, value);
+    public Integer getSkip() {
+        return skip;
     }
 
-    public static Filter ge(String property, Object value) {
-        return new GreaterThanOrEqualFilter(property, value);
+    public void setSkip(Integer skip) {
+        this.skip = skip;
     }
 
-    public static Filter lt(String property, Object value) {
-        return new LessThanFilter(property, value);
+    public Filters skip(Integer skip) {
+        this.setSkip(skip);
+        return this;
     }
 
-    public static Filter le(String property, Object value) {
-        return new LessThanOrEqualFilter(property, value);
+    public Integer getLimit() {
+        return limit;
     }
 
-    public static <T> Filter in(String property, Collection<T> value) {
-        return new InFilter(property, value);
+    public void setLimit(Integer limit) {
+        this.limit = limit;
     }
 
-    public static <T> Filter in(String property, T[] value) {
-        return new InFilter(property, value);
+    public Filters limit(Integer limit) {
+        this.setLimit(limit);
+        return this;
     }
 
-    public static Filter like(String property, Object value) {
-        return new LikeFilter(property, value);
-    }
-
-    public static Filter notLike(String property, Object value) {
-        return new NotLikeFilter(property, value);
-    }
-
-    public static Filter isNull(String property) {
-        return new NullFilter(property);
-    }
-
-    public static Filter isNotNull(String property) {
-        return new NotNullFilter(property);
-    }
-
-    public static Filter isNotLike(String property, Object value) {
-        return new NotLikeFilter(property, value);
-    }
-
-    public static Filters create() {
+    public static Filters build() {
         return new Filters();
     }
 
-    public static Filters create(Filter filters) {
-        return new Filters(filters);
+    public static Filters build(Filter filter) {
+        return new Filters().andFilter(filter);
+    }
+
+    public static Filters build(Filter filter, String tableName) {
+        return new Filters().andFilter(filter, tableName);
+    }
+
+    public String toSql() {
+        StringBuilder sqlBuilder = new StringBuilder();
+        boolean first = true;
+        for (FilterSegment filterSegment : this.filters) {
+            Filter filter = filterSegment.filter;
+            if (first) {
+                first = false;
+                sqlBuilder.append(" ").append(filter.toSql());
+            } else {
+                sqlBuilder.append(" ").append(filterSegment.connection)
+                        .append(" (").append(filter.toSql()).append(")");
+            }
+        }
+        return sqlBuilder.substring(1);
+    }
+
+    /**
+     * 拼装表名
+     *
+     * @param filter    过滤实体
+     * @param tableName 表名
+     */
+    private void concatTableName(Filter filter, String tableName) {
+        if (StringUtils.isNotBlank(tableName)) {
+            while (filter != null) {
+                filter.setProperty(tableName + "." + filter.getProperty());
+                filter = filter.getNext();
+            }
+        }
+    }
+
+    private static class FilterSegment {
+        private final Filter filter;
+        private final String connection;
+
+        public FilterSegment(Filter filter, String connection) {
+            this.filter = filter;
+            this.connection = connection;
+        }
+
+        public Filter getFilter() {
+            return filter;
+        }
+
+        public String getConnection() {
+            return connection;
+        }
     }
 
 }

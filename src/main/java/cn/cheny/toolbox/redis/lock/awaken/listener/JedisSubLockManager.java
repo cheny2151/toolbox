@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.lock.awaken.listener;
 
-import cn.cheny.toolbox.redis.client.jedis.JedisClient;
+import cn.cheny.toolbox.redis.client.RedisClient;
 import cn.cheny.toolbox.redis.lock.LockConstant;
 import lombok.extern.slf4j.Slf4j;
 import redis.clients.jedis.JedisPubSub;
@@ -16,13 +16,13 @@ public class JedisSubLockManager extends JedisPubSub implements SubLockManager {
 
     private final LockListeners LockListeners;
 
-    private JedisClient jedisClient;
+    private RedisClient<String> jedisClient;
 
-    public JedisSubLockManager(JedisClient jedisClient) {
+    public JedisSubLockManager(RedisClient<String> jedisClient) {
         this(jedisClient, true);
     }
 
-    public JedisSubLockManager(JedisClient jedisClient, boolean fair) {
+    public JedisSubLockManager(RedisClient<String> jedisClient, boolean fair) {
         this.jedisClient = jedisClient;
         LockListeners = fair ? new LockListeners.FairLockListeners() : new LockListeners.NonFairLockListeners();
     }

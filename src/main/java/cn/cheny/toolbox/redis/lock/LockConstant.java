@@ -198,7 +198,7 @@ public class LockConstant {
             "end; " +
             "return nil;";
 
-    public static final String LOCK_CHANNEL = "LOCK_CHANNEL:";
+    public static final String LOCK_CHANNEL = "TOOLBOX:LOCK_CHANNEL:";
 
      /*"local type = tonumber(ARGV[2]);if (redis.call('exists', KEYS[1]) == 0) then redis.call('hset', KEYS[1], KEYS[2], type);if (type == 1) then redis.call('hset', KEYS[1], ARGV[3], 1)end;if (tonumber(ARGV[1]) > 0) then redis.call('pexpire', KEYS[1], ARGV[1]);end;return nil;end;if (tonumber(redis.call('hget', KEYS[1], KEYS[2])) == 1) then if(redis.call('hexists', KEYS[1], ARGV[3]) == 0) then redis.call('hset', KEYS[1], ARGV[3], 1);if (tonumber(ARGV[1]) > 0) then redis.call('pexpire', KEYS[1], ARGV[1]);end;return nil;end;end;return redis.call('pttl', KEYS[1]);";
 

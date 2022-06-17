@@ -7,7 +7,7 @@ import cn.cheny.toolbox.entityCache.annotation.CacheId;
 import cn.cheny.toolbox.entityCache.buffer.model.BufferInfo;
 import cn.cheny.toolbox.entityCache.exception.AnnotationTypeMissException;
 import cn.cheny.toolbox.reflect.ReflectUtils;
-import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections4.CollectionUtils;
 
 import java.lang.reflect.Method;
 import java.util.HashSet;

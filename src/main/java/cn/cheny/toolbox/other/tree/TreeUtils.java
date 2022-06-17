@@ -67,7 +67,7 @@ public class TreeUtils {
             int length = codes.length;
             T parent = getOrInitByKey(initSequence(codes[0]), roots, clazz);
             if (length == 1) {
-                BeanUtils.copyProperties(t, parent, "children", "code", "codeSequence", "parent");
+                BeanUtils.copyProperties(parent, t, "children", "code", "codeSequence", "parent");
                 continue;
             }
             for (int i = 1; i < length; i++) {
@@ -75,10 +75,15 @@ public class TreeUtils {
                 T next = getOrInitByKey(key, nodes, clazz);
                 //若为尾节点则复制所有数据
                 if (i == length - 1) {
-                    BeanUtils.copyProperties(t, next, "children", "code", "codeSequence", "parent");
+                    BeanUtils.copyProperties(next, t, "children", "code", "codeSequence", "parent");
                 }
-                if (!parent.getChildren().contains(next)) {
-                    parent.getChildren().add(next);
+                Collection<T> children = parent.getChildren();
+                if (children == null){
+                    children = new ArrayList<>();
+                    parent.setChildren(children);
+                }
+                if (!children.contains(next)) {
+                    children.add(next);
                 }
                 //next
                 parent = next;
@@ -115,7 +120,6 @@ public class TreeUtils {
             String[] codes = splitSequence(key);
             treeType.setCodeSequence(key);
             treeType.setCode(codes[codes.length - 1]);
-            treeType.setChildren(new ArrayList<>());
             map.put(key, treeType);
         }
         return treeType;

@@ -12,6 +12,9 @@ public class Limit {
 
     private int size;
 
+    public Limit() {
+    }
+
     public Limit(int num, int size) {
         this.num = num;
         this.size = size;

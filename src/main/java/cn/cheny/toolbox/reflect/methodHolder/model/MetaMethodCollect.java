@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.reflect.methodHolder.model;
 
 import cn.cheny.toolbox.reflect.ReflectUtils;
+import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.reflect.methodHolder.exception.FindNotUniqueMethodException;
 
 import java.lang.reflect.Method;
@@ -134,7 +135,7 @@ public class MetaMethodCollect {
     /**
      * 通过方法名和返回类型，确切获取方法
      *
-     * @param returnType 返回类型
+     * @param returnType 期望返回类型
      * @return 方法
      * @throws FindNotUniqueMethodException 获取到多个方法时抛异常
      */
@@ -153,7 +154,7 @@ public class MetaMethodCollect {
     /**
      * 通过方法名和参数个数确切获取方法，获取到多个方法时抛异常
      *
-     * @param argsNum 参数个数
+     * @param argsNum 期望参数个数
      * @return 方法
      * @throws FindNotUniqueMethodException 获取到多个方法时抛异常
      */
@@ -163,6 +164,27 @@ public class MetaMethodCollect {
                 .collect(Collectors.toList());
         if (findResult.size() > 1) {
             throw new FindNotUniqueMethodException("method key '" + methodKey +
+                    "' and args number = " + argsNum +
+                    "' has not unique method in class :" + this.owner.getName());
+        }
+        return findResult.size() == 0 ? null : findResult.get(0).getMethod();
+    }
+
+    /**
+     * 通过方法名和参数个数和返回类型确切获取方法，获取到多个方法时抛异常
+     *
+     * @param returnType 期望返回类型
+     * @param argsNum    期望参数个数
+     * @return 方法
+     * @throws FindNotUniqueMethodException 获取到多个方法时抛异常
+     */
+    public Method exactMethodByReturnAndArgsNum(Class<?> returnType, int argsNum) {
+        List<MetaMethod> findResult = metaMethods.stream()
+                .filter(metaMethod -> returnType.equals(metaMethod.getReturnType()) && metaMethod.getArgsNum() == argsNum)
+                .collect(Collectors.toList());
+        if (findResult.size() > 1) {
+            throw new FindNotUniqueMethodException("method key '" + methodKey +
+                    "' and return type '" + returnType.getSimpleName() +
                     "' and args number = " + argsNum +
                     "' has not unique method in class :" + this.owner.getName());
         }
@@ -269,27 +291,15 @@ public class MetaMethodCollect {
         if (returnType != null) {
             // 通过返回类型和参数类型精准匹配,null当作空处理
             Method result = exactMethod(returnType, args == null ? new Class[]{} : args);
-            if (result != null) {
+            if (result == null) {
                 // 完全精确匹配成功
-                return result;
-            } else {
-                try {
-                    // 匹配不中时尝试通过返回值匹配唯一方法
-                    return exactMethodByReturn(returnType);
-                } catch (FindNotUniqueMethodException e) {
-                    // if args type contains Object.class,try by args number
-                    if (args != null && containsObject(args)) {
-                        try {
-                            result = exactMethodByArgsNum(args.length);
-                            if (returnType.equals(result.getReturnType())) {
-                                return result;
-                            }
-                        } catch (FindNotUniqueMethodException e2) {
-                            // try next;
-                        }
-                    }
+                if (args == null) {
+                    result = exactMethodByReturn(returnType);
+                } else {
+                    result = exactMethodByReturnAndArgsNum(returnType, args.length);
                 }
             }
+            return result;
         } else if (args != null) {
             // 通过参数类型精准匹配
             Method result;
@@ -297,13 +307,7 @@ public class MetaMethodCollect {
             if (result != null) {
                 return result;
             } else {
-                try {
-                    if (containsObject(args)) {
-                        return exactMethodByArgsNum(args.length);
-                    }
-                } catch (FindNotUniqueMethodException e) {
-                    // try next
-                }
+                return exactMethodByArgsNum(args.length);
             }
         }
 
@@ -362,13 +366,16 @@ public class MetaMethodCollect {
     /**
      * 匹配参数类型
      * 匹配入参是方法参数类型或者方法参数类型的子类,或者基础包装类
+     * 匹配入参方法和入参类型都为基础类型（基础类型可转换）
      *
      * @param curArgType    方法入参类型
      * @param parameterType 参数类型
      * @return 是否匹配
      */
     private boolean matchArgType(Class<?> curArgType, Class<?> parameterType) {
-        return curArgType.isAssignableFrom(parameterType) || (curArgType.isPrimitive() && ReflectUtils.isWrapForm(parameterType, curArgType));
+        return curArgType.isAssignableFrom(parameterType) ||
+                (curArgType.isPrimitive() && ReflectUtils.isWrapForm(parameterType, curArgType)) ||
+                (TypeUtils.isBaseClass(curArgType) && TypeUtils.isBaseClass(parameterType));
     }
 
 }

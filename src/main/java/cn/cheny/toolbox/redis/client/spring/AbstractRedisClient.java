@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.client.spring;
 
-import cn.cheny.toolbox.redis.client.RedisClient;
+import cn.cheny.toolbox.redis.client.RedisApi;
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit;
  *
  * @param <V>
  */
-public abstract class AbstractRedisClient<V> implements RedisClient<V> {
+public abstract class AbstractRedisClient<V> implements RedisApi<V> {
 
     protected RedisTemplate<String, V> redis;
 

@@ -1,11 +1,18 @@
 package cn.cheny.toolbox.reflect;
 
+import cn.cheny.toolbox.other.fun.FilterFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
 import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -21,6 +28,26 @@ public class ReflectUtils {
 
     private final static String IS_PRE = "is";
 
+    private final static Method LOOKUP_DEFINE_CLASS_METHOD;
+
+    static {
+        Method lookupDefineClass0 = null;
+        try {
+            lookupDefineClass0 = (Method) AccessController.doPrivileged(new PrivilegedExceptionAction() {
+                public Object run() throws Exception {
+                    try {
+                        return MethodHandles.Lookup.class.getMethod("defineClass", byte[].class);
+                    } catch (NoSuchMethodException var2) {
+                        return null;
+                    }
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            e.printStackTrace();
+        }
+        LOOKUP_DEFINE_CLASS_METHOD = lookupDefineClass0;
+    }
+
     private ReflectUtils() {
     }
 
@@ -31,7 +58,7 @@ public class ReflectUtils {
         try {
             return getReadMethod(bean.getClass(), property).invoke(bean);
         } catch (Exception e) {
-            throw new ReflectException("反射获取字段值错误", e);
+            throw new ReflectException("获取字段值错误", e);
         }
     }
 
@@ -43,7 +70,7 @@ public class ReflectUtils {
         try {
             return readMethod.invoke(bean);
         } catch (Exception e) {
-            throw new ReflectException("反射获取字段值错误", e);
+            throw new ReflectException("获取字段值错误", e);
         }
     }
 
@@ -118,7 +145,7 @@ public class ReflectUtils {
         try {
             getWriterMethod(bean.getClass(), property, value.getClass()).invoke(bean, value);
         } catch (Exception e) {
-            throw new ReflectException("反射写入字段值错误", e);
+            throw new ReflectException("写入字段值错误", e);
         }
     }
 
@@ -130,7 +157,7 @@ public class ReflectUtils {
         try {
             method.invoke(bean, value);
         } catch (Exception e) {
-            throw new ReflectException("反射写入字段值错误", e);
+            throw new ReflectException("写入字段值错误", e);
         }
     }
 
@@ -202,8 +229,8 @@ public class ReflectUtils {
      * @param annotationClass 注解类
      * @return k:方法名,v:方法
      */
-    public static Map<String, Method> getAllMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        HashMap<String, Method> result = new HashMap<>();
+    public static Set<Method> getAllMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
+        HashSet<Method> result = new HashSet<>();
         Class<?> currentClass = clazz;
         while (!Object.class.equals(currentClass)) {
             Method[] declaredMethods = currentClass.getDeclaredMethods();
@@ -211,7 +238,7 @@ public class ReflectUtils {
                 Annotation declaredAnnotation = method.getDeclaredAnnotation(annotationClass);
                 if (declaredAnnotation != null) {
                     method.setAccessible(true);
-                    result.put(method.getName(), method);
+                    result.add(method);
                 }
             }
             currentClass = currentClass.getSuperclass();
@@ -228,15 +255,14 @@ public class ReflectUtils {
      * @return
      */
     public static Map<String, Method> getAllWriteMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        Map<String, Method> methodMap = getAllMethodHasAnnotation(clazz, annotationClass);
+        Set<Method> methods = getAllMethodHasAnnotation(clazz, annotationClass);
         HashMap<String, Method> result = new HashMap<>();
-        for (Map.Entry<String, Method> methodEntry : methodMap.entrySet()) {
-            Method method = methodEntry.getValue();
+        for (Method method : methods) {
             if (isWriteMethod(method)) {
                 result.put(extractPropertyName(method), method);
             }
         }
-        methodMap.clear();
+        methods.clear();
         return result;
     }
 
@@ -248,15 +274,14 @@ public class ReflectUtils {
      * @return
      */
     public static Map<String, Method> getAllReadMethodHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        Map<String, Method> methodMap = getAllMethodHasAnnotation(clazz, annotationClass);
+        Set<Method> methods = getAllMethodHasAnnotation(clazz, annotationClass);
         HashMap<String, Method> result = new HashMap<>();
-        for (Map.Entry<String, Method> methodEntry : methodMap.entrySet()) {
-            Method method = methodEntry.getValue();
+        for (Method method : methods) {
             if (isReadMethod(method)) {
                 result.put(extractPropertyName(method), method);
             }
         }
-        methodMap.clear();
+        methods.clear();
         return result;
     }
 
@@ -268,15 +293,19 @@ public class ReflectUtils {
      * @return
      */
     public static List<Field> getAllFields(Class<?> clazz, Class<?> stop) {
-        List<Field> fields = new ArrayList<>();
-        for (; clazz != stop; clazz = clazz.getSuperclass()) {
-            for (Field field : clazz.getDeclaredFields()) {
-                if (field.getName().equalsIgnoreCase("serialVersionUID")) continue;
-                field.setAccessible(true);
-                fields.add(field);
-            }
-        }
-        return fields;
+        return getFields(clazz, stop, null);
+    }
+
+    /**
+     * 获取对象属性字段(除find & status)
+     *
+     * @param clazz 所属对象class
+     * @param stop  终止递归父类
+     * @return 字段
+     */
+    public static List<Field> getPropertyFields(Class<?> clazz, Class<?> stop) {
+        return getFields(clazz, stop, field -> (field.getModifiers() & Modifier.FINAL) == 0 ||
+                (field.getModifiers() & Modifier.STATIC) == 0);
     }
 
     /**
@@ -324,7 +353,7 @@ public class ReflectUtils {
         if (name == null || "".equals(name)) {
             throw new IllegalArgumentException();
         }
-        Class currentClass = clazz;
+        Class<?> currentClass = clazz;
         // 尝试查找Field直到Object类
         while (!Object.class.equals(currentClass)) {
             try {
@@ -347,9 +376,59 @@ public class ReflectUtils {
      * @return K:属性名,v:字段
      */
     public static Map<String, Field> getAllFieldHasAnnotation(Class<?> clazz, Class<? extends Annotation> annotationClass) {
-        List<Field> allFields = getAllFields(clazz, Object.class);
-        return allFields.stream().filter(field -> field.getDeclaredAnnotation(annotationClass) != null)
-                .collect(Collectors.toMap(Field::getName, field -> field));
+        return getFields(clazz, Object.class, field -> field.getDeclaredAnnotation(annotationClass) != null)
+                .stream().collect(Collectors.toMap(Field::getName, field -> field));
+    }
+
+    /**
+     * 获取并过滤字段
+     *
+     * @param clazz               所属对象class
+     * @param stop                终止递归父类
+     * @param fieldFilterFunction 过滤函数,返回true则添加到结果
+     * @return 字段集合
+     */
+    public static List<Field> getFields(Class<?> clazz, Class<?> stop, FilterFunction<Field> fieldFilterFunction) {
+        List<Field> fields = new ArrayList<>();
+        for (; clazz != stop; clazz = clazz.getSuperclass()) {
+            for (Field field : clazz.getDeclaredFields()) {
+                if (field.getName().equalsIgnoreCase("serialVersionUID")
+                        || (fieldFilterFunction != null
+                        && !fieldFilterFunction.filter(field))) continue;
+                field.setAccessible(true);
+                fields.add(field);
+            }
+        }
+        return fields;
+    }
+
+    /**
+     * 获取object对应field的值
+     *
+     * @param field 字段
+     * @param obj   对象
+     * @return 字段值
+     */
+    public static Object getFieldVal(Field field, Object obj) {
+        try {
+            return field.get(obj);
+        } catch (IllegalAccessException e) {
+            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass(), e);
+        }
+    }
+
+    /**
+     * 设置object对应field的值
+     *
+     * @param field 字段
+     * @param obj   对象
+     */
+    public static void setFieldVal(Field field, Object obj, Object val) {
+        try {
+            field.set(obj, val);
+        } catch (IllegalAccessException e) {
+            throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass(), e);
+        }
     }
 
     /**
@@ -367,7 +446,7 @@ public class ReflectUtils {
                     clazz.getConstructor().newInstance() :
                     clazz.getConstructor(parameterClass).newInstance(args);
         } catch (Exception e) {
-            throw new ReflectException("reflect:can no new object");
+            throw new ReflectException("reflect:can no new object", e);
         }
     }
 
@@ -379,7 +458,9 @@ public class ReflectUtils {
      */
     public static boolean isReadMethod(Method method) {
         String methodName = method.getName();
-        if (methodName.startsWith(GET_PRE) || methodName.startsWith(IS_PRE)) {
+        int len = methodName.length();
+        if ((methodName.startsWith(GET_PRE) && len > 3) ||
+                (methodName.startsWith(IS_PRE) && len > 2)) {
             return method.getParameterCount() == 0 && !void.class.equals(method.getReturnType());
         }
         return false;
@@ -414,10 +495,9 @@ public class ReflectUtils {
      */
     public static boolean isWriteMethod(Method method) {
         String methodName = method.getName();
-        if (methodName.startsWith(SET_PRE)) {
-            return method.getParameterCount() == 1 && void.class.equals(method.getReturnType());
-        }
-        return false;
+        return methodName.startsWith(SET_PRE) &&
+                methodName.length() > 3 &&
+                method.getParameterCount() == 1;
     }
 
     public static boolean isWrapForm(Class<?> warp, Class<?> base) {
@@ -446,6 +526,10 @@ public class ReflectUtils {
         } catch (ClassNotFoundException e) {
             return false;
         }
+    }
+
+    public static Class<?> defineClass(byte[] c) throws InvocationTargetException, IllegalAccessException {
+        return (Class<?>) LOOKUP_DEFINE_CLASS_METHOD.invoke(MethodHandles.lookup(), c);
     }
 
     private static String toUpperFirstLetter(String fieldName) {

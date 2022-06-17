@@ -1,6 +1,8 @@
 package cn.cheny.toolbox.POIUtils.exception;
 
-public class WorkBookReadException extends RuntimeException {
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
+
+public class WorkBookReadException extends ToolboxRuntimeException {
 
     public WorkBookReadException(String message) {
         super(message);

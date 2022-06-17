@@ -1,66 +1,78 @@
 package cn.cheny.toolbox.redis.client;
 
-import java.util.Collection;
+import redis.clients.jedis.JedisPubSub;
+
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 定义通用的redis api接口
+ *
+ * @author cheney
+ * @date 2020-11-06
+ */
 public interface RedisClient<V> {
 
-    //------------------------------ common ------------------------------
+    Boolean exists(String key);
 
-    void expire(String k, int days);
+    boolean expire(String key, long time, TimeUnit timeUnit);
 
-    void expire(String k, long timeout, TimeUnit timeUnit);
+    Long expireAt(String key, long unixTime);
 
-    void delete(String k);
+    Long pexpireAt(String key, long millisecondsTimestamp);
 
-    void removeKey(String k);
+    void del(String... key);
 
-    boolean exists(String k);
+    void set(V key, V val);
 
-    long getExpire(String k, TimeUnit timeUnit);
+    V get(String key);
 
-    //------------------------------ value ------------------------------
+    Long decrBy(String key, long decrement);
 
-    void setValue(String k, V v, int days);
+    Long decr(String key);
 
-    void setValue(String k, V v);
+    Long incrBy(String key, long increment);
 
-    V getValue(String k);
+    Double incrByFloat(String key, double increment);
 
-    //------------------------------ list ------------------------------
+    Long incr(String key);
 
-    void addList(String k, List<V> values);
+    void hset(String key, String hkey, V hval);
 
-    void addList(String k, V v);
+    void hset(String key, Map<String, V> map);
 
-    void rightPushList(String k, List<V> values);
+    V hget(String key, String hkey);
 
-    void rightPush(String k, V v);
+    String hmset(String key, Map<String, V> hash);
 
-    void leftPushList(String k, List<V> values);
+    List<V> hmget(String key, String... fields);
 
-    void leftPush(String k, V v);
+    Map<String, V> hgetall(String key);
 
-    List<V> getList(String k);
+    Long hincrBy(String key, String field, long value);
 
-    V rightPop(String k);
+    boolean hexists(String key, String field);
 
-    V leftPop(String k);
+    Long hdel(String key, String... field);
 
-    Long listSize(String k);
+    Long hlen(String key);
 
-    //------------------------------ hash common------------------------------
+    Set<String> hkeys(String key);
 
-    boolean hHasKey(String k, String hk);
+    List<V> hvals(String key);
 
-    Set<String> hKeys(String k);
+    Object eval(String script, List<String> Keys, List<String> Args);
 
-    long hDel(String k, String hk);
+    void publish(String channel, String msg);
 
-    List<V> hValues(String k, Collection<String> hks);
+    void psubscribe(JedisPubSub jedisPubSub, String channel);
 
-    List<V> hValues(String k);
+    Object getSource();
+
+    void close();
+
+    boolean isClose();
 
 }

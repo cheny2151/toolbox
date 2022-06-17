@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
-import cn.cheny.toolbox.redis.client.jedis.JedisClient;
+import cn.cheny.toolbox.redis.client.RedisClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -8,16 +8,16 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * jedis实现Lua脚本执行器
+ * jedis命令执行器
  *
  * @author cheney
  * @date 2020-10-26
  */
 public class JedisExecutor implements RedisExecutor {
 
-    private JedisClient jedisClient;
+    private RedisClient<String> jedisClient;
 
-    public JedisExecutor(JedisClient jedisClient) {
+    public JedisExecutor(RedisClient<String> jedisClient) {
         this.jedisClient = jedisClient;
     }
 
@@ -29,8 +29,23 @@ public class JedisExecutor implements RedisExecutor {
     }
 
     @Override
+    public void set(String key, String val) {
+        jedisClient.set(key, val);
+    }
+
+    @Override
+    public String get(String key) {
+        return jedisClient.get(key);
+    }
+
+    @Override
     public void del(String key) {
         jedisClient.del(key);
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        return jedisClient.exists(key);
     }
 
     @Override
@@ -39,19 +54,43 @@ public class JedisExecutor implements RedisExecutor {
     }
 
     @Override
-    public void expire(String key, long time, TimeUnit timeUnit) {
-        jedisClient.expire(key, time, timeUnit);
+    public String hget(String key, String hkey) {
+        return jedisClient.hget(key, hkey);
     }
 
     @Override
-    public boolean hasKey(String key) {
-        Boolean hasKey = jedisClient.hasKey(key);
-        return hasKey != null && hasKey;
-    }
-
-    @Override
-    public void hset(String key, Map<String, String> map) {
+    public void hmset(String key, Map<String, String> map) {
         jedisClient.hset(key, map);
+    }
+
+    @Override
+    public void hset(String key, String hk, String hv) {
+        jedisClient.hset(key, hk, hv);
+    }
+
+    @Override
+    public Long hincrBy(String key, String hk, long val) {
+        return jedisClient.hincrBy(key, hk, val);
+    }
+
+    @Override
+    public void hdel(String key, String... hkey) {
+        jedisClient.hdel(key, hkey);
+    }
+
+    @Override
+    public boolean expire(String key, long time, TimeUnit timeUnit) {
+        return jedisClient.expire(key, time, timeUnit);
+    }
+
+    @Override
+    public Long incr(String key) {
+        return jedisClient.incr(key);
+    }
+
+    @Override
+    public Long incrBy(String key, long val) {
+        return jedisClient.incrBy(key, val);
     }
 
     @Override

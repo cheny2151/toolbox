@@ -28,4 +28,9 @@ public class ReadWriteRedisLock extends RedisLockAdaptor {
     public boolean tryLock(long waitTime, long leaseTime, TimeUnit timeUnit) {
         return false;
     }
+
+    @Override
+    public boolean tryLock(long waitTime, TimeUnit timeUnit) {
+        return false;
+    }
 }

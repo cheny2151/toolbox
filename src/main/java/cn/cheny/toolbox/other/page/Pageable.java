@@ -39,12 +39,21 @@ public class Pageable extends PageInfo {
      * @param filter 过滤条件
      * @return Filters
      */
-    public Filters addFilter(Filter filter) {
+    public Filters andFilter(Filter filter) {
         Filters filters = this.filters;
         if (filters == null) {
             filters = this.filters = new Filters();
         }
-        filters.add(filter);
+        filters.andFilter(filter);
+        return filters;
+    }
+
+    public Filters orFilter(Filter filter) {
+        Filters filters = this.filters;
+        if (filters == null) {
+            filters = this.filters = new Filters();
+        }
+        filters.orFilter(filter);
         return filters;
     }
 

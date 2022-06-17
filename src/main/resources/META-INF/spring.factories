@@ -1,5 +1,6 @@
 # Auto Configure
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 cn.cheny.toolbox.spring.SpringToolAutoConfig,\
-cn.cheny.toolbox.redis.SpringRedisLockAutoConfig,\
-cn.cheny.toolbox.entityCache.spring.SpringEntityCacheAutoConfig
+cn.cheny.toolbox.redis.SpringToolboxRedisAutoConfig,\
+cn.cheny.toolbox.entityCache.spring.SpringEntityCacheAutoConfig,\
+cn.cheny.toolbox.coordinator.RedisCoordinatorAutoConfig

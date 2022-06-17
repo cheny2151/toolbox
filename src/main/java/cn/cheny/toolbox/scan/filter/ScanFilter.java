@@ -14,18 +14,37 @@ public class ScanFilter {
 
     private List<Class<? extends Annotation>> hasAnnotations;
 
+    private List<Class<? extends Annotation>> existMethodAnnotations;
+
     private Class<?> superClass;
 
-    public ScanFilter() {
-        hasAnnotations = new ArrayList<>();
+    public ScanFilter addAnnotation(Class<? extends Annotation> annotation) {
+        if (hasAnnotations == null) {
+            hasAnnotations = new ArrayList<>();
+        }
+        hasAnnotations.add(annotation);
+        return this;
     }
 
-    public void addAnnotation(Class<? extends Annotation> annotation) {
-        hasAnnotations.add(annotation);
+    public ScanFilter existMethodAnnotations(Class<? extends Annotation> annotation) {
+        if (existMethodAnnotations == null) {
+            existMethodAnnotations = new ArrayList<>();
+        }
+        existMethodAnnotations.add(annotation);
+        return this;
+    }
+
+    public ScanFilter superClass(Class<?> superClass) {
+        this.superClass = superClass;
+        return this;
     }
 
     public List<Class<? extends Annotation>> getHasAnnotations() {
         return hasAnnotations;
+    }
+
+    public List<Class<? extends Annotation>> getExistMethodAnnotations() {
+        return existMethodAnnotations;
     }
 
     public Class<?> getSuperClass() {

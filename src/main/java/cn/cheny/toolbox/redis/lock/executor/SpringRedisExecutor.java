@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
-import cn.cheny.toolbox.redis.clustertask.TaskConfig;
+import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import cn.cheny.toolbox.redis.exception.RedisScriptException;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
@@ -26,7 +26,19 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class SpringRedisExecutor implements RedisExecutor {
 
+    /**
+     * 连接模式
+     * 1:jedis;2:JedisCluster;3:lettuce
+     */
+    private final static int CONNECTION_UNCHECK = 0;
+    private final static int CONNECTION_JEDIS = 1;
+    private final static int CONNECTION_JEDISCLUSTER = 2;
+    private final static int CONNECTION_LETTUCE = 3;
+
+    private int connectionModel = CONNECTION_UNCHECK;
+
     private final RedisTemplate<String, String> redisTemplate;
+
 
     public SpringRedisExecutor(RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
@@ -38,20 +50,19 @@ public class SpringRedisExecutor implements RedisExecutor {
     }
 
     @Override
-    public void del(String key) {
-        byte[] rawKey = key.getBytes(StandardCharsets.UTF_8);
-        redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
+    public void set(String key, String val) {
+        redisTemplate.opsForValue().set(key, val);
     }
 
     @Override
-    public Map<String, String> hgetall(String key) {
+    public String get(String key) {
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    @Override
+    public String hget(String key, String hkey) {
         HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
-        return hashOperations.entries(key);
-    }
-
-    @Override
-    public void expire(String key, long time, TimeUnit timeUnit) {
-        redisTemplate.expire(key, TaskConfig.KEY_EXPIRE_SECONDS, timeUnit);
+        return hashOperations.get(key, hkey);
     }
 
     @Override
@@ -61,8 +72,52 @@ public class SpringRedisExecutor implements RedisExecutor {
     }
 
     @Override
-    public void hset(String key, Map<String, String> map) {
+    public void del(String key) {
+        byte[] rawKey = key.getBytes(StandardCharsets.UTF_8);
+        redisTemplate.execute(connection -> connection.del(new byte[][]{rawKey}), true);
+    }
+
+    @Override
+    public boolean expire(String key, long time, TimeUnit timeUnit) {
+        Boolean expire = redisTemplate.expire(key, time, timeUnit);
+        return expire != null && expire;
+    }
+
+    @Override
+    public Long incr(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
+
+    @Override
+    public Long incrBy(String key, long val) {
+        return redisTemplate.opsForValue().increment(key, val);
+    }
+
+    @Override
+    public Map<String, String> hgetall(String key) {
+        HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
+        return hashOperations.entries(key);
+    }
+
+    @Override
+    public void hmset(String key, Map<String, String> map) {
         redisTemplate.opsForHash().putAll(key, map);
+    }
+
+    @Override
+    public void hset(String key, String hk, String hv) {
+        redisTemplate.opsForHash().put(key, hk, hv);
+    }
+
+    @Override
+    public Long hincrBy(String key, String hk, long val) {
+        return redisTemplate.opsForHash().increment(key, hk, val);
+    }
+
+    @Override
+    public void hdel(String key, String... hkey) {
+        HashOperations<String, String, String> hashOperations = redisTemplate.opsForHash();
+        hashOperations.delete(key, (Object[]) hkey);
     }
 
     @Override
@@ -79,13 +134,20 @@ public class SpringRedisExecutor implements RedisExecutor {
 
                 Object nativeConnection = redisConnection.getNativeConnection();
                 Object result;
-                if (nativeConnection instanceof Jedis) {
-                    // 单机模式
+                if (connectionModel == CONNECTION_UNCHECK &&
+                        !tryJedis(nativeConnection) &&
+                        !tryJedisCluster(nativeConnection) &&
+                        !tryLettuce(nativeConnection)) {
+                    throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
+                            + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
+                }
+                if (connectionModel == CONNECTION_JEDIS) {
+                    // jedis单机模式
                     result = ((Jedis) nativeConnection).eval(script, finalKeys, finalArgs);
-                } else if (nativeConnection instanceof JedisCluster) {
-                    // 集群模式
+                } else if (connectionModel == CONNECTION_JEDISCLUSTER) {
+                    // jedis集群模式
                     result = ((JedisCluster) nativeConnection).eval(script, finalKeys, finalArgs);
-                } else if (nativeConnection instanceof RedisScriptingAsyncCommands) {
+                } else {
                     // lettuce
                     try {
                         @SuppressWarnings("unchecked")
@@ -101,16 +163,14 @@ public class SpringRedisExecutor implements RedisExecutor {
                         }
                         throw new RedisScriptException("Error running redis lua script", e);
                     }
-                } else {
-                    throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
-                            + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
                 }
-
                 return result;
             });
-        } catch (RedisScriptException rse) {
-            throw rse;
-        } catch (Throwable e) {
+        } catch (
+                RedisRuntimeException rre) {
+            throw rre;
+        } catch (
+                Throwable e) {
             throw new RedisScriptException("Error running redis lua script", e);
         }
 
@@ -118,5 +178,41 @@ public class SpringRedisExecutor implements RedisExecutor {
 
     private Object[] toBytes(List<String> list) {
         return list.stream().map(String::getBytes).toArray();
+    }
+
+    private boolean tryJedis(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof Jedis) {
+                this.connectionModel = CONNECTION_JEDIS;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
+    }
+
+    private boolean tryJedisCluster(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof JedisCluster) {
+                this.connectionModel = CONNECTION_JEDISCLUSTER;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
+    }
+
+    private boolean tryLettuce(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof RedisScriptingAsyncCommands) {
+                this.connectionModel = CONNECTION_LETTUCE;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
     }
 }

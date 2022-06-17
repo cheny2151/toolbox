@@ -1,17 +1,13 @@
 package cn.cheny.toolbox.other.filter;
 
-import java.util.Collection;
-
 public class InFilter extends Filter {
 
-    private static final String inSymbol = "in";
-
-    public <T> InFilter(String property, Collection<T> value) {
-        super(inSymbol, property, value);
+    protected InFilter(String property, Object value, String connectionSymbol) {
+        super(Filters.Operator.IN.getScript(), property, value, connectionSymbol);
     }
 
-    public <T> InFilter(String property, T[] value) {
-        super(inSymbol, property, value);
+    @Override
+    public String toString() {
+        return this.getProperty() + " " + this.getSymbol() + "(" + formatSqlVal() + ")";
     }
-
 }

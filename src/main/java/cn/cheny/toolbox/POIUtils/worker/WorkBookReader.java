@@ -114,7 +114,7 @@ public class WorkBookReader {
     private <T> ReadResult<T> read(Workbook workbook, Class<T> targetClass) throws IllegalAccessException, InvocationTargetException {
         //数据出现行数,从0开始算
         ExcelHead excelHead = targetClass.getAnnotation(ExcelHead.class);
-        int titleRowNum = 1;
+        int titleRowNum = 0;
         int lastRowNum;
         String sheetName = null;
         if (excelHead != null) {
@@ -321,7 +321,7 @@ public class WorkBookReader {
             }
             titleMap.put(title, cell.getColumnIndex());
         });
-        for (Field field : ReflectUtils.getAllFields(targetClass, Object.class)) {
+        for (Field field : ReflectUtils.getPropertyFields(targetClass, Object.class)) {
             ExcelData annotation = field.getAnnotation(ExcelData.class);
             if (annotation != null) {
                 ExcelData.SwitchType type = annotation.type();

@@ -12,14 +12,19 @@ import static cn.cheny.toolbox.redis.lock.autolease.LeaseConstant.USE_LEASE_THRE
 public class Lease {
 
     /**
+     * 永久续租过期时间
+     */
+    private final static long PERMANENT = -1;
+
+    /**
      * 到期时间戳
      */
-    private long expire;
+    private final long expire;
 
     /**
      * 续租的redis key
      */
-    private String key;
+    private final String key;
 
     /**
      * 是否已完成续租
@@ -36,7 +41,7 @@ public class Lease {
      * @param key       key
      */
     public Lease(long lockTime, long leaseTime, String key) {
-        this.expire = lockTime + leaseTime;
+        this.expire = leaseTime > 0 ? lockTime + leaseTime : PERMANENT;
         this.key = key;
     }
 
@@ -46,6 +51,9 @@ public class Lease {
      * @return 续租时间
      */
     public long getLeaseTime() {
+        if (expire == PERMANENT) {
+            return DURATION;
+        }
         long currentTime = System.currentTimeMillis();
         long remainingExpire = expire - currentTime;
         if (remainingExpire <= 0) {

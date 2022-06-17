@@ -1,6 +1,6 @@
 package cn.cheny.toolbox.redis.proxy;
 
-import cn.cheny.toolbox.redis.client.RedisClient;
+import cn.cheny.toolbox.redis.client.RedisApi;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.InvocationHandler;
@@ -19,22 +19,22 @@ public class RedisLogProxy implements InvocationHandler {
     /**
      * jdk代理的对象必须存在接口
      */
-    private RedisClient redisClient;
+    private RedisApi redisApi;
 
-    public RedisLogProxy(RedisClient redisClient) {
-        this.redisClient = redisClient;
+    public RedisLogProxy(RedisApi redisApi) {
+        this.redisApi = redisApi;
     }
 
-    public static RedisClient newProxyInstance(RedisClient redisClient) {
-        RedisLogProxy redisLogProxy = new RedisLogProxy(redisClient);
-        return (RedisClient) Proxy.newProxyInstance(RedisClient.class.getClassLoader(), new Class[]{RedisClient.class}, redisLogProxy);
+    public static RedisApi newProxyInstance(RedisApi redisApi) {
+        RedisLogProxy redisLogProxy = new RedisLogProxy(redisApi);
+        return (RedisApi) Proxy.newProxyInstance(RedisApi.class.getClassLoader(), new Class[]{RedisApi.class}, redisLogProxy);
     }
 
     @Override
     public Object invoke(Object o, Method method, Object[] objects) throws Throwable {
         log.info("jdk代理...");
         try {
-            return method.invoke(redisClient, objects);
+            return method.invoke(redisApi, objects);
         } catch (Exception e) {
             log.error("jdk代理...:{}", e.getMessage());
             throw e;

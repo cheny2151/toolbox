@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.reflect.methodHolder;
 
+import cn.cheny.toolbox.reflect.TypeUtils;
 import cn.cheny.toolbox.reflect.methodHolder.exception.MethodHolderInvokeException;
 import cn.cheny.toolbox.reflect.methodHolder.exception.NoSuchMethodException;
 import cn.cheny.toolbox.reflect.methodHolder.model.MetaMethodCollect;
@@ -7,7 +8,9 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -62,19 +65,33 @@ public abstract class BaseMethodHolder implements MethodHolder {
             Class<?> parameterType;
             if (args == null) {
                 // 参数为null时填充null数组为入参
-                return method.invoke(obj, createNullArray(parameterCount));
+                return doInvoke(method, obj, createNullArray(parameterCount));
             } else if (parameterCount > 0
                     && (parameterType = method.getParameterTypes()[parameterCount - 1]).isArray()) {
                 // 不定参数必在最后一位,对不定参数进行参数修复
                 Class<?> componentType = parameterType.getComponentType();
-                return method.invoke(obj, castToObjectArray(args, componentType, parameterCount));
+                return doInvoke(method, obj, castToObjectArray(args, componentType, parameterCount));
             } else {
-                return method.invoke(obj, args);
+                return doInvoke(method, obj, args);
             }
         } catch (Exception e) {
             throw new MethodHolderInvokeException("执行方法:" + holdClass.getSimpleName() + "#" + method.getName() + "异常，" +
                     "方法入参:" + JSON.toJSONString(args), e);
         }
+    }
+
+    /**
+     * 执行method
+     *
+     * @param method 方法
+     * @param obj    对象
+     * @param args   参数
+     * @return 方法执行结果
+     * @throws InvocationTargetException 异常
+     * @throws IllegalAccessException    异常
+     */
+    protected Object doInvoke(Method method, Object obj, Object... args) throws InvocationTargetException, IllegalAccessException {
+        return method.invoke(obj, args);
     }
 
     @Override
@@ -170,21 +187,31 @@ public abstract class BaseMethodHolder implements MethodHolder {
      * @return 修复后的数据
      */
     private Object[] castToObjectArray(Object[] args, Class<?> arrayType, int parameterCount) {
-        // 如果入参与方法参数长度一致，并且最后一个入参即为array类型，则直接返回原入参
-        if (args.length == parameterCount && args[parameterCount - 1].getClass().isArray()) {
-            return args;
+        // 如果入参与方法参数长度一致，并且最后一个入参即为array类型/Collection类型，则直接返回原入参
+        int lastIndex = parameterCount - 1;
+        if (args.length == parameterCount) {
+            Object lastArg = args[lastIndex];
+            Class<?> lastArgsClass = lastArg.getClass();
+            if (lastArgsClass.isArray()) {
+                return args;
+            } else if (Collection.class.isAssignableFrom(lastArgsClass)) {
+                Object fixArgs = TypeUtils.collectionToArrayObject((Collection<?>) lastArg, arrayType);
+                args[lastIndex] = fixArgs;
+                return args;
+            }
         }
         Object[] fixArgs = new Object[parameterCount];
-        int defineNum = parameterCount - 1;
-        // 非不定参数不变，copy
-        System.arraycopy(args, 0, fixArgs, 0, defineNum);
+        if (lastIndex != 0) {
+            // 非不定参数不变，copy
+            System.arraycopy(args, 0, fixArgs, 0, lastIndex);
+        }
         // 通过反射将不定参数包装到array中，存到fixArgs最后一位
         Object array = Array.newInstance(arrayType, args.length - parameterCount + 1);
         int index = 0;
-        for (int i = defineNum; i < args.length; i++) {
+        for (int i = lastIndex; i < args.length; i++) {
             Array.set(array, index++, args[i]);
         }
-        fixArgs[defineNum] = array;
+        fixArgs[lastIndex] = array;
         return fixArgs;
     }
 

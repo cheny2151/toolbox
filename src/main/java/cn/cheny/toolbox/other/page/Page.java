@@ -58,7 +58,7 @@ public class Page<T> extends PageInfo {
         return page;
     }
 
-    public static <T> Page<T> build(long total, Pageable page, List<T> list) {
+    public static <T> Page<T> build(long total, PageInfo page, Collection<T> list) {
         return build(total, page.getPageSize(), page.getPageNumber(), list);
     }
 }
