@@ -554,7 +554,7 @@ public class ReflectUtils {
         return toLowerFirstLetter(fieldName);
     }
 
-    private static <T> SerializedLambda getSerializedLambda(Serializable serializable) {
+    private static SerializedLambda getSerializedLambda(Serializable serializable) {
         try {
             Class<?> getterClass = serializable.getClass();
             Method writeReplace = getterClass.getDeclaredMethod("writeReplace");
