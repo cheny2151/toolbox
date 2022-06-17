@@ -417,6 +417,8 @@ public class TypeUtils {
             return (T) collectionToArrayObject((Collection<?>) obj, objType.getComponentType());
         } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
             return (T) arrayToCollection(obj, objType, class0.getComponentType());
+        } else if (obj instanceof String && objType.isEnum()) {
+            return (T) Enum.valueOf((Class<? extends Enum>) objType, (String) obj);
         }
         throw new ParseTokenException(class0 + " can not convert to " + objType);
     }
