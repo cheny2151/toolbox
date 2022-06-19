@@ -21,7 +21,7 @@ public class MultiPathRedisLock extends AwakenRedisLock {
     /**
      * 多路径path
      */
-    private Set<String> multiPaths;
+    private final Set<String> multiPaths;
 
     public MultiPathRedisLock(String path, Collection<String> multiPaths) {
         super(path);
@@ -67,7 +67,7 @@ public class MultiPathRedisLock extends AwakenRedisLock {
 
     @Override
     public String pathPreLabel() {
-        return "MULTI_LOCK";
+        return toolboxRedisProperties.getMultiLockPrePath();
     }
 
 }

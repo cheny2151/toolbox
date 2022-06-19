@@ -10,6 +10,17 @@ import java.util.concurrent.TimeUnit;
 public interface RedisLock extends AutoCloseable {
 
     /**
+     * 构建redis key，计算key的hash只会用到{}内的内容
+     *
+     * @param hashPath 作为hash的部分path
+     * @param path     业务path
+     * @return key
+     */
+    static String buildKey(String hashPath, String path) {
+        return "{" + hashPath + "}:" + path;
+    }
+
+    /**
      * 锁资源的标识path
      */
     String getPath();

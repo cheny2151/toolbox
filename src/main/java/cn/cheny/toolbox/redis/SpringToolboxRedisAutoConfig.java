@@ -9,7 +9,7 @@ import cn.cheny.toolbox.redis.clustertask.sub.ClusterTaskSubscriber;
 import cn.cheny.toolbox.redis.clustertask.sub.SpringClusterTaskRedisSub;
 import cn.cheny.toolbox.redis.clustertask.sub.SpringClusterTaskSubscriberHolder;
 import cn.cheny.toolbox.redis.factory.SpringRedisManagerFactory;
-import cn.cheny.toolbox.redis.lock.LockConstant;
+import cn.cheny.toolbox.redis.lock.RedisLock;
 import cn.cheny.toolbox.redis.lock.awaken.listener.SpringSubLockManager;
 import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import cn.cheny.toolbox.spring.SpringToolAutoConfig;
@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
@@ -34,12 +35,10 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTER_TASK_CHANNEL_PRE_KEY;
 
@@ -54,7 +53,14 @@ import static cn.cheny.toolbox.redis.clustertask.pub.ClusterTaskPublisher.CLUSTE
 @ConditionalOnClass({RedisTemplate.class})
 @ConditionalOnBean({RedisConnectionFactory.class})
 @Conditional(ConditionalOnToolBoxRedisEnable.class)
+@EnableConfigurationProperties({ToolboxRedisProperties.class})
 public class SpringToolboxRedisAutoConfig {
+
+    private final ToolboxRedisProperties toolboxRedisProperties;
+
+    public SpringToolboxRedisAutoConfig(ToolboxRedisProperties toolboxRedisProperties) {
+        this.toolboxRedisProperties = toolboxRedisProperties;
+    }
 
     @Bean
     @ConditionalOnMissingBean(name = "stringRedisTemplate")
@@ -103,7 +109,8 @@ public class SpringToolboxRedisAutoConfig {
     public RedisConfiguration redisConfiguration(SpringSubLockManager springSubLockManager,
                                                  @Qualifier("stringRedisTemplate") StringRedisTemplate stringRedisTemplate) {
         SpringRedisManagerFactory setRedisManagerFactory = new SpringRedisManagerFactory(springSubLockManager, stringRedisTemplate);
-        RedisConfiguration.setDefaultRedisManagerFactory(setRedisManagerFactory);
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(setRedisManagerFactory);
+        RedisConfiguration.DEFAULT.setToolboxRedisProperties(toolboxRedisProperties);
         return RedisConfiguration.DEFAULT;
     }
 
@@ -140,7 +147,14 @@ public class SpringToolboxRedisAutoConfig {
         RedisMessageListenerContainer container = new RedisMessageListenerContainer();
         container.setConnectionFactory(redisConnectionFactory);
         Map<MessageListener, Collection<? extends Topic>> messageListeners = new HashMap<>();
-        messageListeners.put(springSubLockManager, Collections.singleton(new PatternTopic(LockConstant.LOCK_CHANNEL + "*")));
+        String reentryLockPrePath = toolboxRedisProperties.getReentryLockPrePath();
+        String multiLockPrePath = toolboxRedisProperties.getMultiLockPrePath();
+        String secondLevelLockPrePath = toolboxRedisProperties.getSecondLevelLockPrePath();
+        Set<String> prePaths = new HashSet<>();
+        prePaths.add(RedisLock.buildKey(reentryLockPrePath, "*"));
+        prePaths.add(RedisLock.buildKey(multiLockPrePath, "*"));
+        prePaths.add(RedisLock.buildKey(secondLevelLockPrePath, "*"));
+        messageListeners.put(springSubLockManager, prePaths.stream().map(PatternTopic::new).collect(Collectors.toList()));
         clusterTaskRedisSub.ifAvailable(bean ->
                 messageListeners.put(bean, Collections.singleton(new PatternTopic(CLUSTER_TASK_CHANNEL_PRE_KEY + "*")))
         );

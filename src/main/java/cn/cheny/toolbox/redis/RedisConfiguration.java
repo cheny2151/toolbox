@@ -1,7 +1,9 @@
 package cn.cheny.toolbox.redis;
 
+import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * redis全局配置
@@ -15,6 +17,8 @@ public class RedisConfiguration {
 
     private RedisManagerFactory redisManagerFactory;
 
+    private ToolboxRedisProperties toolboxRedisProperties;
+
     private RedisConfiguration() {
     }
 
@@ -25,11 +29,24 @@ public class RedisConfiguration {
         return redisManagerFactory;
     }
 
+    public ToolboxRedisProperties getToolboxRedisProperties() {
+        if (toolboxRedisProperties == null) {
+            throw new RedisRuntimeException("please check RedisConfiguration.DEFAULT,it has not config ToolboxRedisProperties");
+        }
+        return toolboxRedisProperties;
+    }
+
     public void setRedisManagerFactory(RedisManagerFactory redisManagerFactory) {
         this.redisManagerFactory = redisManagerFactory;
     }
 
-    public static void setDefaultRedisManagerFactory(RedisManagerFactory redisManagerFactory) {
-        DEFAULT.setRedisManagerFactory(redisManagerFactory);
+    public void setToolboxRedisProperties(ToolboxRedisProperties toolboxRedisProperties) {
+        if (StringUtils.isEmpty(toolboxRedisProperties.getReentryLockPrePath()) ||
+                StringUtils.isEmpty(toolboxRedisProperties.getReentryLockPrePath()) ||
+                StringUtils.isEmpty(toolboxRedisProperties.getReentryLockPrePath())) {
+            throw new ToolboxRuntimeException("Lock pre path can not be empty");
+        }
+        this.toolboxRedisProperties = toolboxRedisProperties;
     }
+
 }

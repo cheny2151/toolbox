@@ -30,7 +30,8 @@ public class ClientTest {
         JedisClientFactory factory = new JedisClientFactory("localhost");
         RedisClient<String> jedisClient = factory.cacheClient();
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
-        RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(jedisLockFactory);
+        RedisConfiguration.DEFAULT.setToolboxRedisProperties(new ToolboxRedisProperties());
         new Thread(() -> {
             try (RedisLock redisLock = new ReentrantRedisLock("test")) {
                 if (redisLock.tryLock(30000, 1000 * 60 * 3, TimeUnit.MILLISECONDS)) {
@@ -60,7 +61,7 @@ public class ClientTest {
         JedisClientFactory factory = new JedisClientFactory("localhost");
         RedisClient<String> jedisClient = factory.cacheClient();
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
-        RedisConfiguration.setDefaultRedisManagerFactory(jedisLockFactory);
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(jedisLockFactory);
         int[] num = new int[]{0};
         ExecutorService executorService = Executors.newFixedThreadPool(16);
         List<Callable<Integer>> runnables = new ArrayList<>();
@@ -90,7 +91,7 @@ public class ClientTest {
     public void testForCluster() throws InterruptedException {
         JedisClientFactory factory = new JedisClientFactory("localhost", null, null, null);
         RedisClient<String> jedisClient = factory.cacheClient();
-        RedisConfiguration.setDefaultRedisManagerFactory(new JedisManagerFactory(jedisClient));
+        RedisConfiguration.DEFAULT.setRedisManagerFactory(new JedisManagerFactory(jedisClient));
         ClusterTaskPublisher clusterTaskPublisher = JedisClusterHelper.initJedisCluster(factory);
         clusterTaskPublisher.publish("test", 100, 10, 1, true);
         Thread.sleep(10000);

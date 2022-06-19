@@ -35,12 +35,12 @@ public class SecondLevelRedisLock extends AwakenRedisLock {
     /**
      * master锁标识
      */
-    private String secondPath;
+    private final String secondPath;
 
     /**
      * 0：一级锁，1：二级锁
      */
-    private short type;
+    private final short type;
 
     private SecondLevelRedisLock(String firstPath, String secondPath) {
         super(firstPath);
@@ -117,7 +117,7 @@ public class SecondLevelRedisLock extends AwakenRedisLock {
 
     @Override
     public String pathPreLabel() {
-        return "SECOND_LEVEL_LOCK";
+        return toolboxRedisProperties.getSecondLevelLockPrePath();
     }
 
     /**

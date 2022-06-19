@@ -61,7 +61,7 @@ public class ReentrantRedisLock extends AwakenRedisLock {
 
     @Override
     public String pathPreLabel() {
-        return "REENTRANT_LOCK";
+        return toolboxRedisProperties.getReentryLockPrePath();
     }
 
 }

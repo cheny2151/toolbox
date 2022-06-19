@@ -1,6 +1,7 @@
 package cn.cheny.toolbox.redis.lock;
 
 import cn.cheny.toolbox.redis.RedisConfiguration;
+import cn.cheny.toolbox.redis.ToolboxRedisProperties;
 import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
 import cn.cheny.toolbox.redis.lock.autolease.AutoLeaseHolder;
 import cn.cheny.toolbox.redis.lock.autolease.Lease;
@@ -16,7 +17,7 @@ import java.util.UUID;
  * 加了{ } 就只会用花括号里面的字符串做哈希，所以同样{}的key一定可以在同一个slot，而lua脚本里有多个key的情况下，为了保证
  * 原子性操作，如果有两个或以上key落在不同的slot则会报错--> No way to dispatch this command to Redis Cluster because keys have different slots.
  * 所以为了保证每个key都落在同一个slot上，可以在key上引入相同的{ }字符串
- *
+ * <p>
  * update log
  * v1.1 20190624 isLock修改为ThreadLocal<Boolean> 保证一个锁对象被多线程使用时的线程安全
  */
@@ -64,6 +65,11 @@ public abstract class RedisLockAdaptor implements RedisLock {
     private final AutoLeaseHolder autoLeaseHolder;
 
     /**
+     * redis相关配置
+     */
+    protected final ToolboxRedisProperties toolboxRedisProperties;
+
+    /**
      * 是否执行续期
      */
     private final ThreadLocal<Boolean> useLease = new ThreadLocal<>();
@@ -71,10 +77,11 @@ public abstract class RedisLockAdaptor implements RedisLock {
     private static final String SERVER_ID = UUID.randomUUID().toString();
 
     public RedisLockAdaptor(String path) {
-        this.path = "{" + pathPreLabel() + "}:" + path;
         RedisManagerFactory redisManagerFactory = RedisConfiguration.DEFAULT.getRedisManagerFactory();
         this.redisExecutor = redisManagerFactory.getRedisExecutor();
         this.autoLeaseHolder = redisManagerFactory.getAutoLeaseHolder();
+        this.toolboxRedisProperties = RedisConfiguration.DEFAULT.getToolboxRedisProperties();
+        this.path = RedisLock.buildKey(pathPreLabel(), path);
     }
 
 
