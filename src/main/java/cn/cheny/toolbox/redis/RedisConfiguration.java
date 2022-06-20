@@ -24,14 +24,14 @@ public class RedisConfiguration {
 
     public RedisManagerFactory getRedisManagerFactory() {
         if (redisManagerFactory == null) {
-            throw new RedisRuntimeException("please check RedisConfiguration.DEFAULT,it has not config RedisLockFactory");
+            throw new RedisRuntimeException("Please check the RedisConfiguration.DEFAULT,it has not configured RedisLockFactory");
         }
         return redisManagerFactory;
     }
 
     public ToolboxRedisProperties getToolboxRedisProperties() {
         if (toolboxRedisProperties == null) {
-            throw new RedisRuntimeException("please check RedisConfiguration.DEFAULT,it has not config ToolboxRedisProperties");
+            throw new RedisRuntimeException("Please check the RedisConfiguration.DEFAULT,it has not configured ToolboxRedisProperties");
         }
         return toolboxRedisProperties;
     }
