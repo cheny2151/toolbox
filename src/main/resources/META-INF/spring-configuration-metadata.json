@@ -1,6 +1,11 @@
 {
   "groups": [
     {
+      "name": "toolbox.redis",
+      "type": "cn.cheny.toolbox.redis.ToolboxRedisProperties",
+      "sourceType": "cn.cheny.toolbox.redis.ToolboxRedisProperties"
+    },
+    {
       "name": "toolbox.entity-cache",
       "type": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
       "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties"
@@ -17,6 +22,34 @@
     }
   ],
   "properties": [
+    {
+      "sourceType": "cn.cheny.toolbox.redis.ToolboxRedisProperties",
+      "name": "toolbox.redis.enable",
+      "type": "java.lang.Boolean",
+      "defaultValue": "true",
+      "description": "spring toolbox redis enable."
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.redis.ToolboxRedisProperties",
+      "name": "toolbox.redis.reentry-lock-pre-path",
+      "type": "java.lang.String",
+      "defaultValue": "REENTRANT_LOCK",
+      "description": "Reentry Lock Pre Path."
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.redis.ToolboxRedisProperties",
+      "name": "toolbox.redis.second-level-lock-pre-path",
+      "type": "java.lang.String",
+      "defaultValue": "SECOND_LEVEL_LOCK",
+      "description": "Second Level Lock Pre Path."
+    },
+    {
+      "sourceType": "cn.cheny.toolbox.redis.ToolboxRedisProperties",
+      "name": "toolbox.redis.multi-lock-pre-path",
+      "type": "java.lang.String",
+      "defaultValue": "MULTI_LOCK",
+      "description": "Multi Lock Pre Path."
+    },
     {
       "sourceType": "cn.cheny.toolbox.entityCache.spring.EntityBufferProperties",
       "name": "toolbox.entity-cache.enable",
