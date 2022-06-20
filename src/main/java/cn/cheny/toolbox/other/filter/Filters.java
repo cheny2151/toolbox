@@ -33,13 +33,11 @@ public class Filters {
 
         IN("in"),
 
+        NOT_IN("not in"),
+
         IS_NULL("is null"),
 
-        IS_NOT_NULL("is not null"),
-
-        AND("and"),
-
-        OR("or");
+        IS_NOT_NULL("is not null");
 
         private final String script;
 
@@ -49,6 +47,23 @@ public class Filters {
 
         public String getScript() {
             return script;
+        }
+    }
+
+    public enum Connection {
+
+        AND("and"),
+
+        OR("or");
+
+        private final String symbol;
+
+        Connection(String symbol) {
+            this.symbol = symbol;
+        }
+
+        public String getSymbol() {
+            return symbol;
         }
     }
 
@@ -73,24 +88,24 @@ public class Filters {
     }
 
     public Filters andFilter(Filter filter) {
-        this.filters.add(new FilterSegment(filter, Operator.AND.getScript()));
+        this.filters.add(new FilterSegment(filter, Connection.AND.getSymbol()));
         return this;
     }
 
     public Filters orFilter(Filter filter) {
-        this.filters.add(new FilterSegment(filter, Operator.OR.getScript()));
+        this.filters.add(new FilterSegment(filter, Connection.OR.getSymbol()));
         return this;
     }
 
     public Filters andFilter(Filter filter, String tableName) {
         concatTableName(filter, tableName);
-        this.filters.add(new FilterSegment(filter, Operator.AND.getScript()));
+        this.filters.add(new FilterSegment(filter, Connection.AND.getSymbol()));
         return this;
     }
 
     public Filters orFilter(Filter filter, String tableName) {
         concatTableName(filter, tableName);
-        this.filters.add(new FilterSegment(filter, Operator.OR.getScript()));
+        this.filters.add(new FilterSegment(filter, Connection.OR.getSymbol()));
         return this;
     }
 
