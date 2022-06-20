@@ -1,5 +1,10 @@
 package cn.cheny.toolbox.redis.lock;
 
+import cn.cheny.toolbox.redis.lock.awaken.MultiPathRedisLock;
+import cn.cheny.toolbox.redis.lock.awaken.ReentrantRedisLock;
+import cn.cheny.toolbox.redis.lock.awaken.SecondLevelRedisLock;
+
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -63,4 +68,20 @@ public interface RedisLock extends AutoCloseable {
      */
     @Override
     void close();
+
+    static RedisLock reentrant(String path) {
+        return new ReentrantRedisLock(path);
+    }
+
+    static RedisLock multiPath(String path, Collection<String> multiPaths) {
+        return new MultiPathRedisLock(path, multiPaths);
+    }
+
+    static RedisLock firstLevel(String firstPath) {
+        return SecondLevelRedisLock.firstLevelLock(firstPath);
+    }
+
+    static RedisLock secondLevel(String firstPath, String secondPath) {
+        return SecondLevelRedisLock.secondLevelLock(firstPath, secondPath);
+    }
 }
