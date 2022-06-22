@@ -97,10 +97,18 @@ public class Filters {
         return this;
     }
 
+    public Filters andFilter(Filter filter, Class<?> entityClass) {
+        return this.andFilter(filter, getTableName(entityClass));
+    }
+
     public Filters andFilter(Filter filter, String tableName) {
         concatTableName(filter, tableName);
         this.filters.add(new FilterSegment(filter, Connection.AND.getSymbol()));
         return this;
+    }
+
+    public Filters orFilter(Filter filter, Class<?> entityClass) {
+        return this.andFilter(filter, getTableName(entityClass));
     }
 
     public Filters orFilter(Filter filter, String tableName) {
@@ -213,10 +221,24 @@ public class Filters {
     private void concatTableName(Filter filter, String tableName) {
         if (StringUtils.isNotBlank(tableName)) {
             while (filter != null) {
-                filter.setProperty(tableName + "." + filter.getProperty());
+                filter.setProperty(tableName + Filter.TABLE_CONNECTION + filter.getProperty());
                 filter = filter.getNext();
             }
         }
+    }
+
+    /**
+     * 获取表名
+     *
+     * @param entityClass 实体类型
+     * @return 表名
+     */
+    private String getTableName(Class<?> entityClass) {
+        TableAlias tableAlias = entityClass.getAnnotation(TableAlias.class);
+        if (tableAlias != null) {
+            return tableAlias.value();
+        }
+        return entityClass.getSimpleName();
     }
 
     private static class FilterSegment {

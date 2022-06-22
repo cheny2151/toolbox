@@ -17,6 +17,9 @@ import java.util.stream.Stream;
 
 public class Filter {
 
+    // 表/字段连接符
+    protected static String TABLE_CONNECTION = ".";
+
     // 是否下划线默认值
     private static boolean DEFAULT_USE_UNDERLINE = true;
 
@@ -65,8 +68,16 @@ public class Filter {
     }
 
     public String getProperty() {
+        String property = this.property;
         if (getUseUnderLine() && StringUtils.isNotEmpty(property)) {
-            property = PropertyNameUtils.underline(property);
+            if (property.contains(TABLE_CONNECTION)) {
+                String[] split = property.split(TABLE_CONNECTION);
+                if (split.length == 2) {
+                    property = split[0] + PropertyNameUtils.underline(split[1]);
+                }
+            } else {
+                property = PropertyNameUtils.underline(property);
+            }
         }
         return property;
     }

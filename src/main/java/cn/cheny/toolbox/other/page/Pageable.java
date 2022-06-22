@@ -2,6 +2,7 @@ package cn.cheny.toolbox.other.page;
 
 import cn.cheny.toolbox.other.filter.Filter;
 import cn.cheny.toolbox.other.filter.Filters;
+import cn.cheny.toolbox.other.filter.TableAlias;
 import cn.cheny.toolbox.other.order.Orders;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
