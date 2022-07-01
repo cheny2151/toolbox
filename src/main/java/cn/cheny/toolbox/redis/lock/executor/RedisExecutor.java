@@ -1,5 +1,7 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
+import cn.cheny.toolbox.redis.ReturnType;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -14,6 +16,17 @@ public interface RedisExecutor {
 
     /**
      * 执行lua脚本并返回结果
+     *
+     * @param script     脚本内容
+     * @param keys       key
+     * @param args       arg
+     * @param returnType 返回类型
+     * @return 脚本返回值
+     */
+    Object execute(String script, List<String> keys, List<String> args, ReturnType returnType);
+
+    /**
+     * 执行lua脚本并返回结果,returnType默认为Integer
      *
      * @param script 脚本内容
      * @param keys   key

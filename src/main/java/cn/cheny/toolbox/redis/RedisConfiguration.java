@@ -3,10 +3,11 @@ package cn.cheny.toolbox.redis;
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import cn.cheny.toolbox.redis.factory.RedisManagerFactory;
+import cn.cheny.toolbox.redis.lock.executor.RedisExecutor;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * redis全局配置
+ * Toolbox redis全局配置
  *
  * @author cheney
  * @date 2020-08-25
@@ -34,6 +35,10 @@ public class RedisConfiguration {
             throw new RedisRuntimeException("Please check the RedisConfiguration.DEFAULT,it has not configured ToolboxRedisProperties");
         }
         return toolboxRedisProperties;
+    }
+
+    public RedisExecutor getRedisExecutor() {
+        return getRedisManagerFactory().getRedisExecutor();
     }
 
     public void setRedisManagerFactory(RedisManagerFactory redisManagerFactory) {

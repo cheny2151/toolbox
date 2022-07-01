@@ -56,6 +56,7 @@
         <commons-text>1.9</commons-text>
         <jsoup>1.14.3</jsoup>
         <pool2.version>2.11.1</pool2.version>
+        <redisson.version>3.17.3</redisson.version>
     </properties>
 
     <dependencies>
@@ -126,6 +127,13 @@
         <dependency>
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>${redisson.version}</version>
             <optional>true</optional>
         </dependency>
 

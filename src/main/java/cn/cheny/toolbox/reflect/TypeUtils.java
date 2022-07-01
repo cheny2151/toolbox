@@ -200,6 +200,17 @@ public class TypeUtils {
     }
 
     /**
+     * 判断aClass是否为数组并且元素为componentType
+     *
+     * @param aClass        待判断类型
+     * @param componentType 元素类型
+     * @return 是否匹配
+     */
+    public static boolean isArrayOf(Class<?> aClass, Class<?> componentType) {
+        return aClass.isArray() && aClass.getComponentType().equals(componentType);
+    }
+
+    /**
      * 尝试基础类型数据的转换
      *
      * @param obj         对应的值

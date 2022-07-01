@@ -1,5 +1,6 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
+import cn.cheny.toolbox.redis.ReturnType;
 import cn.cheny.toolbox.redis.client.RedisClient;
 
 import java.util.Collections;
@@ -19,6 +20,11 @@ public class JedisExecutor implements RedisExecutor {
 
     public JedisExecutor(RedisClient<String> jedisClient) {
         this.jedisClient = jedisClient;
+    }
+
+    @Override
+    public Object execute(String script, List<String> keys, List<String> args, ReturnType returnType) {
+        return this.execute(script, keys, args);
     }
 
     @Override

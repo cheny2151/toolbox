@@ -1,10 +1,16 @@
 package cn.cheny.toolbox.redis.lock.executor;
 
+import cn.cheny.toolbox.redis.ReturnType;
 import cn.cheny.toolbox.redis.exception.RedisRuntimeException;
 import cn.cheny.toolbox.redis.exception.RedisScriptException;
+import cn.cheny.toolbox.reflect.TypeUtils;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.Redisson;
+import org.redisson.api.RScript;
+import org.redisson.client.codec.LongCodec;
+import org.redisson.client.codec.StringCodec;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -12,10 +18,9 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 整合spring执行lua脚本
@@ -28,12 +33,13 @@ public class SpringRedisExecutor implements RedisExecutor {
 
     /**
      * 连接模式
-     * 1:jedis;2:JedisCluster;3:lettuce
+     * 1:jedis;2:JedisCluster;3:lettuce;4:redisson
      */
     private final static int CONNECTION_UNCHECK = 0;
     private final static int CONNECTION_JEDIS = 1;
     private final static int CONNECTION_JEDISCLUSTER = 2;
     private final static int CONNECTION_LETTUCE = 3;
+    private final static int CONNECTION_REDISSON = 4;
 
     private int connectionModel = CONNECTION_UNCHECK;
 
@@ -45,8 +51,13 @@ public class SpringRedisExecutor implements RedisExecutor {
     }
 
     @Override
+    public Object execute(String script, List<String> keys, List<String> args, ReturnType returnType) {
+        return execute(redisTemplate, script, keys, args, returnType);
+    }
+
+    @Override
     public Object execute(String script, List<String> keys, List<String> args) {
-        return execute(redisTemplate, script, keys, args);
+        return execute(redisTemplate, script, keys, args, ReturnType.INTEGER);
     }
 
     @Override
@@ -125,7 +136,7 @@ public class SpringRedisExecutor implements RedisExecutor {
         redisTemplate.convertAndSend(channel, msg);
     }
 
-    private Object execute(RedisTemplate<String, String> redisTemplate, String script, List<String> keys, List<String> args) {
+    private Object execute(RedisTemplate<String, String> redisTemplate, String script, List<String> keys, List<String> args, ReturnType returnType) {
         final List<String> finalKeys = keys == null ? Collections.emptyList() : keys;
         final List<String> finalArgs = args == null ? Collections.emptyList() : args;
 
@@ -137,7 +148,8 @@ public class SpringRedisExecutor implements RedisExecutor {
                 if (connectionModel == CONNECTION_UNCHECK &&
                         !tryJedis(nativeConnection) &&
                         !tryJedisCluster(nativeConnection) &&
-                        !tryLettuce(nativeConnection)) {
+                        !tryLettuce(nativeConnection) &&
+                        !tryRedisson(nativeConnection)) {
                     throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
                             + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
                 }
@@ -147,22 +159,30 @@ public class SpringRedisExecutor implements RedisExecutor {
                 } else if (connectionModel == CONNECTION_JEDISCLUSTER) {
                     // jedis集群模式
                     result = ((JedisCluster) nativeConnection).eval(script, finalKeys, finalArgs);
-                } else {
+                } else if (connectionModel == CONNECTION_LETTUCE) {
                     // lettuce
                     try {
                         @SuppressWarnings("unchecked")
                         RedisScriptingAsyncCommands<Object, Object> commands = (RedisScriptingAsyncCommands<Object, Object>) nativeConnection;
-                        result = commands
-                                .eval(script, ScriptOutputType.INTEGER,
-                                        toBytes(finalKeys),
-                                        toBytes(finalArgs))
-                                .get();
+                        ScriptOutputType outputType = ScriptOutputType.valueOf(returnType.name());
+                        Object commandRs = commands.eval(script, outputType, toBytes(finalKeys), toBytes(finalArgs)).get();
+                        result = parseOutput(commandRs, returnType);
                     } catch (Exception e) {
                         if (log.isDebugEnabled()) {
                             log.debug("Error running redis lua script", e);
                         }
                         throw new RedisScriptException("Error running redis lua script", e);
                     }
+                } else {
+                    RScript rScript;
+                    RScript.ReturnType outputType = RScript.ReturnType.valueOf(returnType.name());
+                    Redisson redisson = (Redisson) nativeConnection;
+                    if (RScript.ReturnType.INTEGER.equals(outputType)) {
+                        rScript = redisson.getScript(LongCodec.INSTANCE);
+                    } else {
+                        rScript = redisson.getScript(StringCodec.INSTANCE);
+                    }
+                    result = rScript.eval(null, RScript.Mode.READ_WRITE, script, outputType, new ArrayList<>(finalKeys), finalArgs.toArray());
                 }
                 return result;
             });
@@ -174,6 +194,23 @@ public class SpringRedisExecutor implements RedisExecutor {
             throw new RedisScriptException("Error running redis lua script", e);
         }
 
+    }
+
+    private Object parseOutput(Object output, ReturnType returnType) {
+        if (output != null) {
+            Class<?> aClass = output.getClass();
+            if (returnType.equals(ReturnType.VALUE) && TypeUtils.isArrayOf(aClass, byte.class)) {
+                return new String((byte[]) output);
+            } else if (returnType.equals(ReturnType.MULTI) && Collection.class.isAssignableFrom(aClass)) {
+                return ((Collection<?>) output).stream().map(element -> {
+                    if (TypeUtils.isArrayOf(element.getClass(), byte.class)) {
+                        return new String((byte[]) element);
+                    }
+                    return element;
+                }).collect(Collectors.toList());
+            }
+        }
+        return output;
     }
 
     private Object[] toBytes(List<String> list) {
@@ -208,6 +245,18 @@ public class SpringRedisExecutor implements RedisExecutor {
         try {
             if (nativeConnection instanceof RedisScriptingAsyncCommands) {
                 this.connectionModel = CONNECTION_LETTUCE;
+                return true;
+            }
+        } catch (NoClassDefFoundError e) {
+            // do nothing
+        }
+        return false;
+    }
+
+    private boolean tryRedisson(Object nativeConnection) {
+        try {
+            if (nativeConnection instanceof Redisson) {
+                this.connectionModel = CONNECTION_REDISSON;
                 return true;
             }
         } catch (NoClassDefFoundError e) {
