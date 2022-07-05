@@ -66,7 +66,7 @@ public class TestForWindow {
         return new TestResult(i, tests);
     }
 
-    @Batch(threadPoolSize = 3, batchArgIndex = 1, winTime = 100, splitter = TestArraySplitter.class)
+    @Batch(threadPoolSize = 3, batchArgIndex = 1, winTime = 10, splitter = TestArraySplitter.class)
     public TestResultArray printSelfReturnCustomerArray(int i, List<String> tests) throws InterruptedException {
         Thread.sleep(100);
         System.out.println(tests.size());

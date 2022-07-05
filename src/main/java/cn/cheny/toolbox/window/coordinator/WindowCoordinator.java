@@ -9,8 +9,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 窗口协调类
@@ -21,11 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class WindowCoordinator implements Closeable {
 
-    private final AtomicInteger status;
-
     private final ExecutorService workers;
-
-    private ScheduledExecutorService scheduled;
 
     private final Object target;
 
@@ -37,30 +34,14 @@ public class WindowCoordinator implements Closeable {
         this.target = target;
         this.batchConfiguration = batchConfiguration;
         this.units = new ConcurrentHashMap<>();
-        this.status = new AtomicInteger(0);
         this.workers = Executors.newFixedThreadPool(batchConfiguration.getThreadPoolSize(), new NamePrefixThreadFactory("BatchHandler"));
     }
 
-    public WindowElement addElement(Object[] args) throws WindowElementEmptyException {
-        if (status.get() == 0) {
-            this.start();
-        }
+    public WindowElement addElement(Object[] args) throws WindowElementEmptyException, InterruptedException {
         CollectedStaticParams staticParams = batchConfiguration.buildStaticParams(args, batchConfiguration);
         WindowCoordinatorUnit unit = units.computeIfAbsent(staticParams,
                 k -> new WindowCoordinatorUnit(batchConfiguration.buildParams(args), batchConfiguration, target, workers));
         return unit.addElement(args);
-    }
-
-    private void start() {
-        if (status.compareAndSet(0, 1)) {
-            ScheduledExecutorService scheduled = Executors.newSingleThreadScheduledExecutor();
-            this.scheduled = scheduled;
-            scheduled.scheduleAtFixedRate(this::startWork, 0, batchConfiguration.getWinTime(), TimeUnit.MILLISECONDS);
-        }
-    }
-
-    private void startWork() {
-        units.values().forEach(WindowCoordinatorUnit::startWork);
     }
 
     public Object getTarget() {
@@ -69,7 +50,13 @@ public class WindowCoordinator implements Closeable {
 
     @Override
     public void close() throws IOException {
-        this.scheduled.shutdown();
+        for (WindowCoordinatorUnit unit : this.units.values()) {
+            try {
+                unit.close();
+            } catch (Exception e) {
+                // do nothing
+            }
+        }
         this.workers.shutdown();
     }
 }

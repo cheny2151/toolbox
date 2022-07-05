@@ -8,10 +8,14 @@ import cn.cheny.toolbox.window.WindowElement;
 import cn.cheny.toolbox.window.output.BatchResultSplitter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -21,108 +25,115 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2021/9/22
  */
 @Slf4j
-public class WindowCoordinatorUnit {
+public class WindowCoordinatorUnit implements Closeable {
 
+    private final static int QUEUE_SIZE = 200;
+
+    private final AtomicInteger status = new AtomicInteger(0);
     private final CollectedParams collectedParams;
     private final BatchMethod batchMethod;
     private final BatchResultSplitter splitter;
     private final int threshold;
-    private final AtomicInteger cursize;
+    private final long winTime;
     private Object target;
-    private volatile ConcurrentHashMap<Integer, WindowElement> content;
+    private final ExecutorService producer;
     private final ExecutorService workers;
-    private final AtomicInteger lock;
+    private final ArrayBlockingQueue<WindowElement> elementQueue;
 
     public WindowCoordinatorUnit(CollectedParams collectedParams, BatchConfiguration batchConfiguration, Object target, ExecutorService workers) {
         this.collectedParams = collectedParams;
         this.batchMethod = batchConfiguration.getBatchMethod();
+        this.winTime = batchConfiguration.getWinTime();
         this.splitter = batchConfiguration.getBatchResultSplitter();
         this.threshold = batchConfiguration.getThreshold();
         this.target = target;
-        this.cursize = new AtomicInteger(0);
-        this.content = new ConcurrentHashMap<>(threshold);
+        this.producer = Executors.newSingleThreadScheduledExecutor();
         this.workers = workers;
-        this.lock = new AtomicInteger(0);
+        this.elementQueue = new ArrayBlockingQueue<>(QUEUE_SIZE);
     }
 
-    public WindowElement addElement(Object[] args) throws WindowElementEmptyException {
-        int curSize;
+    public WindowElement addElement(Object[] args) throws WindowElementEmptyException, InterruptedException {
         WindowElement element = collectedParams.buildElement(args);
         int size = element.size();
         if (size == 0) {
             throw new WindowElementEmptyException();
         }
-        while (true) {
-            curSize = cursize.get();
-            if (curSize == -1 || curSize >= threshold) {
-                Thread.yield();
-            } else if (this.cursize.compareAndSet(curSize, curSize + size)) {
-                content.put(curSize, element);
-                if (curSize + size >= threshold) {
-                    this.startWork();
-                }
-                return element;
-            }
+        elementQueue.put(element);
+        start();
+        return element;
+    }
+
+    private void start() {
+        if (status.get() == 0 && status.compareAndSet(0, 1)) {
+            startCollectBatch();
         }
     }
 
-    public void startWork() {
-        if (tryLock()) {
-            workers.execute(this::doWindow);
-        }
-    }
-
-    private boolean tryLock() {
-        return lock.compareAndSet(0, 1);
-    }
-
-    private void unlock() {
-        lock.compareAndSet(1, 0);
-    }
-
-    private void doWindow() {
-        int curSize;
-        while ((curSize = this.cursize.get()) > 0) {
-            if (this.cursize.compareAndSet(curSize, -1)) {
-                ConcurrentHashMap<Integer, WindowElement> curContent = this.content;
-                // 自旋等待put element
-                while (getContentSize(curContent) != curSize) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("wait put element");
+    private void startCollectBatch() {
+        long winTime = this.winTime;
+        int threshold = this.threshold;
+        producer.execute(() -> {
+            while (true) {
+                long endTime = System.currentTimeMillis() + winTime;
+                List<WindowElement> batch = new ArrayList<>(threshold);
+                int size = 0;
+                long timeout;
+                while (size < threshold && (timeout = (endTime - System.currentTimeMillis())) > 0) {
+                    WindowElement element = null;
+                    try {
+                        element = elementQueue.poll(timeout, TimeUnit.MILLISECONDS);
+                    } catch (InterruptedException e) {
+                        log.error("Fail to poll window element", e);
+                    }
+                    if (element != null) {
+                        batch.add(element);
+                        size++;
                     }
                 }
-                this.content = new ConcurrentHashMap<>(threshold);
-                this.cursize.set(0);
-                unlock();
-                List<WindowElement> elements = new ArrayList<>(curContent.values());
-                List<Object> inputs = new ArrayList<>();
-                elements.forEach(e -> e.collectInput(inputs));
-                long l = System.currentTimeMillis();
-                Object outputs;
+                if (size > 0) {
+                    submitBatch(batch);
+                }
+            }
+        });
+    }
+
+    private void submitBatch(List<WindowElement> batch) {
+        workers.execute(() -> {
+            try {
+                this.doWindow(batch);
+            } catch (Exception e) {
+                log.error("Execute window task exception", e);
+            }
+        });
+    }
+
+    private void doWindow(List<WindowElement> batch) {
+        List<Object> inputs = new ArrayList<>();
+        batch.forEach(e -> e.collectInput(inputs));
+        long l = System.currentTimeMillis();
+        Object outputs;
+        try {
+            outputs = doBatch(inputs);
+        } catch (Exception e) {
+            batch.forEach(element -> element.setError(e));
+            return;
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Do batch size:{}, use time:{}", inputs.size(), System.currentTimeMillis() - l);
+        }
+        for (int i = 0, index = 0; i < batch.size(); i++) {
+            WindowElement element = batch.get(i);
+            if (outputs == null) {
+                element.setOutput(null);
+            } else {
                 try {
-                    outputs = doBatch(inputs);
-                    curContent.clear();
-                } catch (Exception e) {
-                    elements.forEach(element -> element.setError(e));
-                    return;
-                }
-                if (log.isDebugEnabled()) {
-                    log.debug("size:{},use time:{}", inputs.size(), System.currentTimeMillis() - l);
-                }
-                for (int i = 0, index = 0; i < elements.size(); i++) {
-                    WindowElement element = elements.get(i);
-                    Object output = null;
-                    if (outputs != null) {
-                        output = splitter.split(outputs, element, index);
-                    }
+                    Object output = splitter.split(outputs, element, index);
                     element.setOutput(output);
-                    index += element.size();
+                } catch (Exception e) {
+                    element.setError(e);
                 }
-                break;
+                index += element.size();
             }
-        }
-        if (curSize == 0) {
-            unlock();
         }
     }
 
@@ -131,17 +142,17 @@ public class WindowCoordinatorUnit {
         return batchMethod.doBatch(target, args);
     }
 
-    private int getContentSize(ConcurrentHashMap<Integer, WindowElement> content) {
-        return content.values().stream().map(WindowElement::size)
-                .reduce(Integer::sum)
-                .orElse(0);
-    }
-
     public Object getTarget() {
         return target;
     }
 
     public void setTarget(Object target) {
         this.target = target;
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.producer.shutdown();
+        this.elementQueue.clear();
     }
 }

@@ -21,7 +21,7 @@ public class WindowMain {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
         ArrayList<Thread> threads = new ArrayList<>();
-        for (int i = 0; i < 2000; i++) {
+        for (int i = 0; i < 3000; i++) {
             int finalI = i;
             Thread thread = new Thread(() -> {
                 String str = "test" + finalI;
@@ -91,7 +91,7 @@ public class WindowMain {
     public void printSelfReturnCustomerArray() throws InterruptedException {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
-        ExecutorService executorService = Executors.newFixedThreadPool(30);
+        ExecutorService executorService = Executors.newFixedThreadPool(100);
         for (int i = 0; i < 1000000; i++) {
             int finalI = i;
             executorService.execute(() -> {
