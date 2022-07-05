@@ -11,6 +11,8 @@ import java.util.concurrent.CountDownLatch;
  */
 public class WindowElement {
 
+    private CollectedStaticParams staticParams;
+
     private Object input;
 
     private Object output;
@@ -56,6 +58,14 @@ public class WindowElement {
 
     public void collectInput(List<Object> inputs) {
         inputs.add(getInput());
+    }
+
+    public CollectedStaticParams getStaticParams() {
+        return staticParams;
+    }
+
+    public void setStaticParams(CollectedStaticParams staticParams) {
+        this.staticParams = staticParams;
     }
 
     public int size() {

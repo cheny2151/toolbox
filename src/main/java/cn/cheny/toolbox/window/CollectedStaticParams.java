@@ -3,12 +3,14 @@ package cn.cheny.toolbox.window;
 import java.util.Arrays;
 
 /**
- * 窗口收集方法的静态参数实例
+ * 窗口收集方法的非聚合参数实例
  *
  * @author by chenyi
  * @date 2022/3/1
  */
 public class CollectedStaticParams {
+
+    private final Object[] EMPTY_ARGS_FLAG = new Object[0];
 
     private final Object[] staticArgs;
 
@@ -20,7 +22,7 @@ public class CollectedStaticParams {
     private Object[] collectStatic(Object[] args, int batchArgIndex) {
         int length = args.length;
         if (length == 1) {
-            return new Object[0];
+            return EMPTY_ARGS_FLAG;
         }
         Object[] staticArgs = new Object[length];
         int idx = 0;

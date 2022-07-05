@@ -91,7 +91,7 @@ public class WindowMain {
     public void printSelfReturnCustomerArray() throws InterruptedException {
         TestForWindow testForWindow = new TestForWindow();
         TestForWindow proxy = new JavassistWindowProxyFactory().createProxy(testForWindow);
-        ExecutorService executorService = Executors.newFixedThreadPool(100);
+        ExecutorService executorService = Executors.newFixedThreadPool(1000);
         for (int i = 0; i < 1000000; i++) {
             int finalI = i;
             executorService.execute(() -> {
@@ -100,7 +100,7 @@ public class WindowMain {
                 try {
                     TestForWindow.TestResultArray testResult = proxy.printSelfReturnCustomerArray(0, tests);
                     if (!Arrays.asList(testResult.getRs()).equals(tests)) {
-                        System.out.println(testResult+":"+tests);
+                        System.out.println("i:" + finalI + "," + testResult + ":" + tests);
                         System.out.println("error");
                     }
                 } catch (InterruptedException e) {
