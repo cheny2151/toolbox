@@ -2,12 +2,11 @@ package cn.cheny.toolbox.window.factory.javassist;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.exception.WindowElementEmptyException;
-import cn.cheny.toolbox.proxy.ToolboxAopContext;
+import cn.cheny.toolbox.proxy.javassist.MethodHandlerTemplate;
 import cn.cheny.toolbox.window.BatchConfiguration;
 import cn.cheny.toolbox.window.WindowElement;
 import cn.cheny.toolbox.window.coordinator.WindowCoordinator;
 import cn.cheny.toolbox.window.factory.BaseWindowProxyFactory;
-import javassist.util.proxy.MethodHandler;
 import javassist.util.proxy.ProxyFactory;
 
 import java.lang.reflect.Method;
@@ -47,35 +46,32 @@ public class JavassistWindowProxyFactory extends BaseWindowProxyFactory {
         }
     }
 
-    static class WindowInferenceHandler implements MethodHandler {
-
-        private final Object target;
+    static class WindowInferenceHandler extends MethodHandlerTemplate {
 
         private final Map<Method, WindowCoordinator> windowCoordinatorMap;
 
         public WindowInferenceHandler(Object target) {
-            this.target = target;
+            super(target);
             this.windowCoordinatorMap = new HashMap<>();
         }
 
         @Override
-        public Object invoke(Object proxy, Method method, Method methodProxy, Object[] args) throws Throwable {
-            Object old = null;
-            try {
-                old = ToolboxAopContext.setCurrentProxy(proxy);
-                WindowCoordinator windowCoordinator = windowCoordinatorMap.get(method);
-                if (windowCoordinator != null) {
-                    // 收集窗口进行批量推理
-                    WindowElement element = windowCoordinator.addElement(args);
-                    return element.getOutput();
-                }
-                return method.invoke(target, args);
-            } catch (WindowElementEmptyException e) {
-                // batch size为0，执行原方法
-                return method.invoke(target, args);
-            } finally {
-                ToolboxAopContext.setCurrentProxy(old);
+        protected Object handle(Object self, Method thisMethod, Method proceed, Object[] args) throws Throwable {
+            WindowCoordinator windowCoordinator = windowCoordinatorMap.get(thisMethod);
+            if (windowCoordinator != null) {
+                // 收集窗口进行批量推理
+                WindowElement element = windowCoordinator.addElement(args);
+                return element.getOutput();
             }
+            return invokeOrigin(thisMethod, args);
+        }
+
+        @Override
+        protected Object error(Object self, Method thisMethod, Method proceed, Object[] args, Throwable error) throws Throwable {
+            if (error instanceof WindowElementEmptyException) {
+                return invokeOrigin(thisMethod, args);
+            }
+            throw error;
         }
 
         public void put(Method method, WindowCoordinator coordinator) {
