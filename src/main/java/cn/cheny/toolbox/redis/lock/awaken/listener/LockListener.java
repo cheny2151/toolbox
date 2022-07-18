@@ -1,11 +1,13 @@
 package cn.cheny.toolbox.redis.lock.awaken.listener;
 
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author cheney
  */
-@Data
+@Getter
+@Setter
 public class LockListener {
 
     private String listenerChannel;

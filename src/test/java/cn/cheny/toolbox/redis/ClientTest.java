@@ -34,9 +34,9 @@ public class ClientTest {
         RedisConfiguration.DEFAULT.setToolboxRedisProperties(new ToolboxRedisProperties());
         new Thread(() -> {
             try (RedisLock redisLock = new ReentrantRedisLock("test")) {
-                if (redisLock.tryLock(30000, 1000 * 60 * 3, TimeUnit.MILLISECONDS)) {
+                if (redisLock.tryLock(30000, 1000 , TimeUnit.MILLISECONDS)) {
                     System.out.println("获取锁成功:A");
-                    Thread.sleep(1000 * 60 * 3);
+                    Thread.sleep(1000);
                     System.out.println("执行任务完毕");
                 }
             } catch (Exception e) {
@@ -44,10 +44,10 @@ public class ClientTest {
             }
         }).start();
         new Thread(() -> {
-            try (RedisLock redisLock = new ReentrantRedisLock("test2")) {
+            try (RedisLock redisLock = new ReentrantRedisLock("test")) {
                 if (redisLock.tryLock(30000, 12000, TimeUnit.MILLISECONDS)) {
                     System.out.println("获取锁成功:B");
-                    Thread.sleep(10000);
+                    Thread.sleep(1000);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -62,11 +62,12 @@ public class ClientTest {
         RedisClient<String> jedisClient = factory.cacheClient();
         JedisManagerFactory jedisLockFactory = new JedisManagerFactory(jedisClient);
         RedisConfiguration.DEFAULT.setRedisManagerFactory(jedisLockFactory);
+        RedisConfiguration.DEFAULT.setToolboxRedisProperties(new ToolboxRedisProperties());
         int[] num = new int[]{0};
         ExecutorService executorService = Executors.newFixedThreadPool(16);
         List<Callable<Integer>> runnables = new ArrayList<>();
         ReentrantRedisLock lock = new ReentrantRedisLock("Test");
-        for (int i = 0; i < 100000; i++) {
+        for (int i = 0; i < 1000; i++) {
             Callable<Integer> test = () -> {
                 try {
                     if (lock.tryLock(2000, TimeUnit.MILLISECONDS)) {

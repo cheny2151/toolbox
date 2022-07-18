@@ -40,6 +40,11 @@ public class JedisSubLockManager extends JedisPubSub implements SubLockManager {
     }
 
     @Override
+    public void removeMessageListener(LockListener lockListener) {
+        LockListeners.removeLockListener(lockListener);
+    }
+
+    @Override
     public void init() {
         // 开启订阅线程
         new Thread(() -> {

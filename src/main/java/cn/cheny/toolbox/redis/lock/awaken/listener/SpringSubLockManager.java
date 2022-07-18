@@ -37,4 +37,9 @@ public class SpringSubLockManager implements MessageListener, SubLockManager {
         LockListeners.addLockListener(lockListener);
     }
 
+    @Override
+    public void removeMessageListener(LockListener lockListener) {
+        LockListeners.removeLockListener(lockListener);
+    }
+
 }

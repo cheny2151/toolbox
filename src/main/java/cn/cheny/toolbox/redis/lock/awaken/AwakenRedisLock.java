@@ -66,10 +66,13 @@ public abstract class AwakenRedisLock extends RedisLockAdaptor {
                 }
                 CountDownLatch countDownLatch = new CountDownLatch(1);
                 //add listener
-                subLockManager.addMessageListener(
-                        new LockListener(getChannelName(), countDownLatch::countDown)
-                );
-                countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
+                LockListener lockListener = new LockListener(getChannelName(), countDownLatch::countDown);
+                try {
+                    subLockManager.addMessageListener(lockListener);
+                    countDownLatch.await(timeout, TimeUnit.MILLISECONDS);
+                } finally {
+                    subLockManager.removeMessageListener(lockListener);
+                }
             }
         } catch (Exception e) {
             log.error("try lock error", e);
