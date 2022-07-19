@@ -7,18 +7,18 @@ import cn.cheny.toolbox.reflect.TypeUtils;
 import io.lettuce.core.ScriptOutputType;
 import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.Redisson;
-import org.redisson.api.RScript;
-import org.redisson.client.codec.LongCodec;
-import org.redisson.client.codec.StringCodec;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,13 +33,13 @@ public class SpringRedisExecutor implements RedisExecutor {
 
     /**
      * 连接模式
-     * 1:jedis;2:JedisCluster;3:lettuce;4:redisson
+     * 1:jedis;2:JedisCluster;3:lettuce;
      */
+    private final static int CONNECTION_UNKNOWN = -1;
     private final static int CONNECTION_UNCHECK = 0;
     private final static int CONNECTION_JEDIS = 1;
     private final static int CONNECTION_JEDISCLUSTER = 2;
     private final static int CONNECTION_LETTUCE = 3;
-    private final static int CONNECTION_REDISSON = 4;
 
     private int connectionModel = CONNECTION_UNCHECK;
 
@@ -140,6 +140,7 @@ public class SpringRedisExecutor implements RedisExecutor {
         final List<String> finalKeys = keys == null ? Collections.emptyList() : keys;
         final List<String> finalArgs = args == null ? Collections.emptyList() : args;
 
+        RedisScript<Object> redisScript = RedisScript.of(script);
         try {
             return redisTemplate.execute((RedisCallback<Object>) (redisConnection) -> {
 
@@ -148,10 +149,8 @@ public class SpringRedisExecutor implements RedisExecutor {
                 if (connectionModel == CONNECTION_UNCHECK &&
                         !tryJedis(nativeConnection) &&
                         !tryJedisCluster(nativeConnection) &&
-                        !tryLettuce(nativeConnection) &&
-                        !tryRedisson(nativeConnection)) {
-                    throw new RedisScriptException("nativeConnection [" + nativeConnection.getClass()
-                            + "] is not Jedis/JedisCluster/RedisScriptingAsyncCommands instance");
+                        !tryLettuce(nativeConnection)) {
+                    connectionModel = CONNECTION_UNKNOWN;
                 }
                 if (connectionModel == CONNECTION_JEDIS) {
                     // jedis单机模式
@@ -174,15 +173,7 @@ public class SpringRedisExecutor implements RedisExecutor {
                         throw new RedisScriptException("Error running redis lua script", e);
                     }
                 } else {
-                    RScript rScript;
-                    RScript.ReturnType outputType = RScript.ReturnType.valueOf(returnType.name());
-                    Redisson redisson = (Redisson) nativeConnection;
-                    if (RScript.ReturnType.INTEGER.equals(outputType)) {
-                        rScript = redisson.getScript(LongCodec.INSTANCE);
-                    } else {
-                        rScript = redisson.getScript(StringCodec.INSTANCE);
-                    }
-                    result = rScript.eval(null, RScript.Mode.READ_WRITE, script, outputType, new ArrayList<>(finalKeys), finalArgs.toArray());
+                    result = redisTemplate.execute(redisScript, finalKeys, finalArgs.toArray());
                 }
                 return result;
             });
@@ -253,15 +244,4 @@ public class SpringRedisExecutor implements RedisExecutor {
         return false;
     }
 
-    private boolean tryRedisson(Object nativeConnection) {
-        try {
-            if (nativeConnection instanceof Redisson) {
-                this.connectionModel = CONNECTION_REDISSON;
-                return true;
-            }
-        } catch (NoClassDefFoundError e) {
-            // do nothing
-        }
-        return false;
-    }
 }
