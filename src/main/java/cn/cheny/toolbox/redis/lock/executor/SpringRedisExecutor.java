@@ -173,7 +173,8 @@ public class SpringRedisExecutor implements RedisExecutor {
                     }
                 } else {
                     RedisScript<?> redisScript = RedisScript.of(script, returnType.getType());
-                    result = redisTemplate.execute(redisScript, finalKeys, finalArgs.toArray());
+                    result = finalArgs.size() > 0 ? redisTemplate.execute(redisScript, finalKeys, finalArgs.toArray()) :
+                            redisTemplate.execute(redisScript, finalKeys);
                 }
                 return result;
             });
