@@ -140,7 +140,6 @@ public class SpringRedisExecutor implements RedisExecutor {
         final List<String> finalKeys = keys == null ? Collections.emptyList() : keys;
         final List<String> finalArgs = args == null ? Collections.emptyList() : args;
 
-        RedisScript<Object> redisScript = RedisScript.of(script);
         try {
             return redisTemplate.execute((RedisCallback<Object>) (redisConnection) -> {
 
@@ -173,6 +172,7 @@ public class SpringRedisExecutor implements RedisExecutor {
                         throw new RedisScriptException("Error running redis lua script", e);
                     }
                 } else {
+                    RedisScript<?> redisScript = RedisScript.of(script, returnType.getType());
                     result = redisTemplate.execute(redisScript, finalKeys, finalArgs.toArray());
                 }
                 return result;
