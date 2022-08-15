@@ -10,6 +10,10 @@ import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.env.Environment;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.StandardEvaluationContext;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,6 +35,10 @@ public class SpringUtils implements ApplicationContextAware {
 
     private static final GenericTokenParser TOKEN_PARSER = new GenericTokenParser(OPEN_TOKEN, CLOSE_TOKEN);
 
+    private static final ExpressionParser parser = new SpelExpressionParser();
+
+    private static final StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
+
     private static ApplicationContext applicationContext;
 
     private static Environment env;
@@ -49,6 +57,7 @@ public class SpringUtils implements ApplicationContextAware {
         SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
+        evaluationContext.setBeanResolver((context, beanName) -> applicationContext.getBean(beanName));
         new Thread(() -> {
             SpringUtilsAware.defaultAware().forEach(aware -> aware.after(toolboxDefaultProperties));
             List<SpringUtilsAware> awares = new ArrayList<>();
@@ -107,6 +116,16 @@ public class SpringUtils implements ApplicationContextAware {
             key = TOKEN_PARSER.parse(key);
         }
         return env.getProperty(key);
+    }
+
+    public static Object execute(String expressionString) {
+        Expression expression = parser.parseExpression(expressionString);
+        return expression.getValue(evaluationContext);
+    }
+
+    public static <T> T execute(String expressionString, Class<T> type) {
+        Expression expression = parser.parseExpression(expressionString);
+        return expression.getValue(evaluationContext, type);
     }
 
     public static boolean isInSpring() {
