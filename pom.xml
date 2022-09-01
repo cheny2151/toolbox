@@ -59,7 +59,7 @@
         <mybatis.version>2.2.0</mybatis.version>
         <asm.version>9.2</asm.version>
         <commons-text>1.9</commons-text>
-        <jsoup>1.14.3</jsoup>
+        <jsoup>1.15.3</jsoup>
         <pool2.version>2.11.1</pool2.version>
     </properties>
 
