@@ -228,7 +228,19 @@ public class TypeUtils {
         }
         try {
             if (targetClass.equals(int.class) || targetClass.equals(Integer.class)) {
+                if (obj instanceof Float) {
+                    return (T) Integer.valueOf(((Float) obj).intValue());
+                } else if (obj instanceof Double) {
+                    return (T) Integer.valueOf(((Double) obj).intValue());
+                }
                 return (T) Integer.valueOf(obj.toString());
+            } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
+                if (obj instanceof Float) {
+                    return (T) Long.valueOf(((Float) obj).longValue());
+                } else if (obj instanceof Double) {
+                    return (T) Long.valueOf(((Double) obj).longValue());
+                }
+                return (T) Long.valueOf(obj.toString());
             } else if (targetClass.equals(short.class) || targetClass.equals(Short.class)) {
                 return (T) Short.valueOf(obj.toString());
             } else if (targetClass.equals(double.class) || targetClass.equals(Double.class)) {
@@ -236,18 +248,24 @@ public class TypeUtils {
             } else if (targetClass.equals(float.class) || targetClass.equals(Float.class)) {
                 return (T) Float.valueOf(obj.toString());
             } else if (targetClass.equals(boolean.class) || targetClass.equals(Boolean.class)) {
-                if (obj instanceof Integer || obj instanceof Long) {
-                    int ObjAsInt = Integer.parseInt(obj.toString());
-                    if (ObjAsInt == 1) {
+                Integer objAsInt = null;
+                if (obj instanceof Float) {
+                    objAsInt = ((Float) obj).intValue();
+                } else if (obj instanceof Double) {
+                    objAsInt = ((Double) obj).intValue();
+                } else if (obj instanceof Integer) {
+                    objAsInt = (Integer) obj;
+                } else if (obj instanceof Long) {
+                    objAsInt = ((Long) obj).intValue();
+                }
+                if (objAsInt != null) {
+                    if (objAsInt == 1) {
                         return (T) Boolean.TRUE;
-                    } else if (ObjAsInt == 0) {
+                    } else if (objAsInt == 0) {
                         return (T) Boolean.FALSE;
                     }
-                } else {
-                    return (T) Boolean.valueOf(obj.toString());
                 }
-            } else if (targetClass.equals(long.class) || targetClass.equals(Long.class)) {
-                return (T) Long.valueOf(obj.toString());
+                return (T) Boolean.valueOf(obj.toString());
             } else if (targetClass.equals(byte.class) || targetClass.equals(Byte.class)) {
                 return (T) Byte.valueOf(obj.toString());
             } else if (targetClass.equals(char.class) || targetClass.equals(Character.class)) {
