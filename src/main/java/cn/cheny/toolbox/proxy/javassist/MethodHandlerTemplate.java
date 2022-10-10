@@ -26,7 +26,7 @@ public class MethodHandlerTemplate implements MethodHandler {
         try {
             before(self, thisMethod, proceed, args);
             result = handle(self, thisMethod, proceed, args);
-            after(self, thisMethod, proceed, args);
+            after(self, thisMethod, proceed, args, result);
         } catch (Throwable e) {
             result = error(self, thisMethod, proceed, args, e);
         } finally {
@@ -47,7 +47,7 @@ public class MethodHandlerTemplate implements MethodHandler {
 
     }
 
-    protected void after(Object self, Method thisMethod, Method proceed, Object[] args) {
+    protected void after(Object self, Method thisMethod, Method proceed, Object[] args, Object result) {
 
     }
 
