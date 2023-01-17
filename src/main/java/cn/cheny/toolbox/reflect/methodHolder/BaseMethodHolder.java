@@ -191,6 +191,9 @@ public abstract class BaseMethodHolder implements MethodHolder {
         int lastIndex = parameterCount - 1;
         if (args.length == parameterCount) {
             Object lastArg = args[lastIndex];
+            if (lastArg == null){
+                return args;
+            }
             Class<?> lastArgsClass = lastArg.getClass();
             if (lastArgsClass.isArray()) {
                 return args;
