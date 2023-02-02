@@ -8,6 +8,7 @@ import cn.cheny.toolbox.scan.ScanException;
 import cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
@@ -44,9 +45,7 @@ public class SpringUtils implements ApplicationContextAware {
 
     private static final StandardEvaluationContext evaluationContext = new StandardEvaluationContext();
 
-    private static ConfigurableApplicationContext applicationContext;
-
-    private static DefaultListableBeanFactory beanFactory;
+    private static ApplicationContext applicationContext;
 
     private static Environment env;
 
@@ -61,11 +60,9 @@ public class SpringUtils implements ApplicationContextAware {
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-        ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
-        SpringUtils.applicationContext = configurableApplicationContext;
+        SpringUtils.applicationContext = applicationContext;
         SpringUtils.env = applicationContext.getEnvironment();
         SpringUtils.inSpring = true;
-        SpringUtils.beanFactory = (DefaultListableBeanFactory) configurableApplicationContext.getBeanFactory();
         evaluationContext.setBeanResolver((context, beanName) -> applicationContext.getBean(beanName));
         new Thread(() -> {
             SpringUtilsAware.defaultAware().forEach(aware -> aware.after(toolboxDefaultProperties));
@@ -111,6 +108,7 @@ public class SpringUtils implements ApplicationContextAware {
 
     public static Object registerBean(String beanName, BeanDefinitionBuilder builder) {
         checkInSpring();
+        DefaultListableBeanFactory beanFactory = requiredDefaultListableBeanFactory();
         AbstractBeanDefinition definition = builder.getRawBeanDefinition();
         if (beanFactory.containsBean(beanName)) {
             throw new ToolboxRuntimeException(String.format("Bean:'%s'已注册，若需覆盖请强制执行", beanName));
@@ -121,6 +119,7 @@ public class SpringUtils implements ApplicationContextAware {
 
     public static Object forceRegisterBean(String beanName, BeanDefinitionBuilder builder) {
         checkInSpring();
+        DefaultListableBeanFactory beanFactory = requiredDefaultListableBeanFactory();
         AbstractBeanDefinition definition = builder.getRawBeanDefinition();
         if (beanFactory.containsBean(beanName)) {
             log.info("Remove old BeanDefinition '{}' to register new", beanName);
@@ -167,4 +166,16 @@ public class SpringUtils implements ApplicationContextAware {
             throw new NotInSpringException();
         }
     }
+
+    private static DefaultListableBeanFactory requiredDefaultListableBeanFactory() {
+        if (applicationContext instanceof ConfigurableApplicationContext) {
+            ConfigurableApplicationContext configurableApplicationContext = (ConfigurableApplicationContext) applicationContext;
+            ConfigurableListableBeanFactory beanFactory = configurableApplicationContext.getBeanFactory();
+            if (beanFactory instanceof DefaultListableBeanFactory) {
+                return (DefaultListableBeanFactory) beanFactory;
+            }
+        }
+        throw new ToolboxRuntimeException("Can not get DefaultListableBeanFactory in spring context");
+    }
+
 }
