@@ -7,6 +7,7 @@ import org.apache.poi.ss.usermodel.BuiltinFormats;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.util.XMLHelper;
 import org.apache.poi.xssf.eventusermodel.XSSFReader;
+import org.apache.poi.xssf.model.SharedStrings;
 import org.apache.poi.xssf.model.SharedStringsTable;
 import org.apache.poi.xssf.model.StylesTable;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
@@ -113,9 +114,9 @@ public class SaxReader {
     private void processSheet(OPCPackage pkg, Integer sheetNum) throws Exception {
         init();
         XSSFReader r = new XSSFReader(pkg);
-        SharedStringsTable sst = r.getSharedStringsTable();
+        SharedStrings sharedStrings = r.getSharedStringsTable();
         StylesTable stylesTable = r.getStylesTable();
-        XMLReader parser = fetchSheetParser(sst, stylesTable);
+        XMLReader parser = fetchSheetParser(sharedStrings, stylesTable);
         Iterator<InputStream> sheets = r.getSheetsData();
         for (int i = 0; sheets.hasNext(); i++) {
             InputStream sheet = sheets.next();
@@ -135,7 +136,7 @@ public class SaxReader {
         }
     }
 
-    private XMLReader fetchSheetParser(SharedStringsTable sst, StylesTable stylesTable) throws SAXException, ParserConfigurationException {
+    private XMLReader fetchSheetParser(SharedStrings sst, StylesTable stylesTable) throws SAXException, ParserConfigurationException {
         XMLReader parser = XMLHelper.newXMLReader();
         SheetHandler handler = new SheetHandler(sst, stylesTable);
         parser.setContentHandler(handler);
@@ -206,7 +207,7 @@ public class SaxReader {
     private class SheetHandler extends DefaultHandler {
         // excel单元格reference的解析正则表达式：组1为列字母，组2为行数
         private final Pattern rowNumPattern = Pattern.compile("([A-Z]+)([0-9]+)");
-        private SharedStringsTable sst;
+        private SharedStrings sharedStrings;
         private StylesTable stylesTable;
         private DataFormatter dataFormatter = new DataFormatter();
         private String dataFormatString;
@@ -222,8 +223,8 @@ public class SaxReader {
         // 控制空单元格
         private int c;
 
-        private SheetHandler(SharedStringsTable sst, StylesTable stylesTable) {
-            this.sst = sst;
+        private SheetHandler(SharedStrings sharedStrings, StylesTable stylesTable) {
+            this.sharedStrings = sharedStrings;
             this.currentRow = 0;
             this.currentCol = -1;
             this.stylesTable = stylesTable;
@@ -346,7 +347,7 @@ public class SaxReader {
                 case STRING: {
                     try {
                         int idx = Integer.parseInt(lastContents);
-                        return sst.getItemAt(idx).getString();
+                        return sharedStrings.getItemAt(idx).getString();
                     } catch (NumberFormatException e) {
                         return lastContents;
                     }

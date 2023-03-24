@@ -2,7 +2,6 @@ package cn.cheny.toolbox.window;
 
 import cn.cheny.toolbox.window.output.BatchResultSplitter;
 import cn.cheny.toolbox.window.output.DefaultBatchResultSplitter;
-import org.apache.pdfbox.multipdf.Splitter;
 
 import java.lang.annotation.*;
 
