@@ -8,6 +8,7 @@ import cn.cheny.toolbox.scan.ScanException;
 import cn.cheny.toolbox.spring.properties.ToolboxDefaultProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
@@ -86,6 +87,16 @@ public class SpringUtils implements ApplicationContextAware {
         return applicationContext;
     }
 
+    public static boolean containsBeanDefinition(String beanName) {
+        checkInSpring();
+        return applicationContext.containsBeanDefinition(beanName);
+    }
+
+    public static boolean containsBean(String name) {
+        checkInSpring();
+        return applicationContext.containsBean(name);
+    }
+
     public static <T> T getBean(Class<T> tClass) {
         checkInSpring();
         return applicationContext.getBean(tClass);
@@ -104,6 +115,11 @@ public class SpringUtils implements ApplicationContextAware {
     public static <T> Collection<T> getBeansOfType(Class<T> tClass) {
         checkInSpring();
         return applicationContext.getBeansOfType(tClass).values();
+    }
+
+    public static <T> ObjectProvider<T> getBeanProvider(Class<T> tClass) {
+        checkInSpring();
+        return applicationContext.getBeanProvider(tClass);
     }
 
     public static Object registerBean(String beanName, BeanDefinitionBuilder builder) {
