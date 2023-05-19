@@ -2,6 +2,8 @@ package cn.cheny.toolbox.reflect;
 
 import cn.cheny.toolbox.exception.ToolboxRuntimeException;
 import cn.cheny.toolbox.other.fun.FilterFunction;
+import cn.cheny.toolbox.reflect.methodHolder.ReadWriteMethodHolder;
+import cn.cheny.toolbox.reflect.methodHolder.factory.ReadWriteMethodHolderFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 
@@ -432,6 +434,66 @@ public class ReflectUtils {
         } catch (IllegalAccessException e) {
             throw new ReflectException("can not get field '" + field.getName() + "' in " + obj.getClass(), e);
         }
+    }
+
+    /**
+     * 获取类的读写方法持有者
+     *
+     * @param holdClass 目标类
+     * @return 读写方法持有者实例
+     */
+    public static ReadWriteMethodHolder getMethodHolder(Class<?> holdClass) {
+        return ReadWriteMethodHolderFactory.getInstance().getMethodHolder(holdClass);
+    }
+
+    /**
+     * 使用读写方法持有者读取对象字段值
+     *
+     * @param obj         对象实例
+     * @param fieldGetter 字段获取函数
+     * @return 读写方法持有者实例
+     */
+    public static <T> Object readByMethodHolder(T obj, FieldGetter<T> fieldGetter) {
+        String fieldName = fieldName(fieldGetter);
+        return readByMethodHolder(obj, fieldName);
+    }
+
+    /**
+     * 使用读写方法持有者读取对象字段值
+     *
+     * @param obj       对象实例
+     * @param fieldName 字段名
+     * @return 读写方法持有者实例
+     */
+    public static <T> Object readByMethodHolder(T obj, String fieldName) {
+        ReadWriteMethodHolder methodHolder = getMethodHolder(obj.getClass());
+        return methodHolder.read(obj, fieldName);
+    }
+
+    /**
+     * 使用读写方法持有者写入对象字段值
+     *
+     * @param obj         对象实例
+     * @param newVal      写入的字段值
+     * @param fieldGetter 字段获取函数
+     * @return 读写方法持有者实例
+     */
+    public static <T> void writeByMethodHolder(T obj, Object newVal, FieldGetter<T> fieldGetter) {
+        String fieldName = fieldName(fieldGetter);
+        writeByMethodHolder(obj, newVal, fieldName);
+    }
+
+    /**
+     * 使用读写方法持有者写入对象字段值
+     *
+     * @param obj       对象实例
+     * @param newVal    写入的字段值
+     * @param fieldName 字段名
+     * @return 读写方法持有者实例
+     */
+    public static <T> void writeByMethodHolder(T obj, Object newVal, String fieldName) {
+        ReadWriteMethodHolder methodHolder = getMethodHolder(obj.getClass());
+        methodHolder.write(obj, fieldName, newVal);
     }
 
     /**

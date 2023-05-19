@@ -30,6 +30,19 @@ public class TestMain {
         System.out.println(methodHolder.read(testEntity, "l"));
     }
 
+    @Test
+    public void test3() {
+        TestEntity testEntity = new TestEntity();
+        ReflectUtils.writeByMethodHolder(testEntity,9,TestEntity::getL);
+        System.out.println(ReflectUtils.readByMethodHolder(testEntity, TestEntity::getL));
+    }
+    @Test
+    public void test4() {
+        TestEntity testEntity = new TestEntity();
+        ReflectUtils.writeByMethodHolder(testEntity,9,"l");
+        System.out.println(ReflectUtils.readByMethodHolder(testEntity, "l"));
+    }
+
     @Data
     public static class TestEntity {
         private int i;
