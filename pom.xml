@@ -55,7 +55,7 @@
         <asm.version>9.4</asm.version>
         <commons-text>1.10.0</commons-text>
         <jsoup>1.15.4</jsoup>
-        <redisson.version>3.20.0</redisson.version>
+        <redisson.version>3.22.0</redisson.version>
     </properties>
 
     <dependencies>
