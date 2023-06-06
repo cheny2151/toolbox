@@ -45,7 +45,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <poi-ooxml.version>5.2.2</poi-ooxml.version>
-        <fastjson.version>2.0.25</fastjson.version>
+        <fastjson.version>2.0.32</fastjson.version>
         <lombok.version>1.18.22</lombok.version>
         <zxing.version>3.4.1</zxing.version>
         <aviator.version>5.3.3</aviator.version>
