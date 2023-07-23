@@ -58,7 +58,7 @@
         <jedis.version>3.7.1</jedis.version>
         <mybatis.version>2.2.0</mybatis.version>
         <asm.version>9.2</asm.version>
-        <commons-text>1.9</commons-text>
+        <commons-text>1.10.0</commons-text>
         <jsoup>1.14.3</jsoup>
         <pool2.version>2.11.1</pool2.version>
     </properties>
