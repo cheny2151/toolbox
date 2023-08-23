@@ -45,7 +45,8 @@ public class EasyMap extends HashMap<String, Object> {
     }
 
     public String getString(String key) {
-        return (String) getObject(key);
+        Object val = getObject(key);
+        return tryConvertBase(key, val, String.class);
     }
 
     public Integer getInteger(String key) {
