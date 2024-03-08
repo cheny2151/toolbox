@@ -425,10 +425,20 @@ public class TypeUtils {
         }
         Class<?> class0 = obj.getClass();
         if (objType.isAssignableFrom(class0)) {
+            // self
             return (T) obj;
         } else if (TypeUtils.isBaseClass(class0) && TypeUtils.isBaseClass(objType)) {
+            // base type
             return tryConvertBase(obj, objType);
+        } else if (objType.equals(Class.class) && obj instanceof String) {
+            // class
+            try {
+                return (T) Class.forName((String) obj);
+            } catch (ClassNotFoundException e) {
+                throw new ParseTokenException("Class not found:" + obj);
+            }
         } else if (obj instanceof Map) {
+            // map to object
             if (Map.class.isAssignableFrom(objType)) {
                 return (T) convertMapInstance((Map<Object, Object>) obj, (Class<? extends Map<Object, Object>>) objType);
             } else if (!objType.isArray() &&
@@ -441,12 +451,16 @@ public class TypeUtils {
                 !class0.isArray() &&
                 !Collection.class.isAssignableFrom(class0) &&
                 !TypeUtils.isBaseClass(class0)) {
+            // object to map
             return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
         } else if (obj instanceof Collection && objType.isArray()) {
+            // collection to array
             return (T) collectionToArrayObject((Collection<?>) obj, objType.getComponentType());
         } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
+            // array to collection
             return (T) arrayToCollection(obj, objType, class0.getComponentType());
         } else if (obj instanceof String && objType.isEnum()) {
+            // enum
             return (T) Enum.valueOf((Class<? extends Enum>) objType, (String) obj);
         }
         throw new ParseTokenException(class0 + " can not convert to " + objType);
