@@ -10,6 +10,7 @@ import cn.cheny.toolbox.reflect.methodHolder.factory.ReadWriteMethodHolderFactor
 import java.lang.reflect.*;
 import java.math.BigDecimal;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -32,12 +33,18 @@ public class TypeUtils {
      */
     @SuppressWarnings("unchecked")
     public static <T> T caseToObject(Object obj, Type objType) {
+        return caseToObject(obj, objType, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T caseToObject(Object obj, Type objType,
+                                      BiFunction<Map<String, Object>, String, Object> getFiledInMapFunc) {
         if (obj == null) {
             return null;
         } else if (objType instanceof Class) {
-            return caseToObject(obj, (Class<T>) objType);
+            return caseToObject(obj, (Class<T>) objType, getFiledInMapFunc);
         } else if (objType instanceof ParameterizedType) {
-            return caseToObject(obj, (ParameterizedType) objType);
+            return caseToObject(obj, (ParameterizedType) objType, getFiledInMapFunc);
         } else if (objType instanceof TypeVariable) {
             return caseToObject(obj, (TypeVariable<?>) objType);
         } else if (objType instanceof WildcardType) {
@@ -57,7 +64,7 @@ public class TypeUtils {
      */
     public static <T> T caseToObject(Object obj, TypeReference<T> typeReference) {
         Type actualType = typeReference.getActualType();
-        return caseToObject(obj, actualType);
+        return caseToObject(obj, actualType, null);
     }
 
     /**
@@ -69,13 +76,32 @@ public class TypeUtils {
      * @return 对象实例
      */
     public static <T> T mapToObject(Map<String, Object> map, Class<T> objType) {
+        return mapToObject(map, objType, null);
+    }
+
+    /**
+     * map转换为object对象
+     *
+     * @param map               map实例
+     * @param objType           对象类型
+     * @param getFiledInMapFunc 从map中获取object字段值的函数,为空则按原始Key获取
+     * @param <T>               对象泛型
+     * @return 对象实例
+     */
+    public static <T> T mapToObject(Map<String, Object> map, Class<T> objType,
+                                    BiFunction<Map<String, Object>, String, Object> getFiledInMapFunc) {
         ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objType);
         T t = ReflectUtils.newObject(objType, null, null);
         methodHolder.getWritableProperties().forEach(signature -> {
             String name = signature.getName();
-            Object fieldVal = map.get(name);
+            Object fieldVal;
+            if (getFiledInMapFunc != null) {
+                fieldVal = getFiledInMapFunc.apply(map, name);
+            } else {
+                fieldVal = map.get(name);
+            }
             if (fieldVal != null) {
-                fieldVal = caseToObject(fieldVal, signature.getType());
+                fieldVal = caseToObject(fieldVal, signature.getType(), getFiledInMapFunc);
                 methodHolder.write(t, name, fieldVal);
             }
         });
@@ -91,7 +117,7 @@ public class TypeUtils {
                 if (type != null) {
                     Object val = ReflectUtils.getFieldVal(field, t);
                     if (val != null) {
-                        Object newVal = caseToObject(val, type);
+                        Object newVal = caseToObject(val, type, getFiledInMapFunc);
                         if (val != newVal) {
                             ReflectUtils.setFieldVal(field, t, newVal);
                         }
@@ -128,6 +154,21 @@ public class TypeUtils {
      */
     @SuppressWarnings("unchecked")
     public static <T> Collection<T> arrayToCollection(Object array, Class<?> collectionClass, Class<T> tClass) {
+        return arrayToCollection(array, collectionClass, tClass, null);
+    }
+
+    /**
+     * 将数组转换为集合
+     *
+     * @param array           数组
+     * @param collectionClass 集合类型
+     * @param tClass          元素类型
+     * @param <T>             元素泛型
+     * @return 集合
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> Collection<T> arrayToCollection(Object array, Class<?> collectionClass, Class<T> tClass,
+                                                       BiFunction<Map<String, Object>, String, Object> getFiledInMapFunc) {
         Class<?> componentType = array.getClass().getComponentType();
         Collection<T> rs = newCollection((Class<? extends Collection<T>>) collectionClass);
         if (tClass.isAssignableFrom(componentType)) {
@@ -136,7 +177,7 @@ public class TypeUtils {
             int length = Array.getLength(array);
             for (int i = 0; i < length; i++) {
                 Object o = Array.get(array, i);
-                rs.add(caseToObject(o, tClass));
+                rs.add(caseToObject(o, tClass, getFiledInMapFunc));
             }
         }
         return rs;
@@ -156,7 +197,7 @@ public class TypeUtils {
         Object array = Array.newInstance(class0, collection.size());
         int i = 0;
         for (Object o : collection) {
-            T t = (T) caseToObject(o, class0);
+            T t = (T) caseToObject(o, class0, null);
             Array.set(array, i++, t);
         }
         return (T[]) array;
@@ -169,14 +210,26 @@ public class TypeUtils {
      * @param tClass     元素类型
      * @return 数组
      */
-    public static Object collectionToArrayObject(Collection<?> collection, Class<?> tClass) {
+    private static Object collectionToArrayObject(Collection<?> collection, Class<?> tClass,
+                                                  BiFunction<Map<String, Object>, String, Object> getFiledInMapFunc) {
         Object array = Array.newInstance(tClass, collection.size());
         int i = 0;
         for (Object o : collection) {
-            Object element = caseToObject(o, tClass);
+            Object element = caseToObject(o, tClass, getFiledInMapFunc);
             Array.set(array, i++, element);
         }
         return array;
+    }
+
+    /**
+     * 将集合转换为数组(无泛型)
+     *
+     * @param collection 集合
+     * @param tClass     元素类型
+     * @return 数组
+     */
+    public static Object collectionToArrayObject(Collection<?> collection, Class<?> tClass) {
+        return collectionToArrayObject(collection, tClass, null);
     }
 
     /**
@@ -419,7 +472,8 @@ public class TypeUtils {
      * @return 转换后结果
      */
     @SuppressWarnings("unchecked")
-    private static <T> T caseToObject(Object obj, Class<T> objType) {
+    private static <T> T caseToObject(Object obj, Class<T> objType,
+                                      BiFunction<Map<String, Object>, String, Object> getFiledInMapFunc) {
         if (obj == null) {
             return null;
         }
@@ -444,7 +498,7 @@ public class TypeUtils {
             } else if (!objType.isArray() &&
                     !Collection.class.isAssignableFrom(objType) &&
                     !TypeUtils.isBaseClass(objType)) {
-                return mapToObject((Map<String, Object>) obj, objType);
+                return mapToObject((Map<String, Object>) obj, objType, getFiledInMapFunc);
             }
             throw new ParseTokenException(class0 + " can not convert to " + objType);
         } else if (Map.class.isAssignableFrom(objType) &&
@@ -455,10 +509,10 @@ public class TypeUtils {
             return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
         } else if (obj instanceof Collection && objType.isArray()) {
             // collection to array
-            return (T) collectionToArrayObject((Collection<?>) obj, objType.getComponentType());
+            return (T) collectionToArrayObject((Collection<?>) obj, objType.getComponentType(), getFiledInMapFunc);
         } else if (class0.isArray() && Collection.class.isAssignableFrom(objType)) {
             // array to collection
-            return (T) arrayToCollection(obj, objType, class0.getComponentType());
+            return (T) arrayToCollection(obj, objType, class0.getComponentType(), getFiledInMapFunc);
         } else if (obj instanceof String && objType.isEnum()) {
             // enum
             return (T) Enum.valueOf((Class<? extends Enum>) objType, (String) obj);
@@ -475,9 +529,10 @@ public class TypeUtils {
      * @return 转换后结果
      */
     @SuppressWarnings("unchecked")
-    private static <T> T caseToObject(Object obj, ParameterizedType objType) {
+    private static <T> T caseToObject(Object obj, ParameterizedType objType,
+                                      BiFunction<Map<String, Object>, String, Object> getFiledInMapFunc) {
         Type rawType = objType.getRawType();
-        Object obj0 = caseToObject(obj, rawType);
+        Object obj0 = caseToObject(obj, rawType, getFiledInMapFunc);
         if (obj0 == null) {
             return null;
         } else if (obj0 instanceof Map) {
@@ -485,8 +540,8 @@ public class TypeUtils {
             Map<Object, Object> map = (Map<Object, Object>) obj0;
             Map<Object, Object> results = newMap((Class<? extends Map<Object, Object>>) map.getClass());
             for (Map.Entry<?, ?> entry : map.entrySet()) {
-                results.put(caseToObject(entry.getKey(), argTypes[0]),
-                        caseToObject(entry.getValue(), argTypes[1]));
+                results.put(caseToObject(entry.getKey(), argTypes[0], getFiledInMapFunc),
+                        caseToObject(entry.getValue(), argTypes[1], getFiledInMapFunc));
             }
             return (T) results;
         } else if (obj0 instanceof Collection) {
@@ -494,7 +549,7 @@ public class TypeUtils {
             Collection<Object> col = (Collection<Object>) obj0;
             Collection<Object> results = newCollection((Class<? extends Collection<Object>>) col.getClass());
             for (Object e : col) {
-                Object o = caseToObject(e, argTypes[0]);
+                Object o = caseToObject(e, argTypes[0], getFiledInMapFunc);
                 results.add(o);
             }
             return (T) results;
@@ -514,7 +569,7 @@ public class TypeUtils {
                         continue;
                     }
                     Object fv = ReflectUtils.getFieldVal(field, obj0);
-                    Object newVal = caseToObject(fv, argTypes[typeIdx]);
+                    Object newVal = caseToObject(fv, argTypes[typeIdx], getFiledInMapFunc);
                     if (newVal != fv) {
                         ReflectUtils.setFieldVal(field, obj0, newVal);
                     }
