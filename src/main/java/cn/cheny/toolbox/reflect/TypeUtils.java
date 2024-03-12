@@ -134,7 +134,8 @@ public class TypeUtils {
      * @param mapClass map类型
      * @return map集合
      */
-    public static Map<String, Object> objectToMap(Object obj, Class<? extends Map<String, Object>> mapClass) {
+    @SuppressWarnings("rawtypes")
+    public static Map<String, Object> objectToMap(Object obj, Class<? extends Map> mapClass) {
         Class<?> objClass = obj.getClass();
         ReadWriteMethodHolder methodHolder = methodHolderFactory.getMethodHolder(objClass);
         Map<String, Object> map = newMap(mapClass);
@@ -536,7 +537,7 @@ public class TypeUtils {
         } else if (obj0 instanceof Map) {
             Type[] argTypes = objType.getActualTypeArguments();
             Map<Object, Object> map = (Map<Object, Object>) obj0;
-            Map<Object, Object> results = newMap((Class<? extends Map<Object, Object>>) map.getClass());
+            Map<Object, Object> results = newMap(map.getClass());
             for (Map.Entry<?, ?> entry : map.entrySet()) {
                 results.put(caseToObject(entry.getKey(), argTypes[0], getFiledInMapFunc),
                         caseToObject(entry.getValue(), argTypes[1], getFiledInMapFunc));
@@ -609,7 +610,8 @@ public class TypeUtils {
      * @param <V>      value
      * @return Map实例
      */
-    private static <K, V> Map<K, V> newMap(Class<? extends Map<K, V>> mapClass) {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <K, V> Map<K, V> newMap(Class<? extends Map> mapClass) {
         if (!mapClass.isInterface()) {
             try {
                 return ReflectUtils.newObject(mapClass, null, null);
