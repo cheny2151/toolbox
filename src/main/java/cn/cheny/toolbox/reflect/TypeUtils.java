@@ -31,7 +31,6 @@ public class TypeUtils {
      * @param <T>     泛型
      * @return 转换后结果
      */
-    @SuppressWarnings("unchecked")
     public static <T> T caseToObject(Object obj, Type objType) {
         return caseToObject(obj, objType, null);
     }
@@ -152,7 +151,6 @@ public class TypeUtils {
      * @param <T>             元素泛型
      * @return 集合
      */
-    @SuppressWarnings("unchecked")
     public static <T> Collection<T> arrayToCollection(Object array, Class<?> collectionClass, Class<T> tClass) {
         return arrayToCollection(array, collectionClass, tClass, null);
     }
@@ -506,7 +504,7 @@ public class TypeUtils {
                 !Collection.class.isAssignableFrom(class0) &&
                 !TypeUtils.isBaseClass(class0)) {
             // object to map
-            return (T) objectToMap(obj, (Class<? extends Map<String, Object>>) objType);
+            return (T) objectToMap(obj, (Class<Map<String, Object>>) objType);
         } else if (obj instanceof Collection && objType.isArray()) {
             // collection to array
             return (T) collectionToArrayObject((Collection<?>) obj, objType.getComponentType(), getFiledInMapFunc);
