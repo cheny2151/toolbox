@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @date 2021/2/8
  * @author by chenyi
+ * @date 2021/2/8
  */
 public class TokenExtractor {
 
-    private char[] start;
-    private char[] end;
+    private final char[] start;
+    private final char[] end;
 
     public TokenExtractor(String start, String end) {
         if (start == null || end == null) {
@@ -20,47 +20,46 @@ public class TokenExtractor {
         this.end = end.toCharArray();
     }
 
-    public List<String> extract(String token) {
+    public List<String> extract(String text) {
         ArrayList<String> results = new ArrayList<>();
-        char[] chars = token.toCharArray();
-        int idx = 0;
-        int endLen = end.length;
-        while ((idx = find(start, chars, idx)) != -1) {
-            int subStart = idx + 1;
-            if ((idx = find(end, chars, idx + 1)) != -1) {
-                int subEnd = idx - endLen + 1;
-                results.add(token.substring(subStart, subEnd));
-            } else {
-                break;
+        char[] chars = text.toCharArray();
+        int startTokenLen = start.length;
+        int endTokenLen = end.length;
+        int startLabel = -1;
+        out:
+        for (int cursor = 0; cursor < text.length(); ) {
+            // start token
+            if (chars[cursor] == start[0]) {
+                for (int i = 0; i < startTokenLen && cursor + i < text.length(); ) {
+                    if (start[i] != chars[cursor + i]) {
+                        break;
+                    }
+                    i++;
+                    if (i == startTokenLen) {
+                        startLabel = cursor + startTokenLen;
+                        cursor++;
+                        continue out;
+                    }
+                }
             }
+            // end token
+            if (chars[cursor] == end[0]) {
+                for (int i = 0; i < endTokenLen && cursor + i < text.length(); ) {
+                    if (end[i] != chars[cursor + i]) {
+                        break;
+                    }
+                    i++;
+                    if (i == endTokenLen && startLabel != -1) {
+                        results.add(text.substring(startLabel, cursor));
+                        startLabel = -1;
+                        cursor += i;
+                        continue out;
+                    }
+                }
+            }
+            cursor++;
         }
         return results;
     }
 
-    /**
-     * 从startIdx开始在beFind中查找target，查询到则返回target结尾字符位置，否则返回-1
-     */
-    private int find(char[] target, char[] beFind, int startIdx) {
-        int targetLen = target.length;
-        int idx = 0;
-        char c = target[idx];
-        for (int i = startIdx; i < beFind.length; i++) {
-            if (c == beFind[i]) {
-                if (++idx == targetLen) {
-                    return i;
-                }
-                c = target[idx];
-            } else if (idx != 0) {
-                idx = 0;
-                c = target[idx];
-            }
-        }
-        return -1;
-    }
-
-    public static void main(String[] args) {
-        TokenExtractor tokenExtractor = new TokenExtractor("#{", "}");
-        List<String> extract = tokenExtractor.extract("select * from t where id = #{id}");
-        System.out.println(extract);
-    }
 }
